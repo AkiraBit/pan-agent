@@ -8,9 +8,11 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
+    LargeBinary,
     String,
     Text,
     UniqueConstraint,
+    text,
 )
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -1473,3 +1475,127 @@ class MCPCallLog(Base):
     duration_ms = Column(Integer, default=0)
     client_ip = Column(String, nullable=True)
     called_at = Column(DateTime, server_default=func.now())
+
+
+class ShortTermSnapshot(Base):
+    """Immutable observations and compressed inputs; retained for 14 days."""
+
+    __tablename__ = "short_term_snapshots"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    captured_at = Column(String, nullable=False, index=True)
+    payload = Column(JSON, nullable=False)
+    evidence = Column(LargeBinary, nullable=False)
+
+
+class EmotionWorkspace(Base):
+    """One workspace for the application's authenticated single-owner installation."""
+    __tablename__ = "emotion_workspaces"
+    id = Column(Integer, primary_key=True)
+    revision = Column(Integer, nullable=False, default=0)
+    input_version = Column(Integer, nullable=False, default=0)
+    current_publication_id = Column(String, nullable=True)
+    settings = Column(JSON, nullable=False, default=dict)
+
+
+class EmotionRun(Base):
+    __tablename__ = "emotion_runs"
+    __table_args__ = (
+        UniqueConstraint("workspace_id", "request_key", name="uq_emotion_run_request"),
+        Index("uq_emotion_run_active", "workspace_id", unique=True,
+              sqlite_where=text("status IN ('queued', 'running')")),
+    )
+    id = Column(String, primary_key=True)
+    workspace_id = Column(Integer, ForeignKey("emotion_workspaces.id"), nullable=False)
+    request_key = Column(String, nullable=False)
+    status = Column(String, nullable=False, default="queued")
+    target_trade_date = Column(String, nullable=False)
+    created_at = Column(String, nullable=False)
+    finished_at = Column(String, nullable=True)
+    base_revision = Column(Integer, nullable=False)
+    input_version = Column(Integer, nullable=False)
+    inputs = Column(JSON, nullable=False, default=dict)
+    facts = Column(JSON, nullable=True)
+    model_label = Column(String, nullable=True)
+    error_code = Column(String, nullable=True)
+    events = Column(JSON, nullable=False, default=list)
+    publication_id = Column(String, nullable=True)
+
+
+class EmotionPublication(Base):
+    """Immutable analysis, source evidence and frozen memory; no 14-day deletion."""
+    __tablename__ = "emotion_publications"
+    __table_args__ = (UniqueConstraint("workspace_id", "revision", name="uq_emotion_revision"),)
+    id = Column(String, primary_key=True)
+    workspace_id = Column(Integer, ForeignKey("emotion_workspaces.id"), nullable=False)
+    run_id = Column(String, ForeignKey("emotion_runs.id"), nullable=False, unique=True)
+    revision = Column(Integer, nullable=False)
+    target_trade_date = Column(String, nullable=False, index=True)
+    published_at = Column(String, nullable=False)
+    payload = Column(JSON, nullable=False)
+
+
+class EmotionContextNote(Base):
+    __tablename__ = "emotion_context_notes"
+    id = Column(String, primary_key=True)
+    workspace_id = Column(Integer, ForeignKey("emotion_workspaces.id"), nullable=False, index=True)
+    content = Column(Text, nullable=False)
+    source_url = Column(String, nullable=True)
+    created_at = Column(String, nullable=False)
+    status = Column(String, nullable=False, default="open")
+
+
+class EmotionMonitor(Base):
+    __tablename__ = 'emotion_monitors'
+    id = Column(String, primary_key=True)
+    publication_id = Column(String, ForeignKey('emotion_publications.id'), nullable=False, unique=True)
+    target_trade_date = Column(String, nullable=False, index=True)
+    status = Column(String, nullable=False, default='active')
+    created_at = Column(String, nullable=False)
+    last_sample_at = Column(String, nullable=True)
+    last_error = Column(String, nullable=True)
+    lease_token = Column(String, nullable=True)
+    lease_until = Column(String, nullable=True)
+
+
+class EmotionObservation(Base):
+    __tablename__ = 'emotion_observations'
+    __table_args__ = (UniqueConstraint('monitor_id', 'slot', name='uq_emotion_observation_slot'),)
+    id = Column(String, primary_key=True)
+    monitor_id = Column(String, ForeignKey('emotion_monitors.id'), nullable=False, index=True)
+    slot = Column(String, nullable=False)
+    observed_at = Column(String, nullable=False)
+    payload = Column(JSON, nullable=False)
+
+
+class EmotionReview(Base):
+    __tablename__ = 'emotion_reviews'
+    id = Column(String, primary_key=True)
+    publication_id = Column(String, ForeignKey('emotion_publications.id'), nullable=False, unique=True)
+    run_id = Column(String, ForeignKey('emotion_runs.id'), nullable=False, unique=True)
+    target_trade_date = Column(String, nullable=False, index=True)
+    published_at = Column(String, nullable=False)
+    payload = Column(JSON, nullable=False)
+
+
+class EmotionSourceSettings(Base):
+    __tablename__ = 'emotion_source_settings'
+    id = Column(Integer, primary_key=True)
+    config = Column(JSON, nullable=False, default=dict)
+
+
+class EmotionRegulatoryEvent(Base):
+    """Source-versioned records; repeated discovery never rewrites first knowledge."""
+    __tablename__ = 'emotion_regulatory_events'
+    id = Column(String, primary_key=True)
+    symbol = Column(String, nullable=False, index=True)
+    known_at = Column(String, nullable=False)
+    payload = Column(JSON, nullable=False)
+
+
+class EmotionSessionValidation(Base):
+    __tablename__ = 'emotion_session_validations'
+    trade_date = Column(String, primary_key=True)
+    enabled = Column(Boolean, nullable=False, default=False)
+    created_at = Column(String, nullable=False)
+    heartbeat_at = Column(String, nullable=True)
+    payload = Column(JSON, nullable=False, default=dict)

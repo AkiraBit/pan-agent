@@ -33,6 +33,7 @@ from src.modules.market.api import (
     market,
     news,
     price_alerts,
+    review,
     quotes,
     stocks,
 )
@@ -44,6 +45,9 @@ from src.modules.research.api import (
     insights,
     recommendations,
 )
+from src.modules.short_term import api as short_term_api
+from src.modules.short_term import workspace_api as emotion_api
+from src.modules.short_term.service import emotion_runner
 from src.modules.strategy.api import factors
 from src.web.response import ResponseWrapperMiddleware
 
@@ -69,6 +73,9 @@ app.include_router(market.router, prefix="/api/market", tags=["market"])
 
 # 需要登录的路由
 protected = [Depends(get_current_user)]
+app.include_router(review.router, prefix="/api/market-review", tags=["market-review"], dependencies=protected)
+app.include_router(short_term_api.router, prefix="/api/short-term", tags=["short-term"], dependencies=protected)
+app.include_router(emotion_api.router, prefix="/api/short-term", tags=["emotion-workbench"], dependencies=protected)
 app.include_router(onboarding.router, prefix="/api/onboarding", tags=["onboarding"], dependencies=protected)
 app.include_router(
     stocks.router, prefix="/api/stocks", tags=["stocks"], dependencies=protected
@@ -191,7 +198,10 @@ app.include_router(notifications_api.router, prefix="/api/notifications", tags=[
 
 app.router.on_startup.append(assistant_task_runner.recover_pending)
 app.router.on_startup.append(context_export_runner.recover_pending)
+app.router.on_startup.append(emotion_runner.recover_pending)
+app.router.on_shutdown.append(emotion_runner.shutdown)
 app.router.on_shutdown.append(context_export_runner.shutdown)
+app.router.on_shutdown.append(short_term_api.shutdown)
 # PAT 管理(需登录):创建/列出/吊销 MCP 用的个人访问令牌
 app.include_router(
     pats.router, prefix="/api/pats", tags=["pats"], dependencies=protected

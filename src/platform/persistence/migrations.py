@@ -2238,6 +2238,70 @@ def _m139_retire_session_legacy(conn: Connection) -> None:
                      {"id": identity, "config": json.dumps(config, ensure_ascii=False)})
 
 
+def _m140_emotion_workbench(conn: Connection) -> None:
+    """Durable premarket publications, evidence, context and single-flight runs."""
+    statements = (
+        """CREATE TABLE IF NOT EXISTS emotion_workspaces (
+            id INTEGER PRIMARY KEY, revision INTEGER NOT NULL DEFAULT 0,
+            input_version INTEGER NOT NULL DEFAULT 0, current_publication_id VARCHAR,
+            settings JSON NOT NULL DEFAULT '{}')""",
+        """CREATE TABLE IF NOT EXISTS emotion_runs (
+            id VARCHAR PRIMARY KEY, workspace_id INTEGER NOT NULL REFERENCES emotion_workspaces(id),
+            request_key VARCHAR NOT NULL, status VARCHAR NOT NULL, target_trade_date VARCHAR NOT NULL,
+            created_at VARCHAR NOT NULL, finished_at VARCHAR, base_revision INTEGER NOT NULL,
+            input_version INTEGER NOT NULL, inputs JSON NOT NULL, facts JSON, model_label VARCHAR,
+            error_code VARCHAR, events JSON NOT NULL, publication_id VARCHAR,
+            CONSTRAINT uq_emotion_run_request UNIQUE(workspace_id, request_key))""",
+        """CREATE UNIQUE INDEX IF NOT EXISTS uq_emotion_run_active ON emotion_runs(workspace_id)
+            WHERE status IN ('queued', 'running')""",
+        """CREATE TABLE IF NOT EXISTS emotion_publications (
+            id VARCHAR PRIMARY KEY, workspace_id INTEGER NOT NULL REFERENCES emotion_workspaces(id),
+            run_id VARCHAR NOT NULL UNIQUE REFERENCES emotion_runs(id), revision INTEGER NOT NULL,
+            target_trade_date VARCHAR NOT NULL, published_at VARCHAR NOT NULL, payload JSON NOT NULL,
+            CONSTRAINT uq_emotion_revision UNIQUE(workspace_id, revision))""",
+        "CREATE INDEX IF NOT EXISTS ix_emotion_publications_target_trade_date ON emotion_publications(target_trade_date)",
+        """CREATE TABLE IF NOT EXISTS emotion_context_notes (
+            id VARCHAR PRIMARY KEY, workspace_id INTEGER NOT NULL REFERENCES emotion_workspaces(id),
+            content TEXT NOT NULL, source_url VARCHAR, created_at VARCHAR NOT NULL,
+            status VARCHAR NOT NULL DEFAULT 'open')""",
+        "CREATE INDEX IF NOT EXISTS ix_emotion_context_notes_workspace_id ON emotion_context_notes(workspace_id)",
+    )
+    for statement in statements:
+        conn.execute(text(statement))
+
+
+def _m141_emotion_lifecycle(conn: Connection) -> None:
+    statements = (
+        """CREATE TABLE IF NOT EXISTS emotion_monitors (
+            id VARCHAR PRIMARY KEY, publication_id VARCHAR NOT NULL UNIQUE REFERENCES emotion_publications(id),
+            target_trade_date VARCHAR NOT NULL, status VARCHAR NOT NULL, created_at VARCHAR NOT NULL,
+            last_sample_at VARCHAR, last_error VARCHAR, lease_token VARCHAR, lease_until VARCHAR)""",
+        "CREATE INDEX IF NOT EXISTS ix_emotion_monitors_target_trade_date ON emotion_monitors(target_trade_date)",
+        """CREATE TABLE IF NOT EXISTS emotion_observations (
+            id VARCHAR PRIMARY KEY, monitor_id VARCHAR NOT NULL REFERENCES emotion_monitors(id),
+            slot VARCHAR NOT NULL, observed_at VARCHAR NOT NULL, payload JSON NOT NULL,
+            CONSTRAINT uq_emotion_observation_slot UNIQUE(monitor_id, slot))""",
+        "CREATE INDEX IF NOT EXISTS ix_emotion_observations_monitor_id ON emotion_observations(monitor_id)",
+        """CREATE TABLE IF NOT EXISTS emotion_reviews (
+            id VARCHAR PRIMARY KEY, publication_id VARCHAR NOT NULL UNIQUE REFERENCES emotion_publications(id),
+            run_id VARCHAR NOT NULL UNIQUE REFERENCES emotion_runs(id), target_trade_date VARCHAR NOT NULL,
+            published_at VARCHAR NOT NULL, payload JSON NOT NULL)""",
+        "CREATE INDEX IF NOT EXISTS ix_emotion_reviews_target_trade_date ON emotion_reviews(target_trade_date)",
+        "CREATE TABLE IF NOT EXISTS emotion_source_settings (id INTEGER PRIMARY KEY, config JSON NOT NULL DEFAULT '{}')",
+    )
+    for statement in statements:
+        conn.execute(text(statement))
+
+
+def _m142_emotion_regulatory_validation(conn: Connection) -> None:
+    for statement in (
+        "CREATE TABLE IF NOT EXISTS emotion_regulatory_events (id VARCHAR PRIMARY KEY, symbol VARCHAR NOT NULL, known_at VARCHAR NOT NULL, payload JSON NOT NULL)",
+        "CREATE INDEX IF NOT EXISTS ix_emotion_regulatory_events_symbol ON emotion_regulatory_events(symbol)",
+        "CREATE TABLE IF NOT EXISTS emotion_session_validations (trade_date VARCHAR PRIMARY KEY, enabled BOOLEAN NOT NULL DEFAULT FALSE, created_at VARCHAR NOT NULL, heartbeat_at VARCHAR, payload JSON NOT NULL DEFAULT '{}')",
+    ):
+        conn.execute(text(statement))
+
+
 MIGRATIONS: tuple[Migration, ...] = (
     Migration(101, "agent_config_kind_and_visibility", _m101_agent_config_kind),
     Migration(102, "backfill_agent_kind_data", _m102_backfill_agent_kind),
@@ -2278,6 +2342,9 @@ MIGRATIONS: tuple[Migration, ...] = (
     Migration(137, "stock_asset_type", _m137_stock_asset_type),
     Migration(138, "investment_research_delivery", _m138_investment_research),
     Migration(139, "retire_session_legacy", _m139_retire_session_legacy),
+    Migration(140, "emotion_workbench", _m140_emotion_workbench),
+    Migration(141, "emotion_lifecycle", _m141_emotion_lifecycle),
+    Migration(142, "emotion_regulatory_validation", _m142_emotion_regulatory_validation),
 )
 
 

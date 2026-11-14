@@ -2,9 +2,11 @@ import { lazy } from 'react'
 
 export const pageLoaders = {
   login: () => import('@/pages/Login'),
-  dashboard: () => import('@/pages/Dashboard'),
+  dashboard: () => import('@/pages/MarketReview'),
+  workspace: () => import('@/pages/Dashboard'),
   gettingStarted: () => import('@/pages/GettingStarted'),
   stocks: () => import('@/pages/Stocks'),
+  shortTerm: () => import('@/pages/EmotionWorkbench'),
   opportunities: () => import('@/pages/Opportunities'),
   paperTrading: () => import('@/pages/PaperTrading'),
   assistant: () => import('@/pages/Assistant'),
@@ -22,8 +24,10 @@ export type RouteKey = keyof typeof pageLoaders
 export const routePages = {
   LoginPage: lazy(pageLoaders.login),
   DashboardPage: lazy(pageLoaders.dashboard),
+  WorkspacePage: lazy(pageLoaders.workspace),
   GettingStartedPage: lazy(pageLoaders.gettingStarted),
   StocksPage: lazy(pageLoaders.stocks),
+  ShortTermPage: lazy(pageLoaders.shortTerm),
   OpportunitiesPage: lazy(pageLoaders.opportunities),
   PaperTradingPage: lazy(pageLoaders.paperTrading),
   AssistantPage: lazy(pageLoaders.assistant),
@@ -38,9 +42,11 @@ export const routePages = {
 
 const routeMatchers: Array<{ key: RouteKey; matches: (pathname: string) => boolean }> = [
   { key: 'login', matches: pathname => pathname === '/login' },
-  { key: 'dashboard', matches: pathname => pathname === '/' },
+  { key: 'dashboard', matches: pathname => pathname === '/' || pathname === '/limit-up' },
+  { key: 'workspace', matches: pathname => pathname === '/workspace' },
   { key: 'gettingStarted', matches: pathname => pathname === '/getting-started' },
   { key: 'stocks', matches: pathname => pathname === '/portfolio' },
+  { key: 'shortTerm', matches: pathname => pathname === '/short-term' || pathname.startsWith('/short-term/') },
   { key: 'opportunities', matches: pathname => pathname === '/opportunities' },
   { key: 'paperTrading', matches: pathname => pathname === '/paper-trading' },
   { key: 'assistant', matches: pathname => pathname === '/assistant' || pathname.startsWith('/assistant/') },

@@ -1,8 +1,10 @@
 export const navigation = {
   items: {
+    workspace: '工作台',
     gettingStarted: '引导中心',
     home: '首页',
     portfolio: '持仓',
+    shortTerm: '情绪策略',
     opportunities: '机会',
     paperTrading: '模拟盘',
     assistant: '助手',

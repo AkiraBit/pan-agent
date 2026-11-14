@@ -7,8 +7,10 @@ describe('route page loaders', () => {
     expect(Object.keys(pageLoaders)).toEqual([
       'login',
       'dashboard',
+      'workspace',
       'gettingStarted',
       'stocks',
+      'shortTerm',
       'opportunities',
       'paperTrading',
       'assistant',
@@ -25,6 +27,16 @@ describe('route page loaders', () => {
   it('resolves both assistant routes to the same page loader', () => {
     expect(resolveRouteKey('/assistant')).toBe('assistant')
     expect(resolveRouteKey('/assistant/123')).toBe('assistant')
+  })
+
+  it('keeps the original dashboard separate from market panels', () => {
+    expect(resolveRouteKey('/')).toBe('dashboard')
+    expect(resolveRouteKey('/limit-up')).toBe('dashboard')
+    expect(resolveRouteKey('/workspace')).toBe('workspace')
+  })
+
+  it('resolves the short-term guide', () => {
+    expect(resolveRouteKey('/short-term')).toBe('shortTerm')
   })
 
   it('does not preload an unknown route', () => {

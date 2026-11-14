@@ -10,6 +10,7 @@ import { UserAvatar } from '@/components/UserAvatar'
 import { Input } from '@panwatch/base-ui/components/ui/input'
 import { Label } from '@panwatch/base-ui/components/ui/label'
 import { Button } from '@panwatch/base-ui/components/ui/button'
+import { Badge } from '@panwatch/base-ui/components/ui/badge'
 import { Switch } from '@panwatch/base-ui/components/ui/switch'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@panwatch/base-ui/components/ui/dialog'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@panwatch/base-ui/components/ui/select'
@@ -792,7 +793,7 @@ export default function SettingsPage() {
 
       <div className="mt-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* AI Services + Models Section */}
-        <section id="sec-ai" className="card p-4 md:p-6 lg:col-span-7">
+        <section id="sec-ai" className="card min-w-0 p-4 md:p-6 lg:col-span-7">
           <div className="flex items-start justify-between mb-4 md:mb-5 gap-3">
             <div>
               <h3 className="text-[12px] md:text-[13px] font-semibold text-foreground">{configT('configuration:settingsPage.ai.title')}</h3>
@@ -837,16 +838,28 @@ export default function SettingsPage() {
                   </div>
                   {/* Models under this service */}
                   {svc.models.length > 0 && (
-                    <div className="px-3.5 pb-3.5 space-y-1.5">
+                    <div
+                      className="max-h-56 overflow-y-auto scrollbar overscroll-contain px-3.5 pb-3.5 space-y-1.5 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+                      role="region"
+                      aria-label={`${svc.name} ${configT('configuration:settingsPage.ai.addModel')}`}
+                      tabIndex={0}
+                    >
                       {svc.models.map(m => (
-                        <div key={m.id} className="flex items-center justify-between px-3 py-2 rounded-lg bg-background/60">
-                          <div className="flex items-center gap-2">
-                            {m.is_default && <Star className="w-3 h-3 text-amber-500" />}
-                            <Cpu className="w-3 h-3 text-muted-foreground" />
-                            <span className="text-[12px] font-medium text-foreground">{m.name}</span>
-                            <span className="text-[11px] text-muted-foreground font-mono">{m.model}</span>
+                        <div key={m.id} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 px-3 py-2 rounded-lg bg-background/60">
+                          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1">
+                            <div className="flex min-w-0 max-w-full items-center gap-2">
+                              <Cpu className="w-3 h-3 shrink-0 text-muted-foreground" aria-hidden="true" />
+                              <span className="truncate text-[12px] font-medium text-foreground" title={m.name}>{m.name}</span>
+                              {m.is_default && (
+                                <Badge className="shrink-0 gap-1 rounded-full bg-primary px-2 py-0.5 text-[10px] font-semibold text-primary-foreground">
+                                  <Star className="h-3 w-3 fill-current" aria-hidden="true" />
+                                  {configT('configuration:settingsPage.dialogs.default')}
+                                </Badge>
+                              )}
+                            </div>
+                            <span className="truncate text-[11px] text-muted-foreground font-mono" title={m.model}>{m.model}</span>
                           </div>
-                          <div className="flex items-center gap-0.5">
+                          <div className="flex shrink-0 items-center gap-0.5">
                             <Button
                               variant="ghost" size="icon" className="h-6 w-6"
                               data-tour={m.is_default ? 'test-default-model' : undefined}

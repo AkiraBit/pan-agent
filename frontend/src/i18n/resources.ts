@@ -1,3 +1,9 @@
+import { emotion as zhEmotion } from './locales/zh-CN/emotion'
+import { emotion as enEmotion } from './locales/en-US/emotion'
+import { marketReview as zhMarketReview } from './locales/zh-CN/marketReview'
+import { marketReview as enMarketReview } from './locales/en-US/marketReview'
+import { shortTerm as enShortTerm } from './locales/en-US/shortTerm'
+import { shortTerm as zhShortTerm } from './locales/zh-CN/shortTerm'
 import { auth as enAuth } from './locales/en-US/auth'
 import { common as enCommon } from './locales/en-US/common'
 import { configuration as enConfiguration } from './locales/en-US/configuration'
@@ -13,6 +19,9 @@ import { bizUi as zhBizUi } from './locales/zh-CN/biz-ui'
 import type { TranslationShape } from './resource-types'
 
 export const zhCN = {
+  emotion: zhEmotion,
+  marketReview: zhMarketReview,
+  shortTerm: zhShortTerm,
   common: zhCommon,
   configuration: zhConfiguration,
   auth: zhAuth,
@@ -22,6 +31,9 @@ export const zhCN = {
 } as const
 
 export const enUS = {
+  emotion: enEmotion,
+  marketReview: enMarketReview,
+  shortTerm: enShortTerm,
   common: enCommon,
   configuration: enConfiguration,
   auth: enAuth,

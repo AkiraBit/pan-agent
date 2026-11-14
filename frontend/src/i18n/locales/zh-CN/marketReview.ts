@@ -1,0 +1,30 @@
+export const marketReview = {
+  fiveMinute: '分钟源暂不可用，当前显示腾讯5分钟走势。',
+
+  minuteMissing: '分时暂缺，显示最新成交额快照',
+  method_etf_snapshot: '16只宽基ETF当日真实成交额快照；分时来源不可用。',
+
+  baselineMissing: '20日同期成交额基准暂缺',
+  reasonMissing: '独立来源未提供涨停原因；行业归类不代表涨停原因。',
+  method_eastmoney_pool: '东方财富涨停／炸板池；新浪日线校验（腾讯备用）。按行业分组，晋级由昨日涨停池计算。部分 ST、科创板和新股可能不在池内。',
+  method_etf_turnover: '16只宽基ETF真实累计成交额差分，单位亿元；仅汇总共同更新时间。',
+  method_cffex_top20: '中金所各合约前20名中信期货（代客）持仓合计；净增减＝多单增减－空单增减。',
+  method_lhb_disclosure: '展示营业部实名及东方财富披露汇总，不使用游资别名；机构按股票去重，优先单日榜。',
+  method_calendar_stars: '百度财经日历当日二星及以上事件。',
+  method_sector_etfs: '以公开ETF代表行业与主题表现（悬停可见代码），不是看盘吧自定义板块；商品为期货报价。',
+
+  review: '复盘', limit: '涨停', workspace: '工作台', previous: '前一交易日', next: '后一交易日', latest: '最新交易日', date: '交易日期', refresh: '刷新行情',
+  loading: '正在加载行情…', unavailable: '行情暂时不可用', retry: '重试', stale: '来源更新失败，正在展示上次成功数据', source: '数据来源：', fetched: '获取时间', empty: '暂无行情数据', noMatch: '没有匹配的股票', partial: '部分行情暂缺',
+  highest: '最高', boards: '{{count}}板', stocks: '{{count}}只', families: '{{count}}家', sealed: '涨停', sealRate: '封板率', opened: '炸板', consecutive: '连板',
+  history: '近10日涨停家数', most: '{{name}} {{count}} 家最多', ladder: '连板天梯', fullLadder: '完整天梯', promotion: '晋级', first: '首板', more: '还有 {{count}} 只', all: '全部',
+  search: '搜索股票、代码或行业', clear: '清除搜索', share: '导出图片', sharing: '正在导出…', shareError: '图片导出失败，请重试', close: '关闭',
+  allLimits: '全部涨停', wall: '全景', details: '明细', view: '涨停视图', includeOpened: '含炸板', onlySealed: '仅涨停', onlyOpened: '仅炸板', status: '状态', group: '行业',
+  stock: '股票', price: '现价', change: '涨跌幅', board: '连板', firstSeal: '首封', lastSeal: '最后封板', opens: '开板次数', reason: '涨停原因', amount: '成交额', turnover: '换手率', cap: '流通市值', sealAmount: '封单额',
+  oneWord: '一字板', resealed: '回封', fallen: '断板', waiting: '待晋级', lhbBadge: '榜', lhbNet: '龙虎榜净买', minute: '分时走势', noLine: '暂无分时数据', quoteAt: '行情时间', themeAt: '题材日期', stockDetail: '股票行情详情',
+  overseas: '美股行业与主题 ETF', allSectors: '全部板块', regular: '收盘', extended: '盘后／夜盘', updated: '更新', topics: '热门行业',
+  etf: '宽基ETF分钟成交', etfTotal: '16只宽基ETF合计', peak: '最放量', times: '{{value}}倍', yi: '亿', wan: '万', units: '手', detail: '详情',
+  futures: '中信期货', netChange: '净多单增减', futuresHistory: '近10日净多单增减', net: '净持仓', long: '多单', short: '空单',
+  hotmoney: '营业部净买', lhb: '龙虎榜', institution: '机构净买', connect: '北向', listed: '上榜', calendar: '财经日历',
+  footer: '数据仅供参考 · 各模块按披露日期展示', external: '在来源网站查看',
+  metric: '{{name}}：{{value}}', minuteValue: '{{time}} · {{value}} 亿', signed: '{{value}}',
+} as const

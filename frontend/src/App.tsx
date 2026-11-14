@@ -21,8 +21,10 @@ import { NotificationBell, NotificationProvider } from '@/components/notificatio
 const {
   LoginPage,
   DashboardPage,
+  WorkspacePage,
   GettingStartedPage,
   OpportunitiesPage,
+  ShortTermPage,
   StocksPage,
   AgentsPage,
   SettingsPage,
@@ -37,9 +39,11 @@ const {
 
 const NAV_ITEMS: Array<{ to: string; icon: typeof LayoutDashboard; labelKey: NavigationItemKey }> = [
   { to: '/', icon: LayoutDashboard, labelKey: 'home' },
+  { to: '/workspace', icon: Activity, labelKey: 'workspace' },
   { to: '/portfolio', icon: List, labelKey: 'portfolio' },
   { to: '/assistant', icon: MessageCircle, labelKey: 'assistant' },
   { to: '/opportunities', icon: Sparkles, labelKey: 'opportunities' },
+  { to: '/short-term', icon: Compass, labelKey: 'shortTerm' },
   { to: '/paper-trading', icon: Activity, labelKey: 'paperTrading' },
   { to: '/alerts', icon: BellRing, labelKey: 'alerts' },
   { to: '/agents', icon: Bot, labelKey: 'agents' },
@@ -98,8 +102,8 @@ function App() {
     icon: item.icon,
     label: t(`navigation:items.${item.labelKey}`),
   }))
-  const desktopPrimaryNavItems = navItems.slice(0, 5)
-  const desktopMoreNavItems = navItems.slice(5)
+  const desktopPrimaryNavItems = navItems.slice(0, 6)
+  const desktopMoreNavItems = navItems.slice(6)
   const mobilePrimaryNavItems = navItems.slice(0, 5)
   const mobileMoreNavItems = navItems.slice(5)
 
@@ -168,11 +172,12 @@ function App() {
             {/* Nav Links */}
             <nav className="flex items-center gap-1">
               {desktopPrimaryNavItems.map(({ to, icon: Icon, label }) => {
-                const isActive = to === '/' ? location.pathname === '/' : location.pathname.startsWith(to)
+                const isActive = to === '/' ? (location.pathname === '/' || location.pathname === '/limit-up') : location.pathname.startsWith(to)
                 return (
                   <NavLink
                     key={to}
                     to={to}
+                    aria-label={label}
                     className="relative"
                     onMouseEnter={() => preloadRoute(to)}
                     onFocus={() => preloadRoute(to)}
@@ -192,7 +197,7 @@ function App() {
                       }`}
                     >
                       <Icon className={`w-4 h-4 ${isActive ? 'text-primary' : ''}`} />
-                      {label}
+                      <span className="hidden xl:inline">{label}</span>
                     </span>
                   </NavLink>
                 )
@@ -270,7 +275,7 @@ function App() {
       <nav className="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-card border-t border-border px-2 pb-[env(safe-area-inset-bottom)]">
         <div className="flex items-center justify-around h-14">
           {mobilePrimaryNavItems.map(({ to, icon: Icon, label }) => {
-            const isActive = to === '/' ? location.pathname === '/' : location.pathname.startsWith(to)
+            const isActive = to === '/' ? (location.pathname === '/' || location.pathname === '/limit-up') : location.pathname.startsWith(to)
             return (
               <NavLink
                 key={to}
@@ -302,7 +307,10 @@ function App() {
           <Suspense fallback={<RouteLoadingFallback />}>
             <Routes>
               <Route path="/" element={<DashboardPage />} />
+              <Route path="/limit-up" element={<DashboardPage />} />
+              <Route path="/workspace" element={<WorkspacePage />} />
               <Route path="/getting-started" element={<GettingStartedPage />} />
+              <Route path="/short-term/*" element={<ShortTermPage />} />
               <Route path="/opportunities" element={<OpportunitiesPage />} />
               <Route path="/portfolio" element={<StocksPage />} />
               <Route path="/agents" element={<AgentsPage />} />
