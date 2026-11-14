@@ -1,5 +1,11 @@
 export const configuration = {
   skills: {
+    masterSwitch: '长桥技能总开关', allEnabled: '全部启用 · {{total}} 个', partlyEnabled: '部分启用 · {{enabled}} / {{total}} 个', allDisabled: '全部停用 · {{total}} 个可启用',
+    masterHint: '开启可启用当前已适配的 {{count}} 个技能，关闭可全部停用。仍可使用各技能的独立开关，实际使用需长桥 MCP 已授权并启用。', disableAll: '全部停用',
+    supportReasonTitle: '为什么有未支持的技能？',
+    supportReasonTools: '技能提供分析流程，执行时还需要对应的数据工具或计算能力。PanWatch 当前接入长桥的 7 项只读查询：报价、证券资料、K 线、资金流向、资金分布、账户余额和股票持仓。',
+    supportReasonMissing: '新闻、期权、完整财报、机构研究等数据接口，以及量化计算、回测和自选提醒写入尚未接入，所以相关技能暂时只能查看原文。部分支持的技能也只会使用已适配的能力。',
+    supportReasonAuth: '这里的未支持状态表示 PanWatch 尚未适配。完成账户授权后，已适配技能仍受长桥账户数据权限约束；授权不会自动补齐未接入的能力。',
     sources: '技能来源', providerTitle: '长桥', skillCount: '{{count}} 个技能', enabledCount: '已启用 {{count}} 个',
     providerDescription: '长桥官方技能集合，涵盖行情、技术分析、基本面与账户等领域。各项技能可独立管理，当前支持范围见详情。',
     includedSkills: '包含的技能', expandHint: '点击技能查看详情', enableNamed: '启用技能：{{name}}',

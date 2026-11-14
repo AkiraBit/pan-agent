@@ -95,6 +95,19 @@ def configure(db: Session, enabled: bool, skill_id: str = SKILL_ID) -> dict:
     return status(db, skill_id)
 
 
+def configure_supported(db: Session, enabled: bool) -> list[dict]:
+    """Update all adapted Longbridge skills in one transaction, preserving MCP authorization."""
+    values = [{"key": f"builtin_skill.{skill_id}.enabled", "value": "true" if enabled else "false"}
+              for skill_id, item in catalog().items() if item["capabilities"]]
+    if values:
+        statement = insert(AppSettings).values(values)
+        db.execute(statement.on_conflict_do_update(
+            index_elements=[AppSettings.key], set_={"value": statement.excluded.value}))
+        db.commit()
+        db.expire_all()
+    return list_skills(db)
+
+
 def instructions(skill_id: str = SKILL_ID) -> str:
     item = definition(skill_id)
     if not item["capabilities"]:

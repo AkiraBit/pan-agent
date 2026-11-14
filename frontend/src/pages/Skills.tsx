@@ -98,6 +98,7 @@ export default function SkillsPage() {
   const [items, setItems] = useState<BuiltinSkill[]>([])
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const [showSupportReason, setShowSupportReason] = useState(false)
   const label = (key: SkillLabel) => t(`configuration:skills.${key}`)
   const local = (value: Localized) => value[i18n.language.startsWith('en') ? 1 : 0]
   const selectedId = search.get('skill')
@@ -125,7 +126,22 @@ export default function SkillsPage() {
     finally { setBusy(false) }
   }
   const status = (entry: BuiltinSkill) => label(entry.support === 'unsupported' ? 'unsupported' : !entry.enabled ? 'disabled' : entry.available ? 'ready' : 'waiting')
-  const partialCount = items.filter(entry => entry.support === 'partial').length
+  const supported = items.filter(entry => entry.support === 'partial')
+  const partialCount = supported.length
+  const enabledCount = supported.filter(entry => entry.enabled).length
+  const allEnabled = partialCount > 0 && enabledCount === partialCount
+  const partlyEnabled = enabledCount > 0 && !allEnabled
+  const configureAll = async (enabled: boolean) => {
+    setBusy(true); setError('')
+    try {
+      const result = await fetchAPI<{ items: BuiltinSkill[] }>('/builtin-skills/providers/longbridge', {
+        method: 'PUT', body: JSON.stringify({ enabled }),
+      })
+      setItems(result.items)
+      toast(label('saved'), 'success')
+    } catch (e) { setError(e instanceof Error ? e.message : label('failed')) }
+    finally { setBusy(false) }
+  }
   return <div className="space-y-6">
     {error && <div role="alert" className="rounded-xl border border-destructive/30 p-4 text-sm text-destructive space-y-3">
       <p>{error}</p><Button variant="secondary" size="sm" onClick={() => void load()}>{label('retry')}</Button>
@@ -149,7 +165,25 @@ export default function SkillsPage() {
         <p className="text-sm text-muted-foreground leading-relaxed">{label('providerDescription')}</p>
         <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-accent/40 p-4 text-xs text-muted-foreground">
           <p>{t('configuration:skills.catalogCount', { count: items.length, partial: partialCount, unsupported: items.length - partialCount })}</p>
-          <p>{t('configuration:skills.enabledCount', { count: items.filter(entry => entry.enabled).length })}</p>
+          <p>{t('configuration:skills.enabledCount', { count: enabledCount })}</p>
+        </div>
+        <div className="rounded-xl border border-border/60 p-4 space-y-3">
+          <div className="flex items-center justify-between gap-4">
+            <div className="space-y-1"><label htmlFor="longbridge-skills-enabled" className="text-sm font-medium">{label('masterSwitch')}</label>
+              <p id="longbridge-skills-state" aria-live="polite" className="text-xs text-muted-foreground">{t(`configuration:skills.${allEnabled ? 'allEnabled' : partlyEnabled ? 'partlyEnabled' : 'allDisabled'}`, { enabled: enabledCount, total: partialCount })}</p>
+            </div>
+            <Switch id="longbridge-skills-enabled" aria-describedby="longbridge-skills-state longbridge-skills-hint" checked={allEnabled} disabled={busy || !partialCount} onCheckedChange={value => void configureAll(value)} />
+          </div>
+          <p id="longbridge-skills-hint" className="text-xs text-muted-foreground leading-relaxed">{t('configuration:skills.masterHint', { count: partialCount })}</p>
+          {partlyEnabled && <Button variant="secondary" size="sm" disabled={busy} onClick={() => void configureAll(false)}>{label('disableAll')}</Button>}
+        </div>
+        <div className="space-y-3">
+          <Button variant="ghost" size="sm" className="h-auto max-w-full px-0 text-xs text-muted-foreground whitespace-normal text-left" aria-expanded={showSupportReason} aria-controls="skills-support-reason" onClick={() => setShowSupportReason(!showSupportReason)}>
+            <ChevronDown className={`w-4 h-4 mr-1 shrink-0 ${showSupportReason ? '' : '-rotate-90'}`} />{label('supportReasonTitle')}
+          </Button>
+          {showSupportReason && <div id="skills-support-reason" className="rounded-xl bg-accent/40 p-4 space-y-2 text-xs text-muted-foreground leading-relaxed">
+            <p>{label('supportReasonTools')}</p><p>{label('supportReasonMissing')}</p><p>{label('supportReasonAuth')}</p>
+          </div>}
         </div>
         <div className="space-y-3">
           <div className="flex items-center justify-between gap-3"><h3 className="text-sm font-medium">{label('includedSkills')}</h3><p className="text-xs text-muted-foreground">{label('expandHint')}</p></div>

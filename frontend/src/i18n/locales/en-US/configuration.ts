@@ -3,6 +3,12 @@ import { configuration as zhConfiguration } from '../zh-CN/configuration'
 
 export const configuration = {
   skills: {
+    masterSwitch: 'Longbridge skills master switch', allEnabled: 'All enabled · {{total}} skills', partlyEnabled: 'Partially enabled · {{enabled}} / {{total}}', allDisabled: 'All disabled · {{total}} supported',
+    masterHint: 'Turn on to enable all {{count}} adapted skills, or turn off to disable them all. Individual switches remain available. Using skills requires an authorized and enabled Longbridge MCP connection.', disableAll: 'Disable all',
+    supportReasonTitle: 'Why are some skills unsupported?',
+    supportReasonTools: 'Skills provide workflows, which also require data tools or computation. PanWatch currently connects seven read-only Longbridge queries: quotes, security information, candles, capital flow, capital distribution, cash balances and stock positions.',
+    supportReasonMissing: 'News, options, full financial statements and institutional research data, as well as quant computation, backtesting and watchlist or alert writes, are not connected yet. These skills can be viewed as source material. Partially supported skills use only their adapted capabilities.',
+    supportReasonAuth: 'Unsupported means PanWatch has not adapted the capability yet. Adapted skills also depend on the authorized account’s data entitlements. Authorization does not add capabilities that are not connected.',
     sources: 'Skill sources', providerTitle: 'Longbridge', skillCount: '{{count}} skills', enabledCount: '{{count}} enabled',
     providerDescription: 'Official Longbridge skills for market data, technical analysis, fundamentals, accounts and more. Manage each skill independently and view its supported scope.',
     includedSkills: 'Included skills', expandHint: 'Select a skill for details', enableNamed: 'Enable skill: {{name}}',

@@ -25,6 +25,11 @@ def get_source(skill_id: str):
     return service.source(skill_id)
 
 
+@router.put("/providers/longbridge")
+def configure_longbridge(body: EnabledBody, db: Session = Depends(get_db)):
+    return {"items": service.configure_supported(db, body.enabled)}
+
+
 @router.put("/{skill_id}")
 def configure(skill_id: str, body: EnabledBody, db: Session = Depends(get_db)):
     return service.configure(db, body.enabled, skill_id)

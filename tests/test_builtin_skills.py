@@ -183,3 +183,72 @@ def test_independent_skill_settings_and_actual_discovered_tool_requirements(setu
     client.put(BASE + '/longbridge-technical', json={'enabled': False})
     items = {item['id']: item for item in client.get(BASE).json()['data']['items']}
     assert items['longbridge-market-data']['enabled'] and not items['longbridge-technical']['enabled']
+
+
+def test_master_switch_updates_only_supported_skills_and_keeps_individual_controls(setup):
+    client, engine, provider, _ = setup
+    finish(client); client.post(PREFIX + '/test'); client.put(PREFIX, json={'enabled': True})
+    before = client.get('/api/mcp-connections').json()['data']
+    provider.calls.clear()
+    with Session(engine) as db:
+        db.add(AppSettings(key='unrelated', value='preserve')); db.commit()
+    response = client.put(BASE + '/providers/longbridge', json={'enabled': True})
+    assert response.status_code == 200
+    items = response.json()['data']['items']
+    assert sum(item['enabled'] for item in items) == 5
+    assert all(item['enabled'] == (item['support'] == 'partial') for item in items)
+    with Session(engine) as db:
+        assert db.query(AppSettings).filter(AppSettings.key.like('builtin_skill.%')).count() == 5
+        registry = build_panwatch_tool_registry(db)
+        spec = next(tool for tool in registry.registered_tools() if tool.name == 'load_builtin_skill')
+        assert len(spec.input_schema['properties']['skill_id']['enum']) == 5
+    client.put(BASE + '/longbridge-technical', json={'enabled': False})
+    items = client.get(BASE).json()['data']['items']
+    assert sum(item['enabled'] for item in items) == 4
+    assert not next(item for item in items if item['id'] == 'longbridge-technical')['enabled']
+    for _ in range(2):
+        response = client.put(BASE + '/providers/longbridge', json={'enabled': False})
+        assert not any(item['enabled'] for item in response.json()['data']['items'])
+    with Session(engine) as db:
+        assert db.query(AppSettings).filter(AppSettings.key.like('builtin_skill.%')).count() == 5
+        assert db.query(AppSettings).filter_by(key='unrelated').one().value == 'preserve'
+        assert 'load_builtin_skill' not in {tool.name for tool in build_panwatch_tool_registry(db).registered_tools()}
+    request = RunRequest(run_id='bulk-disabled', messages=[ModelMessage(role='user', content='查询行情')])
+    assert not asyncio.run(registry.execute('load_builtin_skill', request, {'skill_id': 'longbridge-market-data'})).ok
+    assert client.get('/api/mcp-connections').json()['data'] == before
+    assert not provider.calls
+
+
+def test_master_switch_requires_login_and_stores_preferences_without_granting_access(setup):
+    client, _, provider, _ = setup
+    path = BASE + '/providers/longbridge'
+    for body in [{'enabled': 'true'}, {'enabled': True, 'ids': ['longbridge-quant']}]:
+        assert client.put(path, json=body).status_code == 422
+    assert client.put(BASE + '/providers/custom', json={'enabled': True}).status_code == 404
+    items = client.put(path, json={'enabled': True}).json()['data']['items']
+    assert sum(item['enabled'] for item in items) == 5
+    assert not any(item['available'] for item in items)
+    assert all(item['connection_status'] == 'authorization_required' for item in items)
+    assert not provider.calls
+    client.headers.pop('Authorization')
+    assert client.put(path, json={'enabled': False}).status_code == 401
+
+
+def test_master_switch_database_failure_does_not_partially_save(setup):
+    import pytest
+    from sqlalchemy import text
+    from sqlalchemy.exc import IntegrityError
+
+    client, engine, _, _ = setup
+    client.put(BASE + '/longbridge', json={'enabled': True})
+    with Session(engine) as db:
+        db.execute(text("""CREATE TRIGGER reject_skill_save BEFORE INSERT ON app_settings
+            WHEN NEW.key = 'builtin_skill.longbridge-portfolio.enabled'
+            BEGIN SELECT RAISE(ABORT, 'synthetic write failure'); END"""))
+        db.commit()
+        with pytest.raises(IntegrityError):
+            skills.configure_supported(db, False)
+        db.rollback()
+    with Session(engine) as db:
+        assert db.query(AppSettings).filter(AppSettings.key.like('builtin_skill.%')).count() == 1
+        assert skills.status(db)['enabled']
