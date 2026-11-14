@@ -1,7 +1,10 @@
 export const configuration = {
   skills: {
+    sources: '技能来源', providerTitle: '长桥', skillCount: '{{count}} 个技能', enabledCount: '已启用 {{count}} 个',
+    providerDescription: '长桥官方技能集合，涵盖行情、技术分析、基本面与账户等领域。各项技能可独立管理，当前支持范围见详情。',
+    includedSkills: '包含的技能', expandHint: '点击技能查看详情', enableNamed: '启用技能：{{name}}',
     mcpTab: 'MCP', providerName: 'Longbridge', tabsLabel: '集成类型', tab: '技能', services: '内置技能',
-    builtin: '长桥官方技能', builtinHint: '每个技能独立启用，可用范围以右侧能力明细为准。',
+    builtin: '长桥官方技能', builtinHint: '按来源归类，选择后查看其中的技能。',
     catalogCount: '{{count}} 个技能 · {{partial}} 个部分支持 · {{unsupported}} 个尚未支持',
     provider: '官方来源', version: '适配版本', sourceVersion: '官方来源版本', adapted: 'PanWatch 适配版', notAdapted: '尚未适配',
     enable: '启用技能', enableHint: '助手按需读取已启用技能。开关对后续技能加载生效。',

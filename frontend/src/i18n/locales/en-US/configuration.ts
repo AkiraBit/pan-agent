@@ -3,8 +3,11 @@ import { configuration as zhConfiguration } from '../zh-CN/configuration'
 
 export const configuration = {
   skills: {
+    sources: 'Skill sources', providerTitle: 'Longbridge', skillCount: '{{count}} skills', enabledCount: '{{count}} enabled',
+    providerDescription: 'Official Longbridge skills for market data, technical analysis, fundamentals, accounts and more. Manage each skill independently and view its supported scope.',
+    includedSkills: 'Included skills', expandHint: 'Select a skill for details', enableNamed: 'Enable skill: {{name}}',
     mcpTab: 'MCP', providerName: 'Longbridge', tabsLabel: 'Integration type', tab: 'Skills', services: 'Built-in skills',
-    builtin: 'Official Longbridge skill', builtinHint: 'Enable skills individually. See each skill’s supported capabilities for its scope.',
+    builtin: 'Official Longbridge skill', builtinHint: 'Skills are grouped by source. Select a source to explore its skills.',
     catalogCount: '{{count}} skills · {{partial}} partially supported · {{unsupported}} unsupported',
     provider: 'Official source', version: 'Adaptation version', sourceVersion: 'Official source version', adapted: 'PanWatch adaptation', notAdapted: 'Not adapted yet',
     enable: 'Enable skill', enableHint: 'The assistant loads enabled skills as needed. Changes apply to subsequent loads.',

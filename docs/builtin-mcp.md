@@ -20,7 +20,7 @@ PanWatch ships a fixed Longbridge connector. The account menu opens `/integratio
 
 ## 内置技能
 
-**MCP & 技能 → 技能** 内置长桥全部 **13 个技能**，沿用左右分栏。左侧列出每项技能的支持与启用状态，右侧展示官方图标、适配版本、官方版本或来源提交、已适配与尚未支持的能力、分析流程、示例及官方原文。`/integrations/mcp?tab=skills&skill=longbridge-market-data` 可直接定位；刷新、浏览器返回保留选择。
+**MCP & 技能 → 技能** 内置长桥全部 **13 个技能**，沿用左右分栏。左侧按来源归并，仅展示一个长桥入口；右侧展示该来源包含的 13 个技能、支持状态和独立开关。点击技能展开详情，可查看适配版本、官方版本或来源提交、已适配与尚未支持的能力、分析流程、示例及官方原文。`/integrations/mcp?tab=skills&skill=longbridge-market-data` 可直接定位；刷新、浏览器返回保留选择。
 
 | 状态 | 技能 | 本期适配范围 |
 | --- | --- | --- |

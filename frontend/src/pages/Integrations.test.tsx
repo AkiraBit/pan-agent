@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { MemoryRouter, useLocation, useNavigate } from 'react-router-dom'
 import { ConfirmProvider } from '@panwatch/base-ui/components/ui/confirm-dialog'
@@ -50,7 +50,7 @@ describe('MCP and Skills', () => {
     expect(screen.getByRole('heading', { name: 'MCP & 技能' })).toBeTruthy()
     await screen.findByText('demo@example.com(Demo)')
     fireEvent.mouseDown(screen.getByRole('tab', { name: '技能' }), { button: 0, ctrlKey: false })
-    await screen.findByRole('heading', { name: '长桥总览' })
+    await screen.findByRole('button', { name: '长桥总览' })
     expect(screen.getByTestId('location').textContent).toBe('/integrations/mcp?tab=skills')
     expect(screen.queryByText('demo@example.com(Demo)')).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: 'Back' }))
@@ -58,9 +58,30 @@ describe('MCP and Skills', () => {
     expect(screen.getByRole('tab', { name: 'MCP' }).getAttribute('aria-selected')).toBe('true')
   })
 
-  it('opens the skills tab directly and shows provenance, supported capabilities and examples', async () => {
+  it('groups the 13 skills under one source and expands details in the source panel', async () => {
     mount('/integrations/mcp?tab=skills')
-    await screen.findByRole('heading', { name: '长桥总览' })
+    const sourceNav = await screen.findByRole('navigation', { name: '技能来源' })
+    await screen.findByRole('heading', { name: '长桥' })
+    expect(within(sourceNav).getAllByRole('link')).toHaveLength(1)
+    expect(within(sourceNav).getByRole('link', { name: /长桥/ }).getAttribute('href')).toBe('#longbridge-skills')
+    expect(within(sourceNav).queryByRole('button', { name: '行情数据' })).toBeNull()
+    const group = screen.getByRole('region', { name: '长桥' })
+    expect(within(group).getAllByRole('switch')).toHaveLength(13)
+    const row = within(group).getByRole('button', { name: '行情数据' })
+    expect(row.getAttribute('aria-expanded')).toBe('false')
+    expect(screen.queryByRole('button', { name: '查看官方原文' })).toBeNull()
+    fireEvent.click(row)
+    expect(row.getAttribute('aria-expanded')).toBe('true')
+    expect(screen.getByTestId('location').textContent).toContain('skill=longbridge-market-data')
+    expect(screen.getByRole('button', { name: '查看官方原文' })).toBeTruthy()
+    fireEvent.click(row)
+    expect(row.getAttribute('aria-expanded')).toBe('false')
+    expect(screen.getByTestId('location').textContent).toBe('/integrations/mcp?tab=skills')
+  })
+
+  it('opens the skills tab directly and shows provenance, supported capabilities and examples', async () => {
+    mount('/integrations/mcp?tab=skills&skill=longbridge')
+    await screen.findByRole('button', { name: '长桥总览' })
     expect(screen.getByRole('tab', { name: '技能' }).getAttribute('aria-selected')).toBe('true')
     expect(screen.getByText('1.0.0')).toBeTruthy()
     expect(screen.getByRole('link', { name: '38900e9' }).getAttribute('href')).toBe(skill.source_url)
@@ -74,21 +95,21 @@ describe('MCP and Skills', () => {
 
   it('lists all 13 skills and restores selection from the URL, including unsupported capabilities', async () => {
     mount('/integrations/mcp?tab=skills&skill=longbridge-derivatives')
-    await screen.findByRole('heading', { name: '期权与窝轮' })
+    await screen.findByRole('region', { name: '期权与窝轮' })
     expect(screen.getByText('13 个技能 · 5 个部分支持 · 8 个尚未支持')).toBeTruthy()
-    expect(screen.getByRole('switch', { name: '启用技能' }).hasAttribute('disabled')).toBe(true)
+    expect(screen.getByRole('switch', { name: '启用技能：期权与窝轮' }).hasAttribute('disabled')).toBe(true)
     expect(screen.getByText('官方内容已内置，所需能力尚未接入，暂不能启用。')).toBeTruthy()
     expect(screen.queryByRole('link', { name: '前往助手' })).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: /技术分析/ }))
-    await screen.findByRole('heading', { name: '技术分析' })
+    await screen.findByRole('region', { name: '技术分析' })
     expect(screen.getByTestId('location').textContent).toContain('skill=longbridge-technical')
-    expect(screen.getByRole('switch', { name: '启用技能' }).hasAttribute('disabled')).toBe(false)
+    expect(screen.getByRole('switch', { name: '启用技能：技术分析' }).hasAttribute('disabled')).toBe(false)
     fireEvent.click(screen.getByRole('button', { name: 'Back' }))
-    await screen.findByRole('heading', { name: '期权与窝轮' })
+    await screen.findByRole('region', { name: '期权与窝轮' })
   })
 
   it('shows official source as inert text, and clears it when selecting another skill', async () => {
-    mount('/integrations/mcp?tab=skills')
+    mount('/integrations/mcp?tab=skills&skill=longbridge')
     const open = await screen.findByRole('button', { name: '查看官方原文' })
     request.mockResolvedValueOnce({ content: '# Official <script>alert(1)</script>' })
     fireEvent.click(open)
@@ -96,26 +117,26 @@ describe('MCP and Skills', () => {
     expect(request).toHaveBeenLastCalledWith('/builtin-skills/longbridge/source')
     expect(document.querySelector('pre script')).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: /技术分析/ }))
-    await screen.findByRole('heading', { name: '技术分析' })
+    await screen.findByRole('region', { name: '技术分析' })
     expect(screen.queryByText('# Official <script>alert(1)</script>')).toBeNull()
     expect(screen.getByRole('button', { name: '查看官方原文' }).getAttribute('aria-expanded')).toBe('false')
   })
 
   it('changes only the selected skill setting', async () => {
     mount('/integrations/mcp?tab=skills&skill=longbridge-market-data')
-    const toggle = await screen.findByRole('switch', { name: '启用技能' })
+    const toggle = await screen.findByRole('switch', { name: '启用技能：行情数据' })
     await waitFor(() => expect(toggle.hasAttribute('disabled')).toBe(false))
     request.mockResolvedValueOnce({ ...catalog[1], enabled: true, available: true })
     fireEvent.click(toggle)
     await screen.findByRole('link', { name: '前往助手' })
     expect(request).toHaveBeenLastCalledWith('/builtin-skills/longbridge-market-data', { method: 'PUT', body: '{"enabled":true}' })
     fireEvent.click(screen.getByRole('button', { name: /长桥总览/ }))
-    expect(screen.getByRole('switch', { name: '启用技能' }).getAttribute('aria-checked')).toBe('false')
+    expect(screen.getByRole('switch', { name: '启用技能：长桥总览' }).getAttribute('aria-checked')).toBe('false')
   })
 
   it('persists enabling through the API without changing the MCP grant', async () => {
-    mount('/integrations/mcp?tab=skills')
-    const toggle = await screen.findByRole('switch', { name: '启用技能' })
+    mount('/integrations/mcp?tab=skills&skill=longbridge')
+    const toggle = await screen.findByRole('switch', { name: '启用技能：长桥总览' })
     await waitFor(() => expect(toggle.hasAttribute('disabled')).toBe(false))
     request.mockResolvedValueOnce({ ...skill, enabled: true, available: true })
     fireEvent.click(toggle)
@@ -126,8 +147,8 @@ describe('MCP and Skills', () => {
   })
 
   it('keeps the last saved setting when saving fails', async () => {
-    mount('/integrations/mcp?tab=skills')
-    const toggle = await screen.findByRole('switch', { name: '启用技能' })
+    mount('/integrations/mcp?tab=skills&skill=longbridge')
+    const toggle = await screen.findByRole('switch', { name: '启用技能：长桥总览' })
     await waitFor(() => expect(toggle.hasAttribute('disabled')).toBe(false))
     request.mockRejectedValueOnce(new Error('Save failed'))
     fireEvent.click(toggle)
@@ -137,7 +158,7 @@ describe('MCP and Skills', () => {
 
   it.each(['authorization_required', 'mcp_disabled', 'test_required'])('shows dependency guidance for %s', async status => {
     request.mockResolvedValue({ items: [{ ...skill, enabled: true, connection_status: status }] })
-    mount('/integrations/mcp?tab=skills')
+    mount('/integrations/mcp?tab=skills&skill=longbridge')
     await screen.findByText(i18n.t(`configuration:skills.${status}` as 'configuration:skills.test_required'))
     expect(screen.queryByRole('link', { name: '前往助手' })).toBeNull()
     expect(screen.getByRole('link', { name: '管理连接' })).toBeTruthy()
@@ -145,9 +166,9 @@ describe('MCP and Skills', () => {
 
   it('recovers from a failed catalog load', async () => {
     request.mockRejectedValueOnce(new Error('Offline'))
-    mount('/integrations/mcp?tab=skills')
+    mount('/integrations/mcp?tab=skills&skill=longbridge')
     fireEvent.click(await screen.findByRole('button', { name: '重新加载' }))
-    await screen.findByRole('heading', { name: '长桥总览' })
+    await screen.findByRole('button', { name: '长桥总览' })
     expect(screen.queryByRole('alert')).toBeNull()
   })
 
@@ -162,10 +183,10 @@ describe('MCP and Skills', () => {
 
   it('renders the English skills page', async () => {
     await i18n.changeLanguage('en-US')
-    mount('/integrations/mcp?tab=skills')
-    await screen.findByRole('heading', { name: 'Longbridge overview' })
+    mount('/integrations/mcp?tab=skills&skill=longbridge')
+    await screen.findByRole('button', { name: 'Longbridge overview' })
     expect(screen.getByRole('heading', { name: 'MCP & Skills' })).toBeTruthy()
     expect(screen.getByText('Quotes')).toBeTruthy()
-    expect(screen.getByRole('switch', { name: 'Enable skill' })).toBeTruthy()
+    expect(screen.getByRole('switch', { name: 'Enable skill: Longbridge overview' })).toBeTruthy()
   })
 })
