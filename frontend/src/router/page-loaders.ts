@@ -15,7 +15,7 @@ export const pageLoaders = {
   evaluations: () => import('@/pages/Evaluations'),
   history: () => import('@/pages/History'),
   dataSources: () => import('@/pages/DataSources'),
-  mcp: () => import('@/pages/MCP'),
+  mcp: () => import('@/pages/Integrations'),
   settings: () => import('@/pages/Settings'),
   analysisDetail: () => import('@/pages/AnalysisDetail'),
 } as const

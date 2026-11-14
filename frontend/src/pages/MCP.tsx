@@ -1,6 +1,6 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { ChevronRight, ExternalLink, Loader2, Plug, RefreshCw, Unplug } from 'lucide-react'
+import { ChevronRight, ExternalLink, Loader2, RefreshCw, Unplug } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { fetchAPI } from '@panwatch/api/client'
 import { Button } from '@panwatch/base-ui/components/ui/button'
@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useConfirm } from '@panwatch/base-ui/components/ui/confirm-dialog'
 import { useToast } from '@panwatch/base-ui/components/ui/toast'
 import { formatDate } from '@/i18n/format'
+import LongbridgeIcon from '@/components/integrations/LongbridgeIcon'
 
 interface Connection {
   id: string; region: 'cn' | 'global'; endpoint: string; authorized: boolean; enabled: boolean
@@ -19,12 +20,6 @@ interface Connection {
 const BASE = '/mcp-connections/longbridge'
 const STORAGE = 'panwatch-longbridge-oauth'
 type MCPLabel = keyof (typeof import('@/i18n/locales/zh-CN/configuration').configuration)['mcp']
-
-function LongbridgeIcon({ className = '' }: { className?: string }) {
-  return <span className={`inline-flex shrink-0 overflow-hidden rounded-xl bg-black p-1 ${className}`}>
-    <img src="https://assets.lbkrs.com/uploads/2e476c46-8bb9-4689-a800-54877351520e/app-icon.svg" alt="Longbridge" referrerPolicy="no-referrer" className="block w-full h-full object-contain" />
-  </span>
-}
 
 function ToolDescription({ text, expandLabel, collapseLabel }: { text: string; expandLabel: string; collapseLabel: string }) {
   const descriptionId = useId()
@@ -111,9 +106,7 @@ export default function MCPPage() {
     }
   }
   const connectionStatus = item ? label(item.error_code === 'mcp_authorization_required' ? 'reauthorize' : item.authorized ? item.enabled ? 'enabled' : 'disabled' : item.pending ? 'pending' : 'notAuthorized') : ''
-  return <div className="max-w-7xl mx-auto space-y-6">
-    <div><h1 className="text-xl font-semibold flex items-center gap-2"><Plug className="w-5 h-5 text-primary" />{label('title')}</h1>
-      <p className="text-sm text-muted-foreground mt-2">{label('subtitle')}</p></div>
+  return <div className="space-y-6">
     {error && <div role="alert" className="rounded-xl border border-destructive/30 p-4 text-sm text-destructive space-y-3">
       <p>{error}</p><Button variant="secondary" size="sm" onClick={() => callback ? navigate('/integrations/mcp', { replace: true }) : void act(load)}>{label('retry')}</Button>
     </div>}

@@ -16,7 +16,7 @@ export const navigation = {
     evaluations: 'Evaluation',
     history: 'History',
     dataSources: 'Data sources',
-    mcp: 'MCP',
+    mcp: 'MCP & Skills',
     settings: 'Settings',
   },
 } as const satisfies TranslationShape<typeof zhNavigation>

@@ -173,6 +173,9 @@ def _evidence_and_facts(
         else:
             expanded.append(invocation)
     for invocation in expanded:
+        # Skill guidance is an execution step, not evidence about a security.
+        if invocation.tool_name == "load_builtin_skill" and invocation.status == "completed":
+            continue
         summary = str(invocation.summary or "").strip()[:2_000]
         if invocation.status != "completed":
             if summary:

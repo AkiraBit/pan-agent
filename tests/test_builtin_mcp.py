@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
 
 from src.modules.administration import longbridge_mcp as service, mcp_transport
-from src.modules.administration.api import auth, mcp_connections
+from src.modules.administration.api import auth, builtin_skills, mcp_connections
 from src.platform.persistence.database import Base, get_db
 from src.platform.persistence.models import AppSettings, MCPConnection
 from src.web.response import ResponseWrapperMiddleware
@@ -90,6 +90,7 @@ def setup(monkeypatch, tmp_path):
         db.commit()
     app = FastAPI()
     app.include_router(mcp_connections.router, prefix='/api/mcp-connections')
+    app.include_router(builtin_skills.router, prefix='/api/builtin-skills')
     app.add_middleware(ResponseWrapperMiddleware)
     def database():
         with Session(engine) as db:

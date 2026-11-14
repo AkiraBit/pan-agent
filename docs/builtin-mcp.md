@@ -4,7 +4,7 @@ PanWatch ships a fixed Longbridge connector. The account menu opens `/integratio
 
 ## 使用步骤
 
-1. 先登录 PanWatch，打开右上角菜单 → **MCP**。
+1. 先登录 PanWatch，打开右上角菜单 → **MCP & 技能** → **MCP**。
 2. 默认选择中国大陆节点 `https://mcp.longbridge.cn`；全球节点为 `https://mcp.longbridge.com`。
 3. 点击 **前往长桥授权**，在同一浏览器标签页登录长桥并确认权限。PanWatch 使用 OAuth 授权码与 PKCE S256，仅请求 `account.read`。授权流程有效期为 10 分钟；超时或取消后可重新发起。
 4. 返回后点击 **检测连接**。工具列表来自实际服务发现，并按 PanWatch 的查询白名单过滤；具体可用数据仍受长桥账户权限影响。
@@ -18,6 +18,24 @@ PanWatch ships a fixed Longbridge connector. The account menu opens `/integratio
 
 授权账号优先显示 `邮箱(账号名)`，仅使用长桥签名授权信息实际提供的字段。若缺少邮箱，显示可用账号名或脱敏账户编号并提示缺失，不把 OAuth 客户端 ID 当作账号。当前长桥授权可能只有 JSON `sub` 内的 `account_no` / `member_id`，不提供邮箱与账号名。点击“检测连接”可刷新账号显示与服务版本，无需重新授权。新增关联从授权完成时记录时间；旧连接没有可靠的原始关联时间，显示“此前未记录”，不会以检测或刷新时间代替。
 
+## 内置技能
+
+**MCP & 技能 → 技能** 内置长桥全部 **13 个技能**，沿用左右分栏。左侧列出每项技能的支持与启用状态，右侧展示官方图标、适配版本、官方版本或来源提交、已适配与尚未支持的能力、分析流程、示例及官方原文。`/integrations/mcp?tab=skills&skill=longbridge-market-data` 可直接定位；刷新、浏览器返回保留选择。
+
+| 状态 | 技能 | 本期适配范围 |
+| --- | --- | --- |
+| 部分支持 | 长桥总览、行情数据 | 报价、证券资料、K 线、资金流；总览可按需查询账户 |
+| 部分支持 | 技术分析 | 基础 K 线、量价与趋势观察，不含专用指标和回测引擎 |
+| 部分支持 | 基本面 | 证券资料与返回的每股指标，不含完整报表、DCF |
+| 部分支持 | 账户与持仓 | 余额与股票持仓，不含交易、再平衡、基金持仓或账单 |
+| 尚未支持 | 新闻与公告、市场情报、期权与窝轮、机构研究、财报分析、量化策略、价值投资、自选与提醒 | 官方内容可查看，所需数据或执行能力未接入，不可启用 |
+
+官方完整来源固定在 [`longbridge/skills` 提交 `38900e9`](https://github.com/longbridge/skills/tree/38900e9884027782c1f4e480b451d5f55a479d95)，保留 MIT 许可。全部 13 份 `SKILL.md`、引用资料和脚本文本以 JSON 随应用发布；脚本仅作为静态原文保存，不落为可执行程序。请求时不下载安装包、不拉取远程指令、不执行官方安装命令。
+
+五项已适配技能各有独立开关，默认关闭，保存在 `AppSettings` 的 `builtin_skill.<id>.enabled`。启用不会自动授权或启用 MCP。助手仅在技能开启且 MCP 已授权、已检测、已启用，并存在相应实际工具时，通过 `load_builtin_skill` 读取 PanWatch 审阅适配版 `1.0.0` 的流程。原文包含的更广泛能力不代表已接入；适配版本与官方来源版本分开显示。工具发现仅返回部分查询时，页面标记缺失能力，仍可使用已满足依赖的部分。
+
+技能读取与数据查询分别保留执行记录，技能指导不作为行情事实或证据展示。每次加载重新检查开关、授权和工具状态；停用阻止后续加载，不撤回已进入对话的指导，也不删除 MCP 授权。当前仅用于交互式助手。
+
 ## 部署与凭证
 
 - 非本机部署必须使用 HTTPS。本机开发允许 `localhost`、`127.0.0.1`、`::1` 的 HTTP 地址；保持从同一地址完成授权回调。反向代理应保留浏览器 `Origin`。
@@ -29,7 +47,9 @@ PanWatch ships a fixed Longbridge connector. The account menu opens `/integratio
 
 ## English
 
-Sign in to PanWatch, open **MCP**, choose a region and authorize on Longbridge in the same browser tab. Return, test discovery and explicitly enable assistant use. Only the seven read queries listed above are exposed. Scheduled agents and TradingAgents data sources are unchanged.
+Sign in to PanWatch, open **MCP & Skills → MCP**, choose a region and authorize on Longbridge in the same browser tab. Return, test discovery and explicitly enable assistant use. Only the seven read queries listed above are exposed. Scheduled agents and TradingAgents data sources are unchanged.
+
+The **Skills** tab bundles official source files and references for all 13 Longbridge skills. Five skills (overview, market data, basic technical analysis, basic fundamentals and account/portfolio queries) are partially adapted for the current MCP tools. The other eight remain viewable but cannot be enabled. Each supported skill has an independent switch, off by default, and reuses existing MCP authorization. The assistant loads reviewed guidance through `load_builtin_skill`; source scripts remain inert text. Guidance is recorded in the tool audit trail but excluded from market facts and evidence. Adaptation versions and pinned official source versions are displayed separately.
 
 After authorization, switching the connection node preserves the grant, account, original connection time and enabled state. The target is tested before saving; a failed test keeps the previous node. MCP calls use the selected node while token renewal stays with the original OAuth issuer and client registration.
 
@@ -37,6 +57,7 @@ Remote deployments require HTTPS. Tokens are encrypted on the server, using `mcp
 
 ## References
 
+- [Longbridge official skills](https://open.longbridge.com/zh-CN/skill)
 - [Longbridge MCP overview](https://open.longbridge.com/zh-CN/docs/mcp)
 - [Longbridge authorization](https://open.longbridge.com/zh-CN/docs/mcp/authorization)
 - [Longbridge OAuth scopes](https://open.longbridge.com/zh-CN/docs/getting-started)

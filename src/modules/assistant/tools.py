@@ -1456,4 +1456,6 @@ def build_panwatch_tool_registry(session: Session) -> ToolRegistry:
     register_context_tools(registry, db_bind, tool_spec)
     from .longbridge_tools import register_longbridge_tools
     register_longbridge_tools(registry, session, language)
+    from .builtin_skills import register_builtin_skills
+    register_builtin_skills(registry, session, language)
     return registry

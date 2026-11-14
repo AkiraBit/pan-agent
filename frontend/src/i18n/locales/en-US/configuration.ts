@@ -2,6 +2,27 @@ import type { TranslationShape } from '../../resource-types'
 import { configuration as zhConfiguration } from '../zh-CN/configuration'
 
 export const configuration = {
+  skills: {
+    mcpTab: 'MCP', providerName: 'Longbridge', tabsLabel: 'Integration type', tab: 'Skills', services: 'Built-in skills',
+    builtin: 'Official Longbridge skill', builtinHint: 'Enable skills individually. See each skill’s supported capabilities for its scope.',
+    catalogCount: '{{count}} skills · {{partial}} partially supported · {{unsupported}} unsupported',
+    provider: 'Official source', version: 'Adaptation version', sourceVersion: 'Official source version', adapted: 'PanWatch adaptation', notAdapted: 'Not adapted yet',
+    enable: 'Enable skill', enableHint: 'The assistant loads enabled skills as needed. Changes apply to subsequent loads.',
+    partial: 'Partially supported', unsupported: 'Not supported yet', ready: 'Ready', disabled: 'Disabled', waiting: 'Waiting for connection',
+    unsupportedHint: 'Official content is bundled. Required capabilities are not connected, so this skill cannot be enabled yet.',
+    dependency: 'Requires Longbridge MCP', manageMcp: 'Manage connection', connectionReady: 'Connected using your existing authorization.',
+    authorization_required: 'Authorize Longbridge MCP first.', mcp_disabled: 'Longbridge is authorized. Enable “Use in AI Assistant” on the MCP tab.',
+    test_required: 'Longbridge is authorized. Test the connection to discover available tools.', tools_missing: 'Required tools are missing from this connection. Test the connection again.',
+    authorizationHint: 'Uses your existing Longbridge authorization. No separate sign-in or API key is required.',
+    workflow: 'How the skill works', capabilities: 'Currently supported capabilities', capabilitiesHint: 'These capabilities are connected. Data access depends on the MCP connection and account permissions.',
+    missingTools: 'Tools missing from this connection', noCapabilities: 'This skill’s capabilities are not connected yet. You can view its official content.', unsupportedCapabilities: 'Not yet supported',
+    examples: 'Try asking', openAssistant: 'Open assistant',
+    scopeHint: 'Official source files and references for all 13 skills are bundled. The assistant uses only adapted workflows and existing query tools. Skills do not expand account permissions or execute trades automatically.',
+    showSource: 'View official source', hideSource: 'Hide official source', sourceContent: 'Official skill source',
+    sourceHint: '{{count}} files are bundled for this skill. Below is the original SKILL.md; its installation commands and extended capabilities are reference material and are not executed here.',
+    sourceLoading: 'Loading bundled source…', sourceFailed: 'Could not load the source. Close and reopen it to retry.',
+    docs: 'Official Longbridge skills', saved: 'Skill settings saved.', failed: 'Could not save skill settings. Try again.', retry: 'Reload',
+  },
   mcp: {
     expandDescription: 'Expand', collapseDescription: 'Collapse',
     services: 'Built-in MCP', builtinHint: 'Choose a service to view its connection and tools.',
@@ -9,7 +30,7 @@ export const configuration = {
     connectedAt: 'Connected on', timeNotRecorded: 'Not previously recorded', serverVersion: 'Current version',
     versionHint: 'Reported by Longbridge and updated when testing the connection.', versionPending: 'Available after testing', versionUnavailable: 'Not provided by the server',
     toolsHint: 'Queries supported by PanWatch and discovered on this connection. Descriptions use the original server text.', noDescription: 'No description provided for this tool.',
-    title: 'MCP', subtitle: 'Manage built-in services and account authorization.', longbridge: 'Longbridge', builtin: 'Built in · Queries only',
+    title: 'MCP & Skills', subtitle: 'Manage built-in services, account authorization and assistant skills.', longbridge: 'Longbridge', builtin: 'Built in · Queries only',
     description: 'Connect quotes, capital flows, account balances and positions. Sign in and authorize on Longbridge. Placing, replacing and cancelling orders are unavailable.',
     region: 'Connection node', cn: 'Mainland China', global: 'Global', useAssistant: 'Use in AI Assistant',
     regionHint: 'Switching keeps your authorization. The new node is saved after a successful connection test; otherwise the current node is kept.', regionChanged: 'Node switched. Your authorization is unchanged.',

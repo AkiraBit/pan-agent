@@ -75,6 +75,23 @@ def test_deterministic_result_uses_fields_and_flags_timepoint_discrepancies():
     )
 
 
+def test_skill_guidance_stays_out_of_market_facts_and_evidence():
+    from src.modules.assistant.result_builder import build_deterministic_assistant_result
+
+    guidance = _invocation('load_builtin_skill', call_id='skill-1',
+        data={'skill_id': 'longbridge', 'version': '1.0.0'}, summary='Internal skill workflow',
+        sources=[{'name': 'Longbridge Skill', 'url': 'https://open.longbridge.com/zh-CN/skill'}])
+    quote = _invocation('longbridge_quote', call_id='quote-1', data={'provider': 'longbridge'},
+        summary='Synthetic market quote', sources=[{'name': 'Longbridge MCP'}])
+    result = build_deterministic_assistant_result(task_id=1, answer='Quote retrieved.',
+        invocations=[guidance, quote], language='en-US')
+    assert {e.tool_name for e in result.evidence} == {'longbridge_quote'}
+    assert 'Internal skill workflow' not in result.model_dump_json()
+    only_guidance = build_deterministic_assistant_result(task_id=2, answer='Guidance loaded.',
+        invocations=[guidance], language='en-US')
+    assert not only_guidance.facts and not only_guidance.evidence
+
+
 def test_deterministic_result_reports_missing_fields_and_stale_evidence():
     from src.modules.assistant.result_builder import build_deterministic_assistant_result
 

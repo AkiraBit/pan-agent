@@ -1,0 +1,503 @@
+[
+  {
+    "id": "longbridge",
+    "title": [
+      "长桥总览",
+      "Longbridge overview"
+    ],
+    "description": [
+      "按问题组织行情与账户查询，识别所需数据、选择工具并说明结论依据。",
+      "Organize market and account queries, choose relevant tools and explain the evidence behind conclusions."
+    ],
+    "capabilities": [
+      {
+        "title": [
+          "行情报价",
+          "Quotes"
+        ],
+        "tools": [
+          "quote"
+        ]
+      },
+      {
+        "title": [
+          "证券资料",
+          "Security information"
+        ],
+        "tools": [
+          "static_info"
+        ]
+      },
+      {
+        "title": [
+          "K 线与量价观察",
+          "Candles, price and volume"
+        ],
+        "tools": [
+          "candlesticks"
+        ]
+      },
+      {
+        "title": [
+          "资金流向与分布",
+          "Capital flow and distribution"
+        ],
+        "tools": [
+          "capital_flow",
+          "capital_distribution"
+        ]
+      },
+      {
+        "title": [
+          "账户余额与股票持仓",
+          "Cash balance and stock positions"
+        ],
+        "tools": [
+          "account_balance",
+          "stock_positions"
+        ]
+      }
+    ],
+    "unsupported_capabilities": [
+      [
+        "交易、自动化与其他尚未接入的长桥能力",
+        "Trading, automation and other unconnected Longbridge capabilities"
+      ]
+    ],
+    "workflow": [
+      [
+        "确认标的、市场、时间范围和问题所需证据。",
+        "Identify the security, market, period and evidence needed."
+      ],
+      [
+        "仅调用问题需要且已授权的查询工具；账户数据按需读取。",
+        "Use only relevant authorized queries; access account data only when needed."
+      ],
+      [
+        "说明来源、币种、数据时间，并区分事实、判断和数据缺口。",
+        "State sources, currency and data timestamps; separate facts, interpretation and missing evidence."
+      ]
+    ],
+    "examples": [
+      [
+        "用长桥查一下 AAPL.US 的最新报价，说明数据时间和币种。",
+        "Use Longbridge to get the latest AAPL.US quote, including its timestamp and currency."
+      ]
+    ]
+  },
+  {
+    "id": "longbridge-market-data",
+    "title": [
+      "行情数据",
+      "Market data"
+    ],
+    "description": [
+      "查询报价、K 线、资金流和证券资料，为市场观察提供数据基础。",
+      "Retrieve quotes, candles, capital flows and security information for market analysis."
+    ],
+    "capabilities": [
+      {
+        "title": [
+          "行情报价",
+          "Quotes"
+        ],
+        "tools": [
+          "quote"
+        ]
+      },
+      {
+        "title": [
+          "证券资料",
+          "Security information"
+        ],
+        "tools": [
+          "static_info"
+        ]
+      },
+      {
+        "title": [
+          "历史 K 线",
+          "Historical candles"
+        ],
+        "tools": [
+          "candlesticks"
+        ]
+      },
+      {
+        "title": [
+          "盘中资金流向与分布",
+          "Intraday capital flow and distribution"
+        ],
+        "tools": [
+          "capital_flow",
+          "capital_distribution"
+        ]
+      }
+    ],
+    "unsupported_capabilities": [
+      [
+        "盘口深度、逐笔成交、行情推送",
+        "Order book depth, tick trades and streaming quotes"
+      ],
+      [
+        "外汇、IPO、ADR 溢价与市场情绪数据",
+        "FX, IPO, ADR premium and market sentiment data"
+      ]
+    ],
+    "workflow": [
+      [
+        "确认股票代码、交易市场、周期和复权方式。",
+        "Confirm the symbol, market, interval and adjustment mode."
+      ],
+      [
+        "按实际工具参数获取报价、K 线或资金流，避免重复请求。",
+        "Retrieve quotes, candles or flows using the actual tool schema; avoid duplicate requests."
+      ],
+      [
+        "保留原始时间、币种和数据来源，区分盘中快照与正式收盘数据。",
+        "Preserve timestamps, currency and sources; distinguish snapshots from official closing data."
+      ]
+    ],
+    "examples": [
+      [
+        "用长桥查询腾讯最近 20 根日 K，并描述成交量变化。",
+        "Use Longbridge to get Tencent’s last 20 daily candles and describe changes in volume."
+      ]
+    ]
+  },
+  {
+    "id": "longbridge-technical",
+    "title": [
+      "技术分析",
+      "Technical analysis"
+    ],
+    "description": [
+      "基于 K 线观察价格结构、成交量和可能的支撑阻力，明确分析条件。",
+      "Use candles to examine price structure, volume and possible support and resistance, with explicit assumptions."
+    ],
+    "capabilities": [
+      {
+        "title": [
+          "基础 K 线、量价与趋势观察",
+          "Basic candle, price-volume and trend analysis"
+        ],
+        "tools": [
+          "candlesticks"
+        ]
+      }
+    ],
+    "unsupported_capabilities": [
+      [
+        "专用指标计算与回测引擎",
+        "Dedicated indicator calculation and backtesting engines"
+      ],
+      [
+        "缠论、SMC、谐波、艾略特波浪等专用分析模块",
+        "Dedicated Chan, SMC, harmonic and Elliott wave modules"
+      ]
+    ],
+    "workflow": [
+      [
+        "先确认时间周期，再取得足够的 OHLCV 样本。",
+        "Confirm the interval and retrieve sufficient OHLCV samples."
+      ],
+      [
+        "根据实际 K 线描述趋势、量价变化和候选支撑阻力。",
+        "Describe trends, price-volume changes and candidate support and resistance using retrieved candles."
+      ],
+      [
+        "区分观察与预测；未计算的指标不得给出数值。",
+        "Separate observations from predictions; never invent uncomputed indicator values."
+      ]
+    ],
+    "examples": [
+      [
+        "用长桥日 K 分析 AAPL.US 近期的量价走势，并说明样本范围。",
+        "Analyze AAPL.US price and volume using Longbridge daily candles and state the sample period."
+      ]
+    ]
+  },
+  {
+    "id": "longbridge-fundamentals",
+    "title": [
+      "基本面",
+      "Fundamentals"
+    ],
+    "description": [
+      "读取证券基本资料与报价，解释已返回的每股指标和数据局限。",
+      "Read security information and quotes, explaining returned per-share metrics and their limits."
+    ],
+    "capabilities": [
+      {
+        "title": [
+          "证券基本资料与已返回的每股指标",
+          "Security information and returned per-share metrics"
+        ],
+        "tools": [
+          "static_info"
+        ]
+      },
+      {
+        "title": [
+          "结合当前报价观察基础估值",
+          "Basic valuation context using current quotes"
+        ],
+        "tools": [
+          "quote",
+          "static_info"
+        ]
+      }
+    ],
+    "unsupported_capabilities": [
+      [
+        "完整财务报表、业务分部与同业比较",
+        "Full financial statements, business segments and peer comparisons"
+      ],
+      [
+        "DCF 估值、财务质量与高管分析",
+        "DCF valuation, financial quality and executive analysis"
+      ]
+    ],
+    "workflow": [
+      [
+        "确认证券及市场，获取资料和必要报价。",
+        "Identify the security and market, then retrieve information and relevant quotes."
+      ],
+      [
+        "仅解释实际返回的 EPS、BPS 等字段，保留单位与周期；缺失字段明确标记。",
+        "Explain only returned fields such as EPS or BPS with units and periods; identify missing fields."
+      ],
+      [
+        "说明资料不足以支持完整财务质量判断或 DCF 结论。",
+        "Explain why this data alone cannot support a full financial-quality or DCF conclusion."
+      ]
+    ],
+    "examples": [
+      [
+        "用长桥查看 AAPL.US 的证券资料，解释返回的每股指标及局限。",
+        "Use Longbridge to inspect AAPL.US security information and explain the returned per-share metrics and limitations."
+      ]
+    ]
+  },
+  {
+    "id": "longbridge-portfolio",
+    "title": [
+      "账户与持仓",
+      "Portfolio & account"
+    ],
+    "description": [
+      "汇总已授权账户的现金余额与股票持仓，说明币种和查询时间。",
+      "Summarize authorized cash balances and stock positions with currencies and retrieval times."
+    ],
+    "capabilities": [
+      {
+        "title": [
+          "现金余额",
+          "Cash balances"
+        ],
+        "tools": [
+          "account_balance"
+        ]
+      },
+      {
+        "title": [
+          "股票持仓",
+          "Stock positions"
+        ],
+        "tools": [
+          "stock_positions"
+        ]
+      }
+    ],
+    "unsupported_capabilities": [
+      [
+        "基金持仓、资金流水、账单和订单查询",
+        "Fund positions, cash flows, statements and order queries"
+      ],
+      [
+        "VaR 风险计算、再平衡、定投和交易操作",
+        "VaR calculations, rebalancing, recurring investments and trading"
+      ]
+    ],
+    "workflow": [
+      [
+        "仅在用户问题需要时读取账户信息，确认范围和币种。",
+        "Read account information only when the request needs it; establish scope and currencies."
+      ],
+      [
+        "查询余额或股票持仓，按返回币种分组，不擅自换汇汇总。",
+        "Retrieve balances or stock positions and group by returned currency without assuming exchange rates."
+      ],
+      [
+        "区分现金与资产估值，说明缺少的价格、汇率和估值时间。",
+        "Distinguish cash from asset valuation and identify missing prices, FX rates and valuation timestamps."
+      ]
+    ],
+    "examples": [
+      [
+        "用长桥汇总我的股票持仓和现金余额，按币种分别展示。",
+        "Use Longbridge to summarize my stock positions and cash balances separately by currency."
+      ]
+    ]
+  },
+  {
+    "id": "longbridge-content",
+    "title": [
+      "新闻与公告",
+      "News & filings"
+    ],
+    "description": [
+      "整理市场新闻、公司公告、监管披露与社区内容。",
+      "Organize market news, company announcements, regulatory disclosures and community content."
+    ],
+    "capabilities": [],
+    "unsupported_capabilities": [
+      [
+        "新闻、公告、SEC 披露与社区内容查询尚未接入",
+        "News, announcements, SEC filings and community queries are not connected"
+      ]
+    ],
+    "workflow": [],
+    "examples": []
+  },
+  {
+    "id": "longbridge-intel",
+    "title": [
+      "市场情报",
+      "Market intelligence"
+    ],
+    "description": [
+      "结合市场榜单、异动、板块和资金数据形成市场观察。",
+      "Combine rankings, unusual moves, sectors and fund flows into market intelligence."
+    ],
+    "capabilities": [],
+    "unsupported_capabilities": [
+      [
+        "市场筛选、排行、异动、ETF 资金与板块数据尚未接入",
+        "Screening, rankings, unusual moves, ETF flows and sector data are not connected"
+      ]
+    ],
+    "workflow": [],
+    "examples": []
+  },
+  {
+    "id": "longbridge-derivatives",
+    "title": [
+      "期权与窝轮",
+      "Derivatives"
+    ],
+    "description": [
+      "分析期权链、希腊值、隐含波动率及港股衍生品。",
+      "Analyze option chains, Greeks, implied volatility and Hong Kong derivatives."
+    ],
+    "capabilities": [],
+    "unsupported_capabilities": [
+      [
+        "期权链、希腊值、隐含波动率和窝轮数据尚未接入",
+        "Option chains, Greeks, implied volatility and warrant data are not connected"
+      ]
+    ],
+    "workflow": [],
+    "examples": []
+  },
+  {
+    "id": "longbridge-research",
+    "title": [
+      "机构研究",
+      "Institutional research"
+    ],
+    "description": [
+      "研究分析师观点、盈利预期、股东结构与机构行为。",
+      "Study analyst views, earnings estimates, shareholders and institutional activity."
+    ],
+    "capabilities": [],
+    "unsupported_capabilities": [
+      [
+        "分析师评级、目标价、盈利预期、股东与做空数据尚未接入",
+        "Analyst ratings, targets, estimates, shareholders and short-interest data are not connected"
+      ]
+    ],
+    "workflow": [],
+    "examples": []
+  },
+  {
+    "id": "longbridge-earnings",
+    "title": [
+      "财报分析",
+      "Earnings analysis"
+    ],
+    "description": [
+      "组织财报前瞻与业绩复盘，对照预期、指引和电话会信息。",
+      "Prepare earnings previews and reviews using estimates, guidance and call information."
+    ],
+    "capabilities": [],
+    "unsupported_capabilities": [
+      [
+        "财报、业绩日历、市场预期、公司指引与电话会资料尚未接入",
+        "Financial reports, earnings calendars, estimates, guidance and calls are not connected"
+      ]
+    ],
+    "workflow": [],
+    "examples": []
+  },
+  {
+    "id": "longbridge-quant",
+    "title": [
+      "量化策略",
+      "Quantitative strategies"
+    ],
+    "description": [
+      "组织因子研究、配对交易、统计建模和策略回测。",
+      "Organize factor research, pairs trading, statistical modeling and strategy backtesting."
+    ],
+    "capabilities": [],
+    "unsupported_capabilities": [
+      [
+        "策略计算、因子数据、统计模型和回测运行环境尚未接入",
+        "Strategy computation, factor data, statistical models and a backtesting runtime are not connected"
+      ]
+    ],
+    "workflow": [],
+    "examples": []
+  },
+  {
+    "id": "longbridge-value-investing",
+    "title": [
+      "价值投资",
+      "Value investing"
+    ],
+    "description": [
+      "通过财务核验、估值和安全边际框架开展价值研究。",
+      "Research value using financial reconciliation, valuation and margin-of-safety frameworks."
+    ],
+    "capabilities": [],
+    "unsupported_capabilities": [
+      [
+        "价值分析所需的完整财务历史、现金流与估值计算尚未接入",
+        "Full financial history, cash flows and valuation calculations required for value analysis are not connected"
+      ]
+    ],
+    "workflow": [],
+    "examples": []
+  },
+  {
+    "id": "longbridge-watchlist",
+    "title": [
+      "自选与提醒",
+      "Watchlist & alerts"
+    ],
+    "description": [
+      "管理长桥自选分组、关注标的与价格提醒。",
+      "Manage Longbridge watchlist groups, followed securities and price alerts."
+    ],
+    "capabilities": [],
+    "unsupported_capabilities": [
+      [
+        "长桥自选分组和价格提醒的读取、创建与修改尚未接入",
+        "Reading, creating and editing Longbridge watchlists and price alerts are not connected"
+      ]
+    ],
+    "workflow": [],
+    "examples": []
+  }
+]
