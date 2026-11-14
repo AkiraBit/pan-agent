@@ -32,8 +32,11 @@ class BackendReadinessTests(unittest.TestCase):
         replies = [
             (503, b'{"detail":"starting"}'),
             (200, b'<html>not the API</html>'),
-            (200, b'{"initialized":"false"}'),
             (200, b'{"initialized":false}'),
+            (200, b'{"code":0,"success":false,"data":{"initialized":false}}'),
+            (200, b'{"code":1,"success":true,"data":{"initialized":false}}'),
+            (200, b'{"code":0,"success":true,"data":{"initialized":"false"}}'),
+            (200, b'{"code":0,"success":true,"data":{"initialized":false}}'),
         ]
 
         class Handler(BaseHTTPRequestHandler):

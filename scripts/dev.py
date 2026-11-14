@@ -47,10 +47,13 @@ def wait_for_backend(process, timeout=600, url=BACKEND_URL):
         try:
             with opener.open(url, timeout=1) as response:
                 body = json.load(response)
+                # Public API responses are wrapped by the application's
+                # response middleware, including /api/auth/status.
+                payload = body.get("data") if isinstance(body, dict) and body.get("success") is True and body.get("code") == 0 else None
                 if (
                     response.status == 200
-                    and isinstance(body, dict)
-                    and isinstance(body.get("initialized"), bool)
+                    and isinstance(payload, dict)
+                    and isinstance(payload.get("initialized"), bool)
                 ):
                     return
         except (OSError, URLError, ValueError):
