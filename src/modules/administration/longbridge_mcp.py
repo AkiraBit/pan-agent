@@ -93,9 +93,11 @@ def read(db: Session) -> MCPConnection:
     return row
 
 
-def save(db: Session, version: int, **values) -> None:
-    result = db.execute(update(MCPConnection).where(MCPConnection.provider == "longbridge",
-        MCPConnection.version == version).values(**values, version=version + 1),
+def save(db: Session, version: int, *, require_idle_refresh=False, **values) -> None:
+    statement = update(MCPConnection).where(MCPConnection.provider == "longbridge", MCPConnection.version == version)
+    if require_idle_refresh:
+        statement = statement.where(MCPConnection.refresh_until <= time.time())
+    result = db.execute(statement.values(**values, version=version + 1),
         execution_options={"synchronize_session": False})
     db.commit()
     if result.rowcount != 1:
@@ -209,7 +211,7 @@ async def access_token(db: Session, *, require_enabled=False) -> tuple[str, str,
         credential, version = unseal(row.credentials), row.version
         if not credential:
             raise fail("mcp_authorization_required")
-        endpoint = ENDPOINTS[credential["region"]]
+        endpoint = ENDPOINTS[row.region]
         if credential["expires_at"] > time.time() + 60:
             return endpoint, credential["access_token"], version
         if row.refresh_until > time.time():
@@ -224,10 +226,13 @@ async def access_token(db: Session, *, require_enabled=False) -> tuple[str, str,
         try:
             if not credential.get("refresh_token"):
                 raise fail("mcp_authorization_required")
+            # Keep OAuth renewal with the original issuer/client registration.
+            # Only MCP traffic follows the user's selected network node.
+            authorization_endpoint = ENDPOINTS[credential["region"]]
             async with http_client() as client:
-                data = await request_json(client, "POST", endpoint + "/oauth2/token", data={
+                data = await request_json(client, "POST", authorization_endpoint + "/oauth2/token", data={
                     "grant_type": "refresh_token", "client_id": credential["client_id"],
-                    "refresh_token": credential["refresh_token"], "resource": endpoint})
+                    "refresh_token": credential["refresh_token"], "resource": authorization_endpoint})
             renewed = tokens(data, credential)
             save(db, version, credentials=seal(renewed), refresh_until=0)
         except Exception as exc:
@@ -241,6 +246,32 @@ async def access_token(db: Session, *, require_enabled=False) -> tuple[str, str,
             db.commit()
             raise
     raise fail("mcp_connection_changed")
+
+
+def discovery_values(result: dict) -> dict:
+    approved = list({t["name"]: t for t in result["tools"] if isinstance(t, dict)
+                     and isinstance(t.get("name"), str) and t["name"] in READ_TOOLS
+                     and isinstance(t.get("inputSchema"), dict)
+                     and t["inputSchema"].get("type") == "object"}.values())
+    return {"tools": json.dumps(approved), "checked_at": int(time.time()), "error_code": "",
+            "server_version": result["server_version"]}
+
+
+async def change_region(db: Session, region: str) -> dict:
+    from .mcp_transport import query
+    row = read(db)
+    if not row.credentials:
+        raise fail("mcp_authorization_required")
+    if row.region == region:
+        return status(db)
+    if row.pending and row.pending_until > time.time():
+        raise fail("mcp_connection_changed")
+    _, token, version = await access_token(db)
+    # Probe before saving. A failed target must not revoke a working connection.
+    result = await query(ENDPOINTS[region], token, None, None)
+    # Do not interrupt token rotation or let a stale probe undo disconnect/disable.
+    save(db, version, require_idle_refresh=True, region=region, **discovery_values(result))
+    return status(db)
 
 
 async def remote(db: Session, tool: str | None = None, arguments: dict | None = None):
@@ -259,14 +290,9 @@ async def remote(db: Session, tool: str | None = None, arguments: dict | None = 
         save(db, version, **values)
         raise
     if tool is None:
-        approved = list({t["name"]: t for t in result["tools"] if isinstance(t, dict)
-                         and isinstance(t.get("name"), str) and t["name"] in READ_TOOLS
-                         and isinstance(t.get("inputSchema"), dict)
-                         and t["inputSchema"].get("type") == "object"}.values())
         from .longbridge_identity import account_label
         identity = await account_label(token, endpoint) or read(db).account_label
-        save(db, version, tools=json.dumps(approved), checked_at=int(time.time()), error_code="",
-             account_label=identity, server_version=result["server_version"])
+        save(db, version, account_label=identity, **discovery_values(result))
         return status(db)
     if read(db).version != version:
         raise fail("mcp_connection_changed")

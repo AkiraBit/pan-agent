@@ -100,8 +100,9 @@ export default function MCPPage() {
     window.location.assign(result.authorization_url)
   })
   const change = (path: string, method: string, body?: object) => act(async () => {
-    setItem(await fetchAPI<Connection>(BASE + path, { method, body: body ? JSON.stringify(body) : undefined, timeoutMs: 45000 }))
-    toast(label(path === '/test' ? 'tested' : 'saved'), 'success')
+    const result = await fetchAPI<Connection>(BASE + path, { method, body: body ? JSON.stringify(body) : undefined, timeoutMs: 45000 })
+    setItem(result); setRegion(result.region)
+    toast(label(path === '/test' ? 'tested' : path === '/region' ? 'regionChanged' : 'saved'), 'success')
   })
   const disconnect = async () => {
     if (await showConfirm(label('disconnectConfirm'), { destructive: true })) {
@@ -145,10 +146,11 @@ export default function MCPPage() {
       </dl>
       <div className="grid sm:grid-cols-2 gap-5">
         <div className="space-y-2"><label className="text-sm" id="mcp-region-label">{label('region')}</label>
-          <Select value={region} onValueChange={value => setRegion(value as 'cn' | 'global')} disabled={busy || item.authorized}>
+          <Select value={region} onValueChange={value => item.authorized ? void change('/region', 'PUT', { region: value }) : setRegion(value as 'cn' | 'global')} disabled={busy || item.pending}>
             <SelectTrigger aria-labelledby="mcp-region-label"><SelectValue /></SelectTrigger><SelectContent>
               <SelectItem value="cn">{label('cn')}</SelectItem><SelectItem value="global">{label('global')}</SelectItem>
             </SelectContent></Select><p className="text-xs text-muted-foreground break-all">{item.authorized ? item.endpoint : region === 'cn' ? 'https://mcp.longbridge.cn' : 'https://mcp.longbridge.com'}</p>
+          <p className="text-xs text-muted-foreground leading-relaxed">{label('regionHint')}</p>
         </div>
         <div className="flex items-center justify-between gap-4"><div><label htmlFor="mcp-enabled" className="text-sm">{label('useAssistant')}</label><p className="text-xs text-muted-foreground mt-1">{label('enableHint')}</p></div>
           <Switch id="mcp-enabled" checked={item.enabled} disabled={busy || !item.authorized || !item.tools.length || !item.checked_at} onCheckedChange={enabled => void change('', 'PUT', { enabled })} />

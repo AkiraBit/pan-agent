@@ -26,6 +26,38 @@ beforeEach(() => { request.mockReset(); sessionStorage.clear() })
 afterEach(() => { cleanup(); vi.restoreAllMocks() })
 
 describe('built-in MCP connections', () => {
+  it('switches an authorized node without reauthorization and keeps the account and enable state', async () => {
+    request.mockResolvedValue({ items: [{ ...tested, enabled: true }] })
+    mount()
+    const select = await screen.findByRole('combobox', { name: '连接节点' })
+    await waitFor(() => expect(select.hasAttribute('disabled')).toBe(false))
+    fireEvent.keyDown(select, { key: 'ArrowDown' })
+    request.mockResolvedValueOnce({ ...tested, enabled: true, region: 'global', endpoint: 'https://mcp.longbridge.com', server_version: '2.8.0' })
+    fireEvent.click(await screen.findByRole('option', { name: '全球' }))
+    await screen.findByText('https://mcp.longbridge.com')
+    expect(select.textContent).toBe('全球')
+    expect(screen.getByText('HK · ••••1234')).toBeTruthy()
+    expect(screen.getByText('2.8.0')).toBeTruthy()
+    expect(screen.getByRole('switch').getAttribute('aria-checked')).toBe('true')
+    expect(request).toHaveBeenLastCalledWith(BASE + '/region', expect.objectContaining({ method: 'PUT', body: '{"region":"global"}' }))
+    expect(request.mock.calls.some(([path]) => path === BASE + '/authorize')).toBe(false)
+  })
+
+  it('keeps the saved node when switching fails and allows retry', async () => {
+    request.mockResolvedValue({ items: [tested] })
+    mount()
+    const select = await screen.findByRole('combobox', { name: '连接节点' })
+    await waitFor(() => expect(select.hasAttribute('disabled')).toBe(false))
+    fireEvent.keyDown(select, { key: 'ArrowDown' })
+    request.mockRejectedValueOnce(new Error('Target unavailable'))
+    fireEvent.click(await screen.findByRole('option', { name: '全球' }))
+    await screen.findByRole('alert')
+    expect(select.textContent).toBe('中国大陆')
+    expect(screen.getByText('https://mcp.longbridge.cn')).toBeTruthy()
+    expect(screen.getByText('HK · ••••1234')).toBeTruthy()
+    expect(select.hasAttribute('disabled')).toBe(false)
+  })
+
   it('shows only the built-in provider and prevents use before authorization', async () => {
     request.mockResolvedValue({ items: [initial] })
     mount()

@@ -40,6 +40,10 @@ class EnabledBody(StrictBody):
     enabled: bool
 
 
+class RegionBody(StrictBody):
+    region: Literal["cn", "global"]
+
+
 @router.get("")
 def get_connections(db: Session = Depends(get_db)):
     return {"items": [service.status(db)]}
@@ -74,6 +78,11 @@ def configure(body: EnabledBody, db: Session = Depends(get_db)):
         raise service.fail("mcp_authorization_required")
     service.save(db, row.version, enabled=body.enabled)
     return service.status(db)
+
+
+@router.put("/longbridge/region")
+async def change_region(body: RegionBody, db: Session = Depends(get_db)):
+    return await service.change_region(db, body.region)
 
 
 @router.delete("/longbridge")

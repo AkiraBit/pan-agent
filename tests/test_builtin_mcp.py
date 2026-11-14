@@ -29,6 +29,8 @@ class Provider:
         self.calls = []
         self.refresh_error = False
         self.on_token = None
+        self.on_mcp = None
+        self.mcp_error = None
         self.tools = [{'name': name, 'description': name, 'inputSchema': {'type': 'object', 'properties': {}}}
                       for name in [*service.READ_TOOLS, 'submit_order', 'unknown_future_tool']]
 
@@ -56,9 +58,14 @@ class Provider:
             return httpx.Response(204)
         payload = json.loads(request.content)
         assert request.headers['authorization'] == 'Bearer PRIVATE-ACCESS'
+        if self.on_mcp:
+            callback, self.on_mcp = self.on_mcp, None
+            callback()
+        if self.mcp_error:
+            return httpx.Response(self.mcp_error, json={'error': 'synthetic target failure'})
         if payload['method'] == 'notifications/initialized':
             return httpx.Response(202)
-        result = {'protocolVersion': '2025-03-26', 'capabilities': {'tools': {}}, 'serverInfo': {'name': 'fixture', 'version': '1'}}
+        result = {'protocolVersion': '2025-03-26', 'capabilities': {'tools': {}}, 'serverInfo': {'name': 'fixture', 'version': '2' if request.url.host.endswith('.com') else '1'}}
         if payload['method'] == 'tools/list':
             result = {'tools': self.tools}
             # Exercise SSE framing, keepalives and a nonmatching notification.
@@ -153,6 +160,7 @@ def test_login_required_even_before_initial_setup(setup):
     client, engine, _, _ = setup
     client.headers.pop('Authorization')
     assert client.get('/api/mcp-connections').status_code == 401
+    assert client.put(PREFIX + '/region', json={'region': 'global'}).status_code == 401
     with Session(engine) as db:
         db.query(AppSettings).delete(); db.commit()
     assert client.get('/api/mcp-connections').status_code == 401
@@ -164,6 +172,106 @@ def test_no_arbitrary_provider_install_or_configuration(setup):
     assert client.post(PREFIX + '/authorize', json={'region': 'custom', 'browser_key': BROWSER}).status_code == 422
     assert client.post(PREFIX + '/authorize', json={'browser_key': BROWSER, 'command': 'npx', 'url': 'https://other.example'}).status_code == 422
     assert client.put(PREFIX, json={'enabled': True}).status_code == 409
+    assert client.put(PREFIX + '/region', json={'region': 'global'}).status_code == 409
+    assert client.put(PREFIX + '/region', json={'region': 'custom'}).status_code == 422
+    assert client.put(PREFIX + '/region', json={'region': 'global', 'url': 'https://other.example'}).status_code == 422
+    assert not provider.calls
+
+
+@pytest.mark.parametrize('enabled', [False, True])
+def test_switch_region_preserves_authorization_and_routes_calls_after_reload(setup, enabled):
+    client, engine, provider, _ = setup
+    original = finish(client)
+    client.post(PREFIX + '/test')
+    client.put(PREFIX, json={'enabled': enabled})
+    with Session(engine) as db:
+        row = service.read(db)
+        row.account_label = 'demo@example.com(Demo)'
+        db.commit()
+        encrypted = row.credentials
+    provider.calls.clear()
+    for region, version in [('global', '2'), ('cn', '1')]:
+        response = client.put(PREFIX + '/region', json={'region': region})
+        assert response.status_code == 200, response.text
+        state = response.json()['data']
+        assert state['authorized'] and state['enabled'] == enabled
+        assert state['region'] == region and state['endpoint'] == service.ENDPOINTS[region]
+        assert state['connected_at'] == original['connected_at']
+        assert state['account_label'] == 'demo@example.com(Demo)'
+        assert state['server_version'] == version
+        assert {tool['name'] for tool in state['tools']} == set(service.READ_TOOLS)
+        with Session(engine) as db:
+            assert service.read(db).credentials == encrypted
+            assert service.status(db)['region'] == region
+            if enabled:
+                asyncio.run(service.remote(db, 'quote', {}))
+                assert provider.calls[-1].url.host == urlsplit(service.ENDPOINTS[region]).hostname
+        count = len(provider.calls)
+        assert client.put(PREFIX + '/region', json={'region': region}).status_code == 200
+        assert len(provider.calls) == count  # Idempotent; no new discovery or OAuth.
+    assert not any('/oauth2/' in request.url.path for request in provider.calls)
+
+
+@pytest.mark.parametrize('failure', [401, 503])
+def test_failed_region_probe_keeps_previous_node_and_credentials(setup, failure):
+    client, engine, provider, _ = setup
+    finish(client); client.post(PREFIX + '/test'); client.put(PREFIX, json={'enabled': True})
+    previous = client.get('/api/mcp-connections').json()['data']['items'][0]
+    with Session(engine) as db:
+        encrypted = service.read(db).credentials
+    provider.mcp_error = failure
+    assert client.put(PREFIX + '/region', json={'region': 'global'}).status_code >= 400
+    assert client.get('/api/mcp-connections').json()['data']['items'][0] == previous
+    with Session(engine) as db:
+        assert service.read(db).credentials == encrypted
+
+
+def test_region_switch_preserves_original_issuer_for_future_token_refresh(setup):
+    client, engine, provider, _ = setup
+    finish(client)
+    assert client.put(PREFIX + '/region', json={'region': 'global'}).status_code == 200
+    with Session(engine) as db:
+        row = service.read(db)
+        credential = service.unseal(row.credentials)
+        credential['expires_at'] = 1
+        row.credentials = service.seal(credential); db.commit()
+    provider.calls.clear()
+    response = client.post(PREFIX + '/test')
+    assert response.status_code == 200 and response.json()['data']['region'] == 'global'
+    refresh = next(r for r in provider.calls if r.url.path.endswith('/token'))
+    assert str(refresh.url) == service.ENDPOINTS['cn'] + '/oauth2/token'
+    assert parse_qs(refresh.content.decode())['resource'] == [service.ENDPOINTS['cn']]
+    assert provider.calls[-1].url.host == 'mcp.longbridge.com'
+
+
+@pytest.mark.parametrize('concurrent', ['disconnect', 'disable', 'refresh'])
+def test_region_probe_cannot_overwrite_concurrent_connection_changes(setup, concurrent):
+    client, engine, provider, _ = setup
+    finish(client); client.post(PREFIX + '/test'); client.put(PREFIX, json={'enabled': True})
+    def change_during_probe():
+        with Session(engine) as db:
+            row = service.read(db)
+            if concurrent == 'disconnect':
+                service.disconnect(db)
+            elif concurrent == 'disable':
+                service.save(db, row.version, enabled=False)
+            else:
+                # Refresh leases deliberately do not bump the connection version.
+                row.refresh_until = int(time.time()) + 30
+                db.commit()
+    provider.on_mcp = change_during_probe
+    assert client.put(PREFIX + '/region', json={'region': 'global'}).status_code == 409
+    state = client.get('/api/mcp-connections').json()['data']['items'][0]
+    assert state['region'] == 'cn'
+    assert state['authorized'] == (concurrent != 'disconnect')
+    assert state['enabled'] == (concurrent == 'refresh')
+
+
+def test_region_cannot_change_during_pending_reauthorization(setup):
+    client, _, provider, _ = setup
+    finish(client); begin(client)
+    provider.calls.clear()
+    assert client.put(PREFIX + '/region', json={'region': 'global'}).status_code == 409
     assert not provider.calls
 
 

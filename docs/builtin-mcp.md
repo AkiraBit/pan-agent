@@ -10,6 +10,8 @@ PanWatch ships a fixed Longbridge connector. The account menu opens `/integratio
 4. 返回后点击 **检测连接**。工具列表来自实际服务发现，并按 PanWatch 的查询白名单过滤；具体可用数据仍受长桥账户权限影响。
 5. 开启 **供 AI 助手使用**。助手对话可以调用已发现的长桥查询工具；授权完成本身不会自动启用。
 
+授权后可直接切换 **连接节点**，无需重新授权。目标节点检测通过后保存，并刷新版本与工具列表；失败时保留原节点。切换保留授权账号、关联时间和启用状态。MCP 请求使用所选节点，令牌续期仍使用原授权节点与客户端注册；授权尚未完成时暂不能切换。
+
 内置范围为 `quote`、`static_info`、`candlesticks`、`capital_flow`、`capital_distribution`、`account_balance`、`stock_positions`。交易、自选修改及自动化写入工具不会注册给助手，服务端也拒绝调用。当前仅接入交互式助手，不改变定时 Agent 或 TradingAgents 的行情数据源。
 
 配置页采用左侧服务列表、右侧详情布局；官方图标直接引用[长桥品牌资源](https://open.longbridge.com/zh-CN/docs/assets)，外层使用固定黑色圆角背景，亮暗主题下保持一致。详情展示关联时间、服务端实际版本及查询工具的原始介绍。简介默认最多一行，溢出时显示“展开 / 收起”，短简介不显示折叠按钮。版本来自 MCP 初始化的 `serverInfo.version`，并非 MCP 协议版本或 PanWatch 版本。
@@ -28,6 +30,8 @@ PanWatch ships a fixed Longbridge connector. The account menu opens `/integratio
 ## English
 
 Sign in to PanWatch, open **MCP**, choose a region and authorize on Longbridge in the same browser tab. Return, test discovery and explicitly enable assistant use. Only the seven read queries listed above are exposed. Scheduled agents and TradingAgents data sources are unchanged.
+
+After authorization, switching the connection node preserves the grant, account, original connection time and enabled state. The target is tested before saving; a failed test keeps the previous node. MCP calls use the selected node while token renewal stays with the original OAuth issuer and client registration.
 
 Remote deployments require HTTPS. Tokens are encrypted on the server, using `mcp-credentials.key` in the data directory. Preserve this key together with the database during backup or migration. Tokens never enter model context; query results enter the current assistant conversation. Disconnecting removes local credentials. Revoke the grant separately in Longbridge account security; existing access tokens may remain valid until expiration.
 
