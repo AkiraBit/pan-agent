@@ -1454,4 +1454,6 @@ def build_panwatch_tool_registry(session: Session) -> ToolRegistry:
     ):
         registry.set_exposure(name, ToolExposure.DEFERRED)
     register_context_tools(registry, db_bind, tool_spec)
+    from .longbridge_tools import register_longbridge_tools
+    register_longbridge_tools(registry, session, language)
     return registry

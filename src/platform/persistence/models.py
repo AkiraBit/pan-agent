@@ -1456,6 +1456,22 @@ class PersonalAccessToken(Base):
     created_at = Column(DateTime, server_default=func.now())
 
 
+class MCPConnection(Base):
+    """Single-user built-in connection; secrets are excluded from settings exports."""
+    __tablename__ = "mcp_connections"
+    provider = Column(String, primary_key=True)
+    version = Column(Integer, nullable=False, default=0, server_default="0")
+    region = Column(String, nullable=False, default="cn", server_default="cn")
+    enabled = Column(Boolean, nullable=False, default=False, server_default="0")
+    credentials = Column(Text, nullable=False, default="", server_default="")
+    pending = Column(Text, nullable=False, default="", server_default="")
+    pending_until = Column(Integer, nullable=False, default=0, server_default="0")
+    refresh_until = Column(Integer, nullable=False, default=0, server_default="0")
+    tools = Column(Text, nullable=False, default="[]", server_default="[]")
+    checked_at = Column(Integer, nullable=True)
+    error_code = Column(String, nullable=False, default="", server_default="")
+
+
 class MCPCallLog(Base):
     """每次 MCP tool 调用的审计记录(只存元数据,不存参数/结果明文)。"""
 

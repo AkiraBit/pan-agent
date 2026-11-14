@@ -13,6 +13,7 @@ export const navigation = {
     evaluations: '验证中心',
     history: '历史',
     dataSources: '数据源',
+    mcp: 'MCP',
     settings: '设置',
   },
 } as const

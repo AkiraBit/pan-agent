@@ -1,6 +1,6 @@
 import { Suspense, useState, useEffect, useRef } from 'react'
 import { Routes, Route, NavLink, useLocation, Navigate } from 'react-router-dom'
-import { TrendingUp, Bot, ScrollText, Settings, List, Database, Clock, LayoutDashboard, Github, BellRing, Sparkles, Activity, ClipboardCheck, MessageCircle, Compass } from 'lucide-react'
+import { TrendingUp, Bot, ScrollText, Settings, List, Database, Clock, LayoutDashboard, Github, BellRing, Sparkles, Activity, ClipboardCheck, MessageCircle, Compass, Plug } from 'lucide-react'
 import { useTheme } from '@/hooks/use-theme'
 import { appApi } from '@panwatch/api/app'
 import { fetchAPI, isAuthenticated } from '@panwatch/api/client'
@@ -29,6 +29,7 @@ const {
   AgentsPage,
   SettingsPage,
   DataSourcesPage,
+  MCPPage,
   HistoryPage,
   AnalysisDetailPage,
   PriceAlertsPage,
@@ -50,6 +51,7 @@ const NAV_ITEMS: Array<{ to: string; icon: typeof LayoutDashboard; labelKey: Nav
   { to: '/evaluations', icon: ClipboardCheck, labelKey: 'evaluations' },
   { to: '/history', icon: Clock, labelKey: 'history' },
   { to: '/datasources', icon: Database, labelKey: 'dataSources' },
+  { to: '/integrations/mcp', icon: Plug, labelKey: 'mcp' },
   { to: '/settings', icon: Settings, labelKey: 'settings' },
   { to: '/getting-started', icon: Compass, labelKey: 'gettingStarted' },
 ]
@@ -321,6 +323,8 @@ function App() {
               <Route path="/assistant" element={<AssistantPage />} />
               <Route path="/assistant/:conversationId" element={<AssistantPage />} />
               <Route path="/datasources" element={<DataSourcesPage />} />
+              <Route path="/integrations/mcp" element={<MCPPage />} />
+              <Route path="/integrations/mcp/callback" element={<MCPPage />} />
               <Route path="/settings" element={<SettingsPage />} />
               <Route path="/analysis/:symbol/:date" element={<AnalysisDetailPage />} />
             </Routes>

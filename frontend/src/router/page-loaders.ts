@@ -15,6 +15,7 @@ export const pageLoaders = {
   evaluations: () => import('@/pages/Evaluations'),
   history: () => import('@/pages/History'),
   dataSources: () => import('@/pages/DataSources'),
+  mcp: () => import('@/pages/MCP'),
   settings: () => import('@/pages/Settings'),
   analysisDetail: () => import('@/pages/AnalysisDetail'),
 } as const
@@ -36,6 +37,7 @@ export const routePages = {
   EvaluationsPage: lazy(pageLoaders.evaluations),
   HistoryPage: lazy(pageLoaders.history),
   DataSourcesPage: lazy(pageLoaders.dataSources),
+  MCPPage: lazy(pageLoaders.mcp),
   SettingsPage: lazy(pageLoaders.settings),
   AnalysisDetailPage: lazy(pageLoaders.analysisDetail),
 } as const
@@ -55,6 +57,7 @@ const routeMatchers: Array<{ key: RouteKey; matches: (pathname: string) => boole
   { key: 'evaluations', matches: pathname => pathname === '/evaluations' },
   { key: 'history', matches: pathname => pathname === '/history' },
   { key: 'dataSources', matches: pathname => pathname === '/datasources' },
+  { key: 'mcp', matches: pathname => pathname.startsWith('/integrations/mcp') },
   { key: 'settings', matches: pathname => pathname === '/settings' },
   { key: 'analysisDetail', matches: pathname => pathname.startsWith('/analysis/') },
 ]

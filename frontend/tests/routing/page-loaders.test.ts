@@ -19,6 +19,7 @@ describe('route page loaders', () => {
       'evaluations',
       'history',
       'dataSources',
+      'mcp',
       'settings',
       'analysisDetail',
     ])
@@ -45,5 +46,11 @@ describe('route page loaders', () => {
 
   it('resolves the recoverable setup page', () => {
     expect(resolveRouteKey('/getting-started')).toBe('gettingStarted')
+  })
+
+  it('loads MCP configuration and its OAuth callback without taking over the inbound MCP endpoint', () => {
+    expect(resolveRouteKey('/integrations/mcp')).toBe('mcp')
+    expect(resolveRouteKey('/integrations/mcp/callback')).toBe('mcp')
+    expect(resolveRouteKey('/mcp')).toBeNull()
   })
 })

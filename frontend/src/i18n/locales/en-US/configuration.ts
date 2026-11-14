@@ -2,6 +2,20 @@ import type { TranslationShape } from '../../resource-types'
 import { configuration as zhConfiguration } from '../zh-CN/configuration'
 
 export const configuration = {
+  mcp: {
+    title: 'MCP', subtitle: 'Manage built-in services and account authorization.', longbridge: 'Longbridge', builtin: 'Built in · Queries only',
+    description: 'Connect quotes, capital flows, account balances and positions. Sign in and authorize on Longbridge. Placing, replacing and cancelling orders are unavailable.',
+    region: 'Connection region', cn: 'Mainland China', global: 'Global', useAssistant: 'Use in AI Assistant',
+    enableHint: 'Authorize and test the connection before enabling it in conversations.', privacy: 'Credentials are encrypted on this server and are never sent to the AI model. Query results become part of the current assistant conversation.',
+    disconnectHint: 'Disconnecting deletes credentials saved by PanWatch. Remove the authorization in Longbridge account security settings to revoke it there; issued credentials may remain valid until expiry.',
+    notAuthorized: 'Not authorized', pending: 'Authorization pending', disabled: 'Authorized · Disabled', enabled: 'Enabled', reauthorize: 'Authorization required',
+    authorize: 'Authorize with Longbridge', authorizeAgain: 'Authorize again', test: 'Test connection', disconnect: 'Disconnect', cancelAuthorization: 'Cancel authorization',
+    disconnectConfirm: 'Disconnect Longbridge MCP? Saved credentials will be deleted and new tool calls will stop immediately.',
+    tools: 'Available query tools', emptyTools: 'After authorization, test the connection to discover queries available to your account.', checkedAt: 'Last checked: {{time}}',
+    docs: 'Longbridge connection documentation', authorized: 'Authorized. Test the connection before enabling it.', cancelled: 'Authorization cancelled.', tested: 'Connection test complete.', saved: 'Connection updated.',
+    failed: 'The operation failed. Try again later.', connectionError: 'The connection is unavailable. Test it or authorize again.',
+    invalidCallback: 'This authorization expired or belongs to another browser. Return and start again.', completing: 'Completing Longbridge authorization…', returnHint: 'Return to the MCP page to continue.', retry: 'Return and retry',
+  },
   notifications: {
     previewTitle: 'Notifications',
     readAll: 'Mark all read',

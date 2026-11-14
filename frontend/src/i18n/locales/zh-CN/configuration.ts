@@ -1,4 +1,18 @@
 export const configuration = {
+  mcp: {
+    title: 'MCP', subtitle: '管理内置服务及账户授权。', longbridge: '长桥 Longbridge', builtin: '内置服务 · 仅查询',
+    description: '连接长桥行情、资金流、账户余额与持仓。由你在长桥官方页面登录并授权，不支持下单、改单或撤单。',
+    region: '连接区域', cn: '中国大陆', global: '全球', useAssistant: '供 AI 助手使用',
+    enableHint: '授权并检测通过后，可在助手对话中使用。', privacy: '凭证加密保存在本机服务端，不会发送给 AI 模型。实际查询结果会进入当前助手对话。',
+    disconnectHint: '断开会删除 PanWatch 保存的凭证。如需撤销长桥侧授权，请在长桥账户安全设置中移除；已签发的凭证在过期前仍可能有效。',
+    notAuthorized: '未授权', pending: '待完成授权', disabled: '已授权 · 未启用', enabled: '已启用', reauthorize: '需要重新授权',
+    authorize: '前往长桥授权', authorizeAgain: '重新授权', test: '检测连接', disconnect: '断开连接', cancelAuthorization: '取消本次授权',
+    disconnectConfirm: '断开长桥 MCP？这会删除本机授权凭证，并立即停止新的工具调用。',
+    tools: '可用查询工具', emptyTools: '授权后点击“检测连接”，获取当前账户可用的查询工具。', checkedAt: '上次检测：{{time}}',
+    docs: '长桥官方接入文档', authorized: '授权成功，请检测连接后启用。', cancelled: '已取消授权。', tested: '连接检测完成。', saved: '已更新连接。',
+    failed: '操作失败，请稍后重试。', connectionError: '连接暂不可用，请检测连接或重新授权。',
+    invalidCallback: '授权不属于当前浏览器或已过期，请返回后重新发起。', completing: '正在完成长桥授权…', returnHint: '请返回 MCP 页面继续。', retry: '返回并重试',
+  },
   notifications: {
     previewTitle: '通知',
     readAll: '全部已读',

@@ -15,6 +15,7 @@ from src.modules.administration.api import (
     health,
     logs,
     mcp,
+    mcp_connections,
     onboarding,
     pats,
     providers,
@@ -73,6 +74,7 @@ app.include_router(market.router, prefix="/api/market", tags=["market"])
 
 # 需要登录的路由
 protected = [Depends(get_current_user)]
+app.include_router(mcp_connections.router, prefix="/api/mcp-connections", tags=["mcp-connections"])
 app.include_router(review.router, prefix="/api/market-review", tags=["market-review"], dependencies=protected)
 app.include_router(short_term_api.router, prefix="/api/short-term", tags=["short-term"], dependencies=protected)
 app.include_router(emotion_api.router, prefix="/api/short-term", tags=["emotion-workbench"], dependencies=protected)

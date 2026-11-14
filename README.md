@@ -85,6 +85,8 @@ ETF deep analysis uses fund-specific context and does not substitute company fin
 
 ## Quick Start
 
+Open **MCP** in the account menu to connect the built-in Longbridge service. Choose a region, authorize read-only account access on Longbridge, then **Test connection** and enable **Use in AI Assistant**. Quotes, candlesticks, capital flows, balances and positions are supported. Arbitrary server installation and trading tools are unavailable. See [built-in MCP setup and credential storage](docs/builtin-mcp.md).
+
 ```bash
 docker run -d \
   --name panwatch \

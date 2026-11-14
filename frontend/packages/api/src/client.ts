@@ -12,6 +12,14 @@ export interface ApiResponse<T> {
 }
 
 const API_ERROR_TEXT_EN: Record<string, string> = {
+  mcp_authorization_required: 'Authorize with Longbridge before continuing.',
+  mcp_authorization_invalid: 'This authorization expired or was already handled. Start again.',
+  mcp_connection_changed: 'The connection changed. Refresh and retry.',
+  mcp_connection_disabled: 'Longbridge MCP is disabled.',
+  mcp_callback_invalid: 'Authorization requires HTTPS, or localhost / 127.0.0.1 for local use.',
+  mcp_tool_not_allowed: 'This tool is outside the built-in query permissions.',
+  mcp_storage_unavailable: 'Saved credentials cannot be read. Restore the MCP key or disconnect and authorize again.',
+  mcp_connection_failed: 'Could not connect to Longbridge. Try again later.',
   onboarding_step_incomplete: 'Complete the current required step before continuing.',
   onboarding_track_invalid: 'Choose a valid guide route and advance one route at a time.',
   onboarding_analysis_interrupted: 'A service restart interrupted the analysis. Your setup is saved; generate it again.',

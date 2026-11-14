@@ -2302,6 +2302,16 @@ def _m142_emotion_regulatory_validation(conn: Connection) -> None:
         conn.execute(text(statement))
 
 
+def _m143_builtin_mcp_connections(conn: Connection) -> None:
+    conn.execute(text("""CREATE TABLE IF NOT EXISTS mcp_connections (
+        provider VARCHAR PRIMARY KEY, version INTEGER NOT NULL DEFAULT 0,
+        region VARCHAR NOT NULL DEFAULT 'cn', enabled BOOLEAN NOT NULL DEFAULT 0,
+        credentials TEXT NOT NULL DEFAULT '', pending TEXT NOT NULL DEFAULT '',
+        pending_until INTEGER NOT NULL DEFAULT 0, refresh_until INTEGER NOT NULL DEFAULT 0,
+        tools TEXT NOT NULL DEFAULT '[]', checked_at INTEGER,
+        error_code VARCHAR NOT NULL DEFAULT '')"""))
+
+
 MIGRATIONS: tuple[Migration, ...] = (
     Migration(101, "agent_config_kind_and_visibility", _m101_agent_config_kind),
     Migration(102, "backfill_agent_kind_data", _m102_backfill_agent_kind),
@@ -2345,6 +2355,7 @@ MIGRATIONS: tuple[Migration, ...] = (
     Migration(140, "emotion_workbench", _m140_emotion_workbench),
     Migration(141, "emotion_lifecycle", _m141_emotion_lifecycle),
     Migration(142, "emotion_regulatory_validation", _m142_emotion_regulatory_validation),
+    Migration(143, "builtin_mcp_connections", _m143_builtin_mcp_connections),
 )
 
 
