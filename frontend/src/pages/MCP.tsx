@@ -21,9 +21,8 @@ const STORAGE = 'panwatch-longbridge-oauth'
 type MCPLabel = keyof (typeof import('@/i18n/locales/zh-CN/configuration').configuration)['mcp']
 
 function LongbridgeIcon({ className = '' }: { className?: string }) {
-  return <span className={`shrink-0 ${className}`}>
-    <img src="https://assets.lbkrs.com/uploads/2e476c46-8bb9-4689-a800-54877351520e/app-icon.svg" alt="Longbridge" referrerPolicy="no-referrer" className="w-full h-full dark:hidden" />
-    <img src="https://assets.lbkrs.com/uploads/716a4e35-c078-4fd5-9818-b859ad83b51b/app-icon-dark.svg" alt="Longbridge" referrerPolicy="no-referrer" className="w-full h-full hidden dark:block" />
+  return <span className={`inline-flex shrink-0 overflow-hidden rounded-xl bg-black p-1 ${className}`}>
+    <img src="https://assets.lbkrs.com/uploads/2e476c46-8bb9-4689-a800-54877351520e/app-icon.svg" alt="Longbridge" referrerPolicy="no-referrer" className="block w-full h-full object-contain" />
   </span>
 }
 

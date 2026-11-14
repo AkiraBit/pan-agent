@@ -12,7 +12,7 @@ PanWatch ships a fixed Longbridge connector. The account menu opens `/integratio
 
 内置范围为 `quote`、`static_info`、`candlesticks`、`capital_flow`、`capital_distribution`、`account_balance`、`stock_positions`。交易、自选修改及自动化写入工具不会注册给助手，服务端也拒绝调用。当前仅接入交互式助手，不改变定时 Agent 或 TradingAgents 的行情数据源。
 
-配置页采用左侧服务列表、右侧详情布局；官方图标直接引用[长桥品牌资源](https://open.longbridge.com/zh-CN/docs/assets)，支持亮暗主题。详情展示关联时间、服务端实际版本及查询工具的原始介绍。简介默认最多一行，溢出时显示“展开 / 收起”，短简介不显示折叠按钮。版本来自 MCP 初始化的 `serverInfo.version`，并非 MCP 协议版本或 PanWatch 版本。
+配置页采用左侧服务列表、右侧详情布局；官方图标直接引用[长桥品牌资源](https://open.longbridge.com/zh-CN/docs/assets)，外层使用固定黑色圆角背景，亮暗主题下保持一致。详情展示关联时间、服务端实际版本及查询工具的原始介绍。简介默认最多一行，溢出时显示“展开 / 收起”，短简介不显示折叠按钮。版本来自 MCP 初始化的 `serverInfo.version`，并非 MCP 协议版本或 PanWatch 版本。
 
 授权账号优先显示 `邮箱(账号名)`，仅使用长桥签名授权信息实际提供的字段。若缺少邮箱，显示可用账号名或脱敏账户编号并提示缺失，不把 OAuth 客户端 ID 当作账号。当前长桥授权可能只有 JSON `sub` 内的 `account_no` / `member_id`，不提供邮箱与账号名。点击“检测连接”可刷新账号显示与服务版本，无需重新授权。新增关联从授权完成时记录时间；旧连接没有可靠的原始关联时间，显示“此前未记录”，不会以检测或刷新时间代替。
 
