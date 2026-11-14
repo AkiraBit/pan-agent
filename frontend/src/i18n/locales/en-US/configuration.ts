@@ -314,6 +314,8 @@ export const configuration = {
     ai: {
       title: 'AI services & models', description: 'Connect AI services and set a default model', addProvider: 'Add service', empty: 'No AI services yet. Click “Add service” to create one.',
       addModel: 'Model', discover: 'Discover models', test: 'Test model', setDefault: 'Set as default',
+      expandProvider: 'Expand models for {{name}}', collapseProvider: 'Collapse models for {{name}}', modelCount: '{{count}} models', noModels: 'No models yet. Add or discover models.',
+      locateDefaultModel: 'Locate default model {{model}}',
     },
     notifications: { title: 'Notification channels', description: 'Send to Telegram, Bark, and other channels', add: 'Add', empty: 'No notification channels yet. Click “Add” to create one.', sendTest: 'Send test', setDefault: 'Set as default' },
     timezone: { display: 'Display and alert expiry: {{timezone}} (browser timezone)', execution: 'Schedules and quiet hours: {{timezone}}. Set TZ on the server and restart to change it.', market: 'Trading dates and sessions follow each exchange’s timezone.', quietHours: 'Quiet hours are evaluated in {{timezone}}.' },

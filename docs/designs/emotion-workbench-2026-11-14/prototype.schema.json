@@ -1,0 +1,1121 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://panwatch.local/design/emotion-workbench/prototype.schema.json",
+  "title": "PanWatch 情绪策略台 · 原型快照",
+  "description": "设计原型专用。固定组件白名单、纯文本内容与有界数组；跨对象引用和时间语义由验证脚本另行检查。不可作为生产监测契约。",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0-prototype"
+    },
+    "snapshot_id": {
+      "$ref": "#/$defs/id"
+    },
+    "revision": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "fixture": {
+      "const": true
+    },
+    "mode": {
+      "enum": [
+        "weekend",
+        "relay",
+        "retreat",
+        "stale"
+      ]
+    },
+    "as_of": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "knowledge_cutoff": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "target_trade_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "timezone": {
+      "const": "Asia/Shanghai"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4000
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4000
+    },
+    "phase": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4000
+    },
+    "assessment": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4000
+    },
+    "data_status": {
+      "enum": [
+        "historical",
+        "simulated",
+        "stale"
+      ]
+    },
+    "market_clock": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4000
+    },
+    "stocks": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/stock"
+      },
+      "maxItems": 50
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/evidence"
+      },
+      "maxItems": 200
+    },
+    "conditions": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/condition"
+      },
+      "maxItems": 100
+    },
+    "scenarios": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/scenario"
+      },
+      "maxItems": 12
+    },
+    "pages": {
+      "type": "object",
+      "properties": {
+        "overview": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/block"
+          },
+          "maxItems": 20
+        },
+        "cycle": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/block"
+          },
+          "maxItems": 20
+        },
+        "playbook": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/block"
+          },
+          "maxItems": 20
+        },
+        "stock": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/block"
+          },
+          "maxItems": 20
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/block"
+          },
+          "maxItems": 20
+        },
+        "review": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/block"
+          },
+          "maxItems": 20
+        },
+        "agent": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/block"
+          },
+          "maxItems": 20
+        }
+      },
+      "required": [
+        "overview",
+        "cycle",
+        "playbook",
+        "stock",
+        "evidence",
+        "review",
+        "agent"
+      ],
+      "additionalProperties": false
+    },
+    "content": {
+      "$ref": "#/$defs/content"
+    },
+    "constraints": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/constraint"
+      },
+      "maxItems": 30
+    },
+    "capabilities": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/capability"
+      },
+      "maxItems": 40
+    },
+    "revisions": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/revision"
+      },
+      "maxItems": 100
+    }
+  },
+  "required": [
+    "schema_version",
+    "snapshot_id",
+    "revision",
+    "fixture",
+    "mode",
+    "as_of",
+    "knowledge_cutoff",
+    "target_trade_date",
+    "timezone",
+    "title",
+    "summary",
+    "phase",
+    "assessment",
+    "data_status",
+    "market_clock",
+    "stocks",
+    "evidence",
+    "conditions",
+    "scenarios",
+    "pages",
+    "content",
+    "constraints",
+    "capabilities",
+    "revisions"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "text": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4000
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_.:-]+$",
+      "maxLength": 100
+    },
+    "symbol": {
+      "type": "string",
+      "pattern": "^[0-9]{6}\\.(SH|SZ|BJ)$"
+    },
+    "tone": {
+      "enum": [
+        "neutral",
+        "blue",
+        "amber",
+        "purple",
+        "danger"
+      ]
+    },
+    "state": {
+      "enum": [
+        "waiting",
+        "met",
+        "not_met",
+        "unknown",
+        "supported"
+      ]
+    },
+    "note": {
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000
+        },
+        "body": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000
+        }
+      },
+      "required": [
+        "title",
+        "body"
+      ],
+      "additionalProperties": false
+    },
+    "stock": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/symbol"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000
+        },
+        "code": {
+          "type": "string",
+          "pattern": "^[0-9]{6}$"
+        },
+        "role": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000
+        },
+        "group": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000
+        },
+        "price": {
+          "type": "number",
+          "minimum": 0
+        },
+        "change": {
+          "type": "number"
+        },
+        "position": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000
+        },
+        "tone": {
+          "$ref": "#/$defs/tone"
+        },
+        "note": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000
+        },
+        "levels": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "prefixItems": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 4000
+              },
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 4000
+              }
+            ],
+            "items": false,
+            "minItems": 2,
+            "maxItems": 2
+          },
+          "maxItems": 10
+        },
+        "bars": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "maxItems": 500
+        },
+        "thesis": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000
+        },
+        "constraints": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000
+          },
+          "maxItems": 20
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "maxItems": 20
+        },
+        "invalidates": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000
+        },
+        "watchpoints": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/note"
+          },
+          "maxItems": 20
+        },
+        "simulated": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "code",
+        "role",
+        "group",
+        "price",
+        "change",
+        "position",
+        "tone",
+        "note",
+        "levels",
+        "bars",
+        "thesis",
+        "constraints",
+        "evidence",
+        "invalidates",
+        "watchpoints"
+      ],
+      "additionalProperties": false
+    },
+    "evidence": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000
+        },
+        "type": {
+          "enum": [
+            "行情事实",
+            "用户补充",
+            "归因假设",
+            "券商通知",
+            "公司公告",
+            "媒体复盘",
+            "分析假设"
+          ]
+        },
+        "status": {
+          "enum": [
+            "示例引用",
+            "待核验",
+            "待计算",
+            "待验证",
+            "待查续期"
+          ]
+        },
+        "source": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000
+        },
+        "published_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 4000
+        },
+        "observed_at": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000
+        },
+        "text": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000
+        },
+        "url": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "pattern": "^https?://",
+              "maxLength": 2048
+            }
+          ]
+        },
+        "affects": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000
+          },
+          "maxItems": 50
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "type",
+        "status",
+        "source",
+        "published_at",
+        "observed_at",
+        "text",
+        "url",
+        "affects"
+      ],
+      "additionalProperties": false
+    },
+    "condition": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000
+        },
+        "subject": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/symbol"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "detail": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000
+        },
+        "state": {
+          "$ref": "#/$defs/state"
+        },
+        "scope": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000
+        },
+        "kind": {
+          "enum": [
+            "composite",
+            "cohort"
+          ]
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "maxItems": 20
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "subject",
+        "detail",
+        "state",
+        "scope",
+        "kind",
+        "evidence"
+      ],
+      "additionalProperties": false
+    },
+    "scenario": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000
+        },
+        "subtitle": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000
+        },
+        "tag": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000
+        },
+        "tone": {
+          "$ref": "#/$defs/tone"
+        },
+        "state": {
+          "$ref": "#/$defs/state"
+        },
+        "requires": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "maxItems": 20
+        },
+        "supports": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000
+          },
+          "maxItems": 20
+        },
+        "against": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000
+          },
+          "maxItems": 20
+        },
+        "invalid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000
+        },
+        "next": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "subtitle",
+        "tag",
+        "tone",
+        "state",
+        "requires",
+        "supports",
+        "against",
+        "invalid",
+        "next"
+      ],
+      "additionalProperties": false
+    },
+    "block": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "kind": {
+          "enum": [
+            "verdict",
+            "context_metrics",
+            "cycle_preview",
+            "next_checks",
+            "watch_table",
+            "thesis_changes",
+            "cycle_graph",
+            "branch_comparison",
+            "relationship_notes",
+            "scenario_grid",
+            "session_timeline",
+            "condition_list",
+            "stock_focus",
+            "stock_history",
+            "stock_constraints",
+            "stock_conditions",
+            "evidence_summary",
+            "evidence_list",
+            "constraint_panel",
+            "review_summary",
+            "revision_timeline",
+            "review_lessons",
+            "review_outcomes",
+            "agent_status",
+            "agent_runs",
+            "capabilities",
+            "publication_contract",
+            "data_gap",
+            "risk_notice",
+            "propagation_update"
+          ]
+        },
+        "span": {
+          "enum": [
+            "full",
+            "main",
+            "side"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "span"
+      ],
+      "additionalProperties": false
+    },
+    "constraint": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000
+        },
+        "value": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000
+        },
+        "status": {
+          "enum": [
+            "unknown",
+            "hypothesis"
+          ]
+        },
+        "evidence_id": {
+          "$ref": "#/$defs/id"
+        }
+      },
+      "required": [
+        "id",
+        "label",
+        "value",
+        "status",
+        "evidence_id"
+      ],
+      "additionalProperties": false
+    },
+    "capability": {
+      "type": "object",
+      "properties": {
+        "label": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000
+        },
+        "status": {
+          "enum": [
+            "可复用",
+            "未接通",
+            "待建设"
+          ]
+        },
+        "detail": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000
+        }
+      },
+      "required": [
+        "label",
+        "status",
+        "detail"
+      ],
+      "additionalProperties": false
+    },
+    "revision": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "time": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000
+        },
+        "body": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000
+        },
+        "type": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000
+        }
+      },
+      "required": [
+        "version",
+        "time",
+        "title",
+        "body",
+        "type"
+      ],
+      "additionalProperties": false
+    },
+    "timelineItem": {
+      "type": "object",
+      "properties": {
+        "time": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000
+        },
+        "body": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000
+        },
+        "tag": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000
+        }
+      },
+      "required": [
+        "time",
+        "title",
+        "body",
+        "tag"
+      ],
+      "additionalProperties": false
+    },
+    "graph": {
+      "type": "object",
+      "properties": {
+        "focus_symbol": {
+          "$ref": "#/$defs/symbol"
+        },
+        "nodes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "symbol": {
+                "$ref": "#/$defs/symbol"
+              },
+              "column": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 3
+              },
+              "row": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 3
+              }
+            },
+            "required": [
+              "symbol",
+              "column",
+              "row"
+            ],
+            "additionalProperties": false
+          },
+          "maxItems": 30
+        },
+        "edges": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "from": {
+                "$ref": "#/$defs/symbol"
+              },
+              "to": {
+                "$ref": "#/$defs/symbol"
+              },
+              "type": {
+                "enum": [
+                  "name_association",
+                  "relay_hypothesis"
+                ]
+              },
+              "evidence_id": {
+                "$ref": "#/$defs/id"
+              }
+            },
+            "required": [
+              "from",
+              "to",
+              "type",
+              "evidence_id"
+            ],
+            "additionalProperties": false
+          },
+          "maxItems": 60
+        },
+        "alternative": {
+          "$ref": "#/$defs/note"
+        }
+      },
+      "required": [
+        "focus_symbol",
+        "nodes",
+        "edges",
+        "alternative"
+      ],
+      "additionalProperties": false
+    },
+    "content": {
+      "type": "object",
+      "properties": {
+        "cycle_name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000
+        },
+        "history_dates": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000
+          },
+          "maxItems": 500
+        },
+        "chain": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "title": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 4000
+              },
+              "description": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 4000
+              },
+              "condition_id": {
+                "$ref": "#/$defs/id"
+              }
+            },
+            "required": [
+              "title",
+              "description",
+              "condition_id"
+            ],
+            "additionalProperties": false
+          },
+          "maxItems": 20
+        },
+        "branches": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 4000
+              },
+              "members": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/symbol"
+                },
+                "maxItems": 30
+              },
+              "summary": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 4000
+              },
+              "label": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 4000
+              }
+            },
+            "required": [
+              "name",
+              "members",
+              "summary",
+              "label"
+            ],
+            "additionalProperties": false
+          },
+          "maxItems": 20
+        },
+        "relationships": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/note"
+          },
+          "maxItems": 20
+        },
+        "graph": {
+          "$ref": "#/$defs/graph"
+        },
+        "timelines": {
+          "type": "object",
+          "properties": {
+            "auction": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/timelineItem"
+              },
+              "maxItems": 20
+            },
+            "opening": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/timelineItem"
+              },
+              "maxItems": 20
+            },
+            "intraday": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/timelineItem"
+              },
+              "maxItems": 20
+            },
+            "review": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/timelineItem"
+              },
+              "maxItems": 20
+            }
+          },
+          "required": [
+            "auction",
+            "opening",
+            "intraday",
+            "review"
+          ],
+          "additionalProperties": false
+        },
+        "calendar": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/note"
+          },
+          "maxItems": 30
+        },
+        "lessons": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/note"
+          },
+          "maxItems": 30
+        },
+        "run_steps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "title": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 4000
+              },
+              "body": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 4000
+              },
+              "label": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 4000
+              }
+            },
+            "required": [
+              "title",
+              "body",
+              "label"
+            ],
+            "additionalProperties": false
+          },
+          "maxItems": 30
+        },
+        "update": {
+          "type": "object",
+          "properties": {
+            "title": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4000
+            },
+            "body": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4000
+            },
+            "tags": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 4000
+              },
+              "maxItems": 20
+            }
+          },
+          "required": [
+            "title",
+            "body",
+            "tags"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "cycle_name",
+        "history_dates",
+        "chain",
+        "branches",
+        "relationships",
+        "graph",
+        "timelines",
+        "calendar",
+        "lessons",
+        "run_steps",
+        "update"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

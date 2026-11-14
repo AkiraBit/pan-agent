@@ -311,6 +311,8 @@ export const configuration = {
     ai: {
       title: 'AI 服务商 & 模型', description: '连接你的 AI 服务并设置默认模型', addProvider: '添加服务商', empty: '暂无 AI 服务商，点击“添加服务商”创建',
       addModel: '模型', discover: '嗅探模型（自动发现可用模型）', test: '测试模型', setDefault: '设为默认',
+      expandProvider: '展开 {{name}} 的模型列表', collapseProvider: '收起 {{name}} 的模型列表', modelCount: '{{count}} 个模型', noModels: '暂无模型，可添加或嗅探模型',
+      locateDefaultModel: '定位默认模型 {{model}}',
     },
     notifications: { title: '通知渠道', description: '推送到 Telegram/Bark 等渠道', add: '添加', empty: '暂无通知渠道，点击“添加”创建', sendTest: '发送测试', setDefault: '设为默认' },
     timezone: { display: '显示与提醒到期时间：{{timezone}}（浏览器时区）', execution: '任务调度与通知静默时段：{{timezone}}。修改部署配置 TZ 并重启服务可更改。', market: '交易日期与交易时段按各交易所时区计算。', quietHours: '静默时段按 {{timezone}} 判断。' },

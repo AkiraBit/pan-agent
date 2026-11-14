@@ -1,0 +1,1198 @@
+{
+  "schema_version": "1.0.0-prototype",
+  "snapshot_id": "demo-relay-v3",
+  "revision": 3,
+  "fixture": true,
+  "mode": "relay",
+  "as_of": "2026-11-16T10:30:00+08:00",
+  "knowledge_cutoff": "2026-11-16T10:30:00+08:00",
+  "target_trade_date": "2026-11-16",
+  "timezone": "Asia/Shanghai",
+  "title": "核心开始共振，接力证据增强",
+  "summary": "模拟情景：九阳主动走强、海洋王响应，部分分支止跌。次日溢价仍需等待，不能提前确认。",
+  "phase": "修复尝试",
+  "assessment": "当日修复已出现，持续性尚待验证",
+  "data_status": "simulated",
+  "market_clock": "盘中推演 · 10:30",
+  "stocks": [
+    {
+      "id": "002242.SZ",
+      "name": "九阳股份",
+      "code": "002242",
+      "role": "周期核心",
+      "group": "阳 / 洋",
+      "price": 28.14,
+      "change": 5.2,
+      "position": "主观察",
+      "tone": "blue",
+      "note": "窗口压力变化后，观察主动性与带动性",
+      "levels": [
+        [
+          "26.75",
+          "周五收盘"
+        ],
+        [
+          "27.04",
+          "本周最高"
+        ],
+        [
+          "25.81",
+          "周五最低"
+        ]
+      ],
+      "bars": [
+        25.1,
+        26.1,
+        26.35,
+        26.59,
+        26.65,
+        26.75
+      ],
+      "thesis": "九阳走强只是第一步，其他核心响应与补涨溢价恢复才构成接力证据。",
+      "constraints": [
+        "异动窗口测算待完整核验",
+        "上涨幅度不能单独代表带动能力"
+      ],
+      "evidence": [
+        "e-quote",
+        "e-window"
+      ],
+      "invalidates": "自身强势无法传导、回落失去承接，或数据来源失效。",
+      "watchpoints": [
+        {
+          "title": "竞价",
+          "body": "看最终匹配与卖压变化；缺竞价源则保留未知"
+        },
+        {
+          "title": "开盘后",
+          "body": "看首次回落承接，同时对照相关核心与分支"
+        },
+        {
+          "title": "收盘确认",
+          "body": "当日带动与次日溢价分别验证，不提前记为成功"
+        }
+      ],
+      "simulated": true
+    },
+    {
+      "id": "002724.SZ",
+      "name": "海洋王",
+      "code": "002724",
+      "role": "共同核心",
+      "group": "阳 / 洋",
+      "price": 13.41,
+      "change": 3.1,
+      "position": "主观察",
+      "tone": "blue",
+      "note": "检验抗跌核心能否同步增强",
+      "levels": [
+        [
+          "13.01",
+          "周五收盘"
+        ],
+        [
+          "13.43",
+          "周五最高"
+        ],
+        [
+          "11.80",
+          "周五最低"
+        ]
+      ],
+      "bars": [
+        11.97,
+        12.9,
+        13.18,
+        13.05,
+        12.91,
+        13.01
+      ],
+      "thesis": "共同核心响应，有助于区分周期扩散与九阳独强。",
+      "constraints": [
+        "监控是否续期待核验"
+      ],
+      "evidence": [
+        "e-quote",
+        "e-monitor"
+      ],
+      "invalidates": "自身强势无法传导、回落失去承接，或数据来源失效。",
+      "watchpoints": [
+        {
+          "title": "竞价",
+          "body": "看最终匹配与卖压变化；缺竞价源则保留未知"
+        },
+        {
+          "title": "开盘后",
+          "body": "看首次回落承接，同时对照相关核心与分支"
+        },
+        {
+          "title": "收盘确认",
+          "body": "当日带动与次日溢价分别验证，不提前记为成功"
+        }
+      ],
+      "simulated": true
+    },
+    {
+      "id": "002086.SZ",
+      "name": "东方海洋",
+      "code": "002086",
+      "role": "属性桥梁",
+      "group": "东方 / 洋",
+      "price": 4.94,
+      "change": 2.4,
+      "position": "主观察",
+      "tone": "amber",
+      "note": "从阳洋扩散到东方分支的修复观察",
+      "levels": [
+        [
+          "4.82",
+          "周五收盘"
+        ],
+        [
+          "5.06",
+          "周五最高"
+        ],
+        [
+          "4.64",
+          "周五最低"
+        ]
+      ],
+      "bars": [
+        3.97,
+        4.37,
+        4.62,
+        4.69,
+        5.16,
+        4.82
+      ],
+      "thesis": "属性交叉提供关联假设；同步上涨仍不等于已证明资金传导。",
+      "constraints": [
+        "题材关系属于分析假设"
+      ],
+      "evidence": [
+        "e-quote",
+        "e-context"
+      ],
+      "invalidates": "自身强势无法传导、回落失去承接，或数据来源失效。",
+      "watchpoints": [
+        {
+          "title": "竞价",
+          "body": "看最终匹配与卖压变化；缺竞价源则保留未知"
+        },
+        {
+          "title": "开盘后",
+          "body": "看首次回落承接，同时对照相关核心与分支"
+        },
+        {
+          "title": "收盘确认",
+          "body": "当日带动与次日溢价分别验证，不提前记为成功"
+        }
+      ],
+      "simulated": true
+    },
+    {
+      "id": "000678.SZ",
+      "name": "襄阳轴承",
+      "code": "000678",
+      "role": "修复观察",
+      "group": "机器人 / 阳",
+      "price": 19.97,
+      "change": 1.1,
+      "position": "主观察",
+      "tone": "amber",
+      "note": "跌停后能否止亏，并带动分支改善",
+      "levels": [
+        [
+          "19.75",
+          "周五收盘"
+        ],
+        [
+          "22.50",
+          "周五最高"
+        ],
+        [
+          "21.94",
+          "周四收盘"
+        ]
+      ],
+      "bars": [],
+      "thesis": "重点观察跌停负反馈是否持续扩散。",
+      "constraints": [
+        "完整历史收盘序列尚未收录，不绘制补造曲线"
+      ],
+      "evidence": [
+        "e-quote"
+      ],
+      "invalidates": "自身强势无法传导、回落失去承接，或数据来源失效。",
+      "watchpoints": [
+        {
+          "title": "竞价",
+          "body": "看最终匹配与卖压变化；缺竞价源则保留未知"
+        },
+        {
+          "title": "开盘后",
+          "body": "看首次回落承接，同时对照相关核心与分支"
+        },
+        {
+          "title": "收盘确认",
+          "body": "当日带动与次日溢价分别验证，不提前记为成功"
+        }
+      ],
+      "simulated": true
+    },
+    {
+      "id": "002578.SZ",
+      "name": "闽发铝业",
+      "code": "002578",
+      "role": "光伏高度",
+      "group": "光伏",
+      "price": 5.68,
+      "change": 4.4,
+      "position": "分支观察",
+      "tone": "amber",
+      "note": "七连板后破位，先验证修复质量",
+      "levels": [
+        [
+          "5.44",
+          "周五收盘"
+        ],
+        [
+          "5.75–5.83",
+          "修复参照区"
+        ],
+        [
+          "6.04–6.08",
+          "此前收盘区域"
+        ]
+      ],
+      "bars": [
+        5.01,
+        5.51,
+        6.06,
+        6.08,
+        6.04,
+        5.44
+      ],
+      "thesis": "九阳改善情绪环境，闽发仍需自身承接与光伏分支响应。",
+      "constraints": [
+        "周一正常涨停价测算为 5.98 元，仍低于 6.04 元",
+        "不能仅凭缩量跌停认定洗盘"
+      ],
+      "evidence": [
+        "e-quote",
+        "e-minfa"
+      ],
+      "invalidates": "九阳走强而闽发持续弱势，光伏分支缺乏响应。",
+      "watchpoints": [
+        {
+          "title": "竞价",
+          "body": "看最终匹配与卖压变化；缺竞价源则保留未知"
+        },
+        {
+          "title": "开盘后",
+          "body": "看首次回落承接，同时对照相关核心与分支"
+        },
+        {
+          "title": "收盘确认",
+          "body": "即使涨停约5.98元，也先记强修复，次日再看持续性"
+        }
+      ],
+      "simulated": true
+    },
+    {
+      "id": "600825.SH",
+      "name": "新华传媒",
+      "code": "600825",
+      "role": "监管观察",
+      "group": "传媒",
+      "price": 12.69,
+      "change": -3.2,
+      "position": "辅助观察",
+      "tone": "neutral",
+      "note": "降低单股监管冲击对全周期判断的权重",
+      "levels": [
+        [
+          "13.11",
+          "周五收盘"
+        ],
+        [
+          "14.57",
+          "周四收盘"
+        ]
+      ],
+      "bars": [
+        12.94,
+        13.65,
+        14.35,
+        14.16,
+        14.57,
+        13.11
+      ],
+      "thesis": "单股监管冲击与周期自然衰竭需要区分，继续观察冲击是否外溢。",
+      "constraints": [
+        "追加监控的原始通知待核验"
+      ],
+      "evidence": [
+        "e-quote",
+        "e-regulation"
+      ],
+      "invalidates": "自身强势无法传导、回落失去承接，或数据来源失效。",
+      "watchpoints": [
+        {
+          "title": "竞价",
+          "body": "看最终匹配与卖压变化；缺竞价源则保留未知"
+        },
+        {
+          "title": "开盘后",
+          "body": "看首次回落承接，同时对照相关核心与分支"
+        },
+        {
+          "title": "收盘确认",
+          "body": "当日带动与次日溢价分别验证，不提前记为成功"
+        }
+      ],
+      "simulated": true
+    },
+    {
+      "id": "600715.SH",
+      "name": "文投控股",
+      "code": "600715",
+      "role": "方向对照",
+      "group": "传媒",
+      "price": 3.61,
+      "change": 6.3,
+      "position": "辅助观察",
+      "tone": "purple",
+      "note": "区分全周期修复与传媒独立走强",
+      "levels": [
+        [
+          "3.40",
+          "周五收盘"
+        ],
+        [
+          "3.20",
+          "周五最低"
+        ]
+      ],
+      "bars": [
+        2.35,
+        2.59,
+        2.85,
+        3.14,
+        3.09,
+        3.4
+      ],
+      "thesis": "文投与传媒形成新梯队，可以和旧周期退潮同时发生。",
+      "constraints": [
+        "传媒走强不自动计入阳洋周期修复"
+      ],
+      "evidence": [
+        "e-quote",
+        "e-media"
+      ],
+      "invalidates": "自身强势无法传导、回落失去承接，或数据来源失效。",
+      "watchpoints": [
+        {
+          "title": "竞价",
+          "body": "看最终匹配与卖压变化；缺竞价源则保留未知"
+        },
+        {
+          "title": "开盘后",
+          "body": "看首次回落承接，同时对照相关核心与分支"
+        },
+        {
+          "title": "收盘确认",
+          "body": "当日带动与次日溢价分别验证，不提前记为成功"
+        }
+      ],
+      "simulated": true
+    }
+  ],
+  "evidence": [
+    {
+      "id": "e-quote",
+      "title": "11月13日收盘行情样本",
+      "type": "行情事实",
+      "status": "示例引用",
+      "source": "本轮讨论查询的长桥行情",
+      "published_at": "2026-11-13 15:00",
+      "observed_at": "2026-11-13 15:00",
+      "text": "九阳 26.75、海洋王 13.01、东方海洋 4.82、襄阳 19.75、闽发 5.44、新华 13.11、文投 3.40 元。生产环境必须保存原始响应、源时间和计价单位。原型未连接行情。",
+      "url": null,
+      "affects": [
+        "周期判断",
+        "核心观察",
+        "价格参照"
+      ]
+    },
+    {
+      "id": "e-regulation",
+      "title": "新华追加监控",
+      "type": "用户补充",
+      "status": "待核验",
+      "source": "本轮用户补充；缺原始监管通知",
+      "published_at": null,
+      "observed_at": "2026-11-14",
+      "text": "暂存为待核验约束，进入条件化分析。风险提示公告不能替代重点监控追加通知，也不能推断解除日期。",
+      "url": null,
+      "affects": [
+        "新华权重",
+        "周期归因"
+      ]
+    },
+    {
+      "id": "e-window",
+      "title": "九阳异动窗口临近变化",
+      "type": "用户补充",
+      "status": "待计算",
+      "source": "用户补充与市场讨论",
+      "published_at": "2026-11-12",
+      "observed_at": "2026-11-14",
+      "text": "需要完整复权口径、基准指数、交易日序列及规则版本，才能计算具体窗口。未核验前仅保留“若压力减轻”的情景，不显示解禁倒计时。",
+      "url": "https://docs.static.szse.cn/www/lawrules/rule/trade/W020260424690713155663.pdf",
+      "affects": [
+        "九阳预期",
+        "接力情景"
+      ]
+    },
+    {
+      "id": "e-weekend",
+      "title": "周末避险可能放大卖盘",
+      "type": "归因假设",
+      "status": "待验证",
+      "source": "用户补充与策略推演",
+      "published_at": null,
+      "observed_at": "2026-11-14",
+      "text": "工作日历只能确认周末休市，不能确认资金卖出的动机。用下个交易日回流与承接观察检验解释力，不将周一反弹预写为结果。",
+      "url": null,
+      "affects": [
+        "分歧归因",
+        "周一检验"
+      ]
+    },
+    {
+      "id": "e-monitor",
+      "title": "海洋王重点监控区间",
+      "type": "券商通知",
+      "status": "待查续期",
+      "source": "太平洋证券",
+      "published_at": "2026-11-02",
+      "observed_at": "2026-11-14",
+      "text": "此前公布区间为11月2日至13日；结束日期到达不等于后续没有新监控。需要核验最新公告与券商通知。",
+      "url": "https://www.tpyzq.com/main/a/20261102/15186.shtml",
+      "affects": [
+        "海洋王约束"
+      ]
+    },
+    {
+      "id": "e-minfa",
+      "title": "闽发光伏业务及异动提示",
+      "type": "公司公告",
+      "status": "示例引用",
+      "source": "巨潮资讯 · 闽发铝业",
+      "published_at": "2026-11-07",
+      "observed_at": "2026-11-14",
+      "text": "公司披露股票交易异常波动并提示经营与估值风险。公司业务事实、市场赋予的光伏高度角色分开存储。",
+      "url": "https://static.cninfo.com.cn/finalpage/2026-11-07/1225662241.PDF",
+      "affects": [
+        "光伏属性",
+        "闽发约束"
+      ]
+    },
+    {
+      "id": "e-media",
+      "title": "传媒分支出现多股响应",
+      "type": "媒体复盘",
+      "status": "示例引用",
+      "source": "财联社",
+      "published_at": "2026-11-13 15:42",
+      "observed_at": "2026-11-14",
+      "text": "用于检验传媒独立走强的替代解释。报道统计口径需保留，不与其他来源的涨停家数直接拼接。",
+      "url": "https://finance.eastmoney.com/a/202611133930683725.html",
+      "affects": [
+        "替代情景"
+      ]
+    },
+    {
+      "id": "e-context",
+      "title": "新华—九阳周期关系",
+      "type": "分析假设",
+      "status": "待验证",
+      "source": "用户图片与本轮讨论",
+      "published_at": null,
+      "observed_at": "2026-11-14",
+      "text": "图中连线表示题材关联或接力假说；需要时间先后、相对表现、分支广度和持续性证据。名字相似不能建立产业关系或确定资金因果。",
+      "url": null,
+      "affects": [
+        "周期地图"
+      ]
+    }
+  ],
+  "conditions": [
+    {
+      "id": "c1",
+      "title": "九阳主动性",
+      "subject": "002242.SZ",
+      "detail": "价格恢复、回落承接与再次走强共同确认",
+      "state": "met",
+      "scope": "核心",
+      "kind": "composite",
+      "evidence": [
+        "e-quote",
+        "e-window"
+      ]
+    },
+    {
+      "id": "c2",
+      "title": "共同核心响应",
+      "subject": "002724.SZ",
+      "detail": "海洋王同步增强，避免只看一只股票",
+      "state": "met",
+      "scope": "扩散",
+      "kind": "composite",
+      "evidence": [
+        "e-quote",
+        "e-monitor"
+      ]
+    },
+    {
+      "id": "c3",
+      "title": "分支负反馈收敛",
+      "subject": "002086.SZ",
+      "detail": "东方海洋、襄阳与闽发的弱势不再扩大",
+      "state": "met",
+      "scope": "扩散",
+      "kind": "cohort",
+      "evidence": [
+        "e-quote"
+      ]
+    },
+    {
+      "id": "c4",
+      "title": "新梯队与次日溢价",
+      "subject": null,
+      "detail": "新增接力经受换手，次日收益单独验证",
+      "state": "waiting",
+      "scope": "持续",
+      "kind": "cohort",
+      "evidence": [
+        "e-quote"
+      ]
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "relay",
+      "name": "周期继续接力",
+      "subtitle": "核心走强 → 共振 → 新梯队",
+      "tag": "主检验",
+      "tone": "blue",
+      "state": "supported",
+      "requires": [
+        "c1",
+        "c2",
+        "c3",
+        "c4"
+      ],
+      "supports": [
+        "九阳趋势尚保持",
+        "其他核心仍有承接"
+      ],
+      "against": [
+        "多只补涨跌停",
+        "监管与窗口尚有缺口"
+      ],
+      "invalid": "九阳失去承接，且分支负反馈继续扩大",
+      "next": "等待9:25结果，再看首次回落与分支响应"
+    },
+    {
+      "id": "island",
+      "name": "核心独强",
+      "subtitle": "核心保留，赚钱效应收缩",
+      "tag": "竞争解释",
+      "tone": "amber",
+      "state": "waiting",
+      "requires": [
+        "c1"
+      ],
+      "supports": [
+        "少数核心相对抗跌"
+      ],
+      "against": [
+        "尚无连续盘中样本"
+      ],
+      "invalid": "多个分支持续修复，新梯队接力恢复",
+      "next": "检查海洋王、东方海洋与闽发是否脱节"
+    },
+    {
+      "id": "rotate",
+      "name": "传媒独立走强",
+      "subtitle": "文投带队，原周期未修复",
+      "tag": "竞争解释",
+      "tone": "purple",
+      "state": "waiting",
+      "requires": [],
+      "supports": [
+        "传媒周五形成多股响应"
+      ],
+      "against": [
+        "延续性仍未观察"
+      ],
+      "invalid": "传媒跟随者接力失败，原周期广泛恢复",
+      "next": "文投与传媒梯队单独统计，不混入阳洋分支"
+    },
+    {
+      "id": "retreat",
+      "name": "退潮继续扩大",
+      "subtitle": "抗跌核心补跌，修复失败",
+      "tag": "失效路径",
+      "tone": "danger",
+      "state": "waiting",
+      "requires": [],
+      "supports": [
+        "补涨已经出现连续负反馈"
+      ],
+      "against": [
+        "九阳、海洋王仍保持承接"
+      ],
+      "invalid": "核心、分支与新梯队形成持续同步修复",
+      "next": "观察周五跌停组与原先抗跌核心"
+    }
+  ],
+  "pages": {
+    "overview": [
+      {
+        "id": "o1",
+        "kind": "verdict",
+        "span": "full"
+      },
+      {
+        "id": "o2",
+        "kind": "context_metrics",
+        "span": "full"
+      },
+      {
+        "id": "o3",
+        "kind": "cycle_preview",
+        "span": "main"
+      },
+      {
+        "id": "o4",
+        "kind": "next_checks",
+        "span": "side"
+      },
+      {
+        "id": "o5",
+        "kind": "watch_table",
+        "span": "full"
+      },
+      {
+        "id": "o6",
+        "kind": "thesis_changes",
+        "span": "full"
+      },
+      {
+        "id": "o-diff",
+        "kind": "propagation_update",
+        "span": "full"
+      }
+    ],
+    "cycle": [
+      {
+        "id": "g1",
+        "kind": "cycle_graph",
+        "span": "full"
+      },
+      {
+        "id": "g2",
+        "kind": "branch_comparison",
+        "span": "main"
+      },
+      {
+        "id": "g3",
+        "kind": "relationship_notes",
+        "span": "side"
+      }
+    ],
+    "playbook": [
+      {
+        "id": "p1",
+        "kind": "scenario_grid",
+        "span": "full"
+      },
+      {
+        "id": "p2",
+        "kind": "session_timeline",
+        "span": "main"
+      },
+      {
+        "id": "p3",
+        "kind": "condition_list",
+        "span": "side"
+      }
+    ],
+    "stock": [
+      {
+        "id": "s1",
+        "kind": "stock_focus",
+        "span": "full"
+      },
+      {
+        "id": "s2",
+        "kind": "stock_history",
+        "span": "main"
+      },
+      {
+        "id": "s3",
+        "kind": "stock_constraints",
+        "span": "side"
+      },
+      {
+        "id": "s4",
+        "kind": "stock_conditions",
+        "span": "full"
+      }
+    ],
+    "evidence": [
+      {
+        "id": "e1",
+        "kind": "evidence_summary",
+        "span": "full"
+      },
+      {
+        "id": "e2",
+        "kind": "evidence_list",
+        "span": "main"
+      },
+      {
+        "id": "e3",
+        "kind": "constraint_panel",
+        "span": "side"
+      }
+    ],
+    "review": [
+      {
+        "id": "r1",
+        "kind": "review_summary",
+        "span": "full"
+      },
+      {
+        "id": "r2",
+        "kind": "revision_timeline",
+        "span": "main"
+      },
+      {
+        "id": "r3",
+        "kind": "review_lessons",
+        "span": "side"
+      },
+      {
+        "id": "r4",
+        "kind": "review_outcomes",
+        "span": "full"
+      }
+    ],
+    "agent": [
+      {
+        "id": "a1",
+        "kind": "agent_status",
+        "span": "full"
+      },
+      {
+        "id": "a2",
+        "kind": "agent_runs",
+        "span": "main"
+      },
+      {
+        "id": "a3",
+        "kind": "capabilities",
+        "span": "side"
+      },
+      {
+        "id": "a4",
+        "kind": "publication_contract",
+        "span": "full"
+      }
+    ]
+  },
+  "content": {
+    "cycle_name": "新华—九阳周期",
+    "history_dates": [
+      "11/06",
+      "11/09",
+      "11/10",
+      "11/11",
+      "11/12",
+      "11/13"
+    ],
+    "chain": [
+      {
+        "title": "九阳股份",
+        "description": "主动走强",
+        "condition_id": "c1"
+      },
+      {
+        "title": "海洋王",
+        "description": "共同核心",
+        "condition_id": "c2"
+      },
+      {
+        "title": "分支修复",
+        "description": "东方 / 机器人 / 光伏",
+        "condition_id": "c3"
+      },
+      {
+        "title": "新接力",
+        "description": "梯队与次日溢价",
+        "condition_id": "c4"
+      }
+    ],
+    "branches": [
+      {
+        "name": "阳 / 洋",
+        "members": [
+          "002242.SZ",
+          "002724.SZ",
+          "002086.SZ"
+        ],
+        "summary": "模拟：九阳与海洋王同步增强，东方海洋开始修复",
+        "label": "核心观察"
+      },
+      {
+        "name": "机器人",
+        "members": [
+          "000678.SZ"
+        ],
+        "summary": "模拟：襄阳止跌，持续性仍待检查",
+        "label": "修复观察"
+      },
+      {
+        "name": "光伏",
+        "members": [
+          "002578.SZ"
+        ],
+        "summary": "模拟：闽发出现修复，自身结构尚未恢复",
+        "label": "修复观察"
+      },
+      {
+        "name": "传媒",
+        "members": [
+          "600825.SH",
+          "600715.SH"
+        ],
+        "summary": "监管冲击与文投带队并存，保留独立走强解释",
+        "label": "竞争解释"
+      }
+    ],
+    "relationships": [
+      {
+        "title": "先证明属性，再检验带动",
+        "body": "业务关系来自公告；同名与题材联想保留为分析假设。"
+      },
+      {
+        "title": "时间先后只是线索",
+        "body": "需要共同核心、分支广度、相对市场表现与持续性共同支持。"
+      },
+      {
+        "title": "周期允许拆分",
+        "body": "传媒独立走强可以和原周期退潮同时发生，避免把所有上涨收进同一叙事。"
+      }
+    ],
+    "graph": {
+      "focus_symbol": "002242.SZ",
+      "nodes": [
+        {
+          "symbol": "600825.SH",
+          "column": 0,
+          "row": 1
+        },
+        {
+          "symbol": "002242.SZ",
+          "column": 1,
+          "row": 1
+        },
+        {
+          "symbol": "002724.SZ",
+          "column": 2,
+          "row": 0
+        },
+        {
+          "symbol": "002086.SZ",
+          "column": 3,
+          "row": 0
+        },
+        {
+          "symbol": "000678.SZ",
+          "column": 2,
+          "row": 2
+        },
+        {
+          "symbol": "002578.SZ",
+          "column": 3,
+          "row": 2
+        },
+        {
+          "symbol": "600715.SH",
+          "column": 1,
+          "row": 3
+        }
+      ],
+      "edges": [
+        {
+          "from": "600825.SH",
+          "to": "002242.SZ",
+          "type": "relay_hypothesis",
+          "evidence_id": "e-context"
+        },
+        {
+          "from": "002242.SZ",
+          "to": "002724.SZ",
+          "type": "name_association",
+          "evidence_id": "e-context"
+        },
+        {
+          "from": "002724.SZ",
+          "to": "002086.SZ",
+          "type": "name_association",
+          "evidence_id": "e-context"
+        },
+        {
+          "from": "002242.SZ",
+          "to": "000678.SZ",
+          "type": "name_association",
+          "evidence_id": "e-context"
+        },
+        {
+          "from": "002242.SZ",
+          "to": "002578.SZ",
+          "type": "relay_hypothesis",
+          "evidence_id": "e-context"
+        },
+        {
+          "from": "600825.SH",
+          "to": "600715.SH",
+          "type": "relay_hypothesis",
+          "evidence_id": "e-media"
+        }
+      ],
+      "alternative": {
+        "title": "竞争解释 · 传媒可能独立走强",
+        "body": "文投的带动性单独统计，不自动认定原周期恢复。"
+      }
+    },
+    "timelines": {
+      "auction": [
+        {
+          "time": "盘前",
+          "title": "先检查三个约束",
+          "body": "核验新华监控原文、九阳窗口计算与周末新增消息。未核验的条件继续保留未知。",
+          "tag": "依赖证据"
+        },
+        {
+          "time": "09:20—25",
+          "title": "看最终匹配与组合反馈",
+          "body": "九阳的最终价格、匹配成交量，与海洋王、东方海洋、襄阳的卖压组合观察。",
+          "tag": "需竞价数据"
+        },
+        {
+          "time": "09:25",
+          "title": "冻结竞价观察",
+          "body": "可撤单阶段的挂单不作为确定信号。缺竞价数据则暂停这条规则，等待连续竞价。",
+          "tag": "缺失不判失败"
+        }
+      ],
+      "opening": [
+        {
+          "time": "09:30—45",
+          "title": "检验第一次回落",
+          "body": "九阳是否主动上攻、回落是否获得承接；大幅高开本身不算条件通过。",
+          "tag": "核心主动性"
+        },
+        {
+          "time": "09:45—10:00",
+          "title": "检验共同核心",
+          "body": "海洋王是否跟上，东方海洋或襄阳是否出现可持续修复。",
+          "tag": "扩散观察"
+        },
+        {
+          "time": "10:00—30",
+          "title": "对照市场与分支",
+          "body": "剔除全市场普涨影响，检查相关分支是否更早、更持续地改善。",
+          "tag": "相对表现"
+        }
+      ],
+      "intraday": [
+        {
+          "time": "13:00",
+          "title": "重新检查数据有效性",
+          "body": "午间新公告和数据恢复均生成新事件，不覆盖上午快照。",
+          "tag": "新证据"
+        },
+        {
+          "time": "14:00",
+          "title": "承受一次回落",
+          "body": "核心与跟随者能否一起保住修复成果，关注跌停负反馈是否再次扩散。",
+          "tag": "持续性"
+        },
+        {
+          "time": "14:30",
+          "title": "核对新梯队",
+          "body": "新增首板和晋级标的能否保持，传媒方向单独对照。",
+          "tag": "独立样本"
+        }
+      ],
+      "review": [
+        {
+          "time": "15:00",
+          "title": "冻结当日结果",
+          "body": "记录条件满足、未满足、未知和失效，不根据收盘后消息重写盘前判断。",
+          "tag": "不可变版本"
+        },
+        {
+          "time": "盘后",
+          "title": "生成修订记录",
+          "body": "明确新增证据改变了哪些结论，以及明日需要继续验证什么。",
+          "tag": "归因修订"
+        },
+        {
+          "time": "下一交易日",
+          "title": "检查接力收益",
+          "body": "新接力者的次日表现和负反馈分别统计；未发生时不显示胜率。",
+          "tag": "延后验证"
+        }
+      ]
+    },
+    "calendar": [
+      {
+        "title": "11月13日 · 窗口节点",
+        "body": "九阳的具体计算未核验，不能展示“已解禁”。海洋王已知监控期到期，续期状态未知。"
+      },
+      {
+        "title": "11月14—15日 · 周末",
+        "body": "核验公告与监管通知。休市期间更新信息，不生成虚构盘中观察。"
+      },
+      {
+        "title": "11月16日 · 待开盘",
+        "body": "先检查数据能力与新增事件，再激活有足够输入的观察规则。"
+      }
+    ],
+    "lessons": [
+      {
+        "title": "先检查外部约束",
+        "body": "监管冲击会改变单股跌停对全周期判断的权重。"
+      },
+      {
+        "title": "拆开三个验证层次",
+        "body": "核心主动性、分支扩散、次日赚钱效应分别记分。"
+      },
+      {
+        "title": "修订不改写历史",
+        "body": "用户补充不会追写进此前快照。回放只读取当时已知信息。"
+      }
+    ],
+    "run_steps": [
+      {
+        "title": "整理行情与已知上下文",
+        "body": "保留源时间、范围与数据缺口",
+        "label": "事实"
+      },
+      {
+        "title": "检验竞争解释",
+        "body": "周期修复 / 核心独强 / 传媒转向 / 退潮",
+        "label": "假设"
+      },
+      {
+        "title": "检查监管与异动窗口",
+        "body": "未核验约束继续保持未知，不自动解除",
+        "label": "约束"
+      },
+      {
+        "title": "编排观察条件与页面",
+        "body": "选择周期图、情景卡、观察池和修订记录",
+        "label": "发布"
+      }
+    ],
+    "update": {
+      "title": "本次新增变化",
+      "body": "共同核心与部分分支出现响应。模拟快照支持当日修复，次日结果仍未发生。",
+      "tags": [
+        "模拟：共同核心响应",
+        "模拟：分支负反馈收敛",
+        "次日溢价仍待验证"
+      ]
+    }
+  },
+  "constraints": [
+    {
+      "id": "k1",
+      "label": "新华监管",
+      "value": "原始通知待核验",
+      "status": "unknown",
+      "evidence_id": "e-regulation"
+    },
+    {
+      "id": "k2",
+      "label": "九阳窗口",
+      "value": "完整计算待补齐",
+      "status": "unknown",
+      "evidence_id": "e-window"
+    },
+    {
+      "id": "k3",
+      "label": "周末避险",
+      "value": "待下个交易日验证",
+      "status": "hypothesis",
+      "evidence_id": "e-weekend"
+    }
+  ],
+  "capabilities": [
+    {
+      "label": "行情与连板快照",
+      "status": "可复用",
+      "detail": "现有 short_term 数据层"
+    },
+    {
+      "label": "竞价逐笔与匹配量",
+      "status": "未接通",
+      "detail": "规则暂停，不拿普通报价替代"
+    },
+    {
+      "label": "监管公告核验",
+      "status": "待建设",
+      "detail": "保留来源与有效区间"
+    },
+    {
+      "label": "异动窗口计算",
+      "status": "待建设",
+      "detail": "独立规则版本与基准口径"
+    },
+    {
+      "label": "持续任务与事件恢复",
+      "status": "可复用",
+      "detail": "现有 Agent runtime 与宿主"
+    }
+  ],
+  "revisions": [
+    {
+      "version": 1,
+      "time": "原始判断",
+      "title": "高位负反馈扩大，倾向退潮",
+      "body": "依据多个核心与补涨跌停。尚未充分纳入外部约束。",
+      "type": "历史判断"
+    },
+    {
+      "version": 2,
+      "time": "补充上下文",
+      "title": "新增监管、窗口与周末因素",
+      "body": "将用户补充分别归档为待核验事实、待计算约束和归因假设。",
+      "type": "用户补充"
+    },
+    {
+      "version": 3,
+      "time": "当前版本",
+      "title": "高位强分歧，保留接力路径",
+      "body": "降低单股监管跌停的归因权重；提高九阳窗口变化后带动性的观察权重。",
+      "type": "修订结论"
+    }
+  ]
+}

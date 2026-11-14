@@ -31,3 +31,7 @@ CLAUDE.md
 docs/superpowers/
 .superpowers/
 .worktrees/
+
+# Local execution evidence (keep reusable prototype sources and design assets)
+docs/short-term-assistant-data-probes.json
+docs/designs/**/verification.json

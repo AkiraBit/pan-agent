@@ -226,7 +226,10 @@ docker compose up -d
 **环境要求**：Python 3.11+ / Node.js 24.14.0 / pnpm 9.15.9
 
 ```bash
-# 一键开发（推荐）
+# 一键启动前后端（按 Ctrl+C 同时停止）
+make dev
+
+# 或分别启动
 make dev-api          # 启动后端（自动 venv+依赖，监听 :8000）
 make dev-web          # 启动前端（自动 pnpm install，监听 :5183）
 

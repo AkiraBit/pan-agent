@@ -1,4 +1,4 @@
-.PHONY: help setup-backend dev-api dev-web build test test-notify eval doctor install-hooks clean-venv
+.PHONY: help setup-backend dev dev-api dev-web build test test-notify eval doctor install-hooks clean-venv
 
 # 端口约定：
 #   - 后端：:8000（Docker / 本地 dev 统一，避免存量用户升级困惑）
@@ -22,6 +22,7 @@ endif
 
 help:
 	@echo "PanWatch 开发命令:"
+	@echo "  make dev             一键启动前端和后端（Ctrl+C 停止）"
 	@echo "  make setup-backend   创建 venv 并安装后端依赖"
 	@echo "  make dev-api         启动后端（:8000，自动 setup-backend）"
 	@echo "  make dev-web         启动前端（:5183，自动 pnpm install）"
@@ -36,16 +37,20 @@ help:
 setup-backend:
 ifeq ($(WINDOWS),1)
 	@if not exist .venv ( echo [setup] 创建 venv & $(PYTHON) -m venv .venv )
-	@$(VENV_PYTHON) -m pip install -q -r requirements.txt
+	@$(VENV_PYTHON) -m pip install -r requirements.txt
 	@if not exist .env if exist .env.example copy /Y .env.example .env >nul
 else
 	@if [ ! -d .venv ]; then \
 		echo ">>> 创建 venv"; \
 		python3 -m venv .venv; \
 	fi
-	@$(VENV_PYTHON) -m pip install -q -r requirements.txt
+	@$(VENV_PYTHON) -m pip install -r requirements.txt
 	@if [ ! -f .env ] && [ -f .env.example ]; then cp .env.example .env; fi
 endif
+
+# 后端就绪后启动前端，并在退出时清理两个服务的子进程。
+dev:
+	@$(PYTHON) scripts/dev.py
 
 # server.py 内部已经用 uvicorn.run(host=0.0.0.0, port=8000, reload=True) 启动。
 dev-api: setup-backend

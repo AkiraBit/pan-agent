@@ -230,7 +230,10 @@ Select the brain icon beside a holding to start TradingAgents deep analysis. Fou
 **Requirements:** Python 3.11+ / Node.js 24.14.0 / pnpm 9.15.9
 
 ```bash
-# One-command development setup (recommended)
+# Start both services (Ctrl+C stops both)
+make dev
+
+# Or start them separately
 make dev-api          # Backend with automatic venv/dependencies on :8000
 make dev-web          # Frontend with automatic pnpm install on :5183
 

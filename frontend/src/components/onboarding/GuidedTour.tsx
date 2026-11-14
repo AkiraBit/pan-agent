@@ -59,7 +59,8 @@ function resolveTarget(step: SetupStep, status: SetupStatus, chooseExisting: boo
     if (visible('[data-tour="provider-form"]')) return pick('[data-tour="provider-form"]', 'providerForm')
     if (visible('[data-tour="model-form"]')) return pick('[data-tour="model-form"]', 'modelForm')
     if (visible('[data-tour="model-discovery"]')) return pick('[data-tour="model-discovery"]', 'modelForm')
-    return pick(status.models.some(model => model.is_default) ? '[data-tour="test-default-model"]' : '#sec-ai', 'ai')
+    const defaultModelVisible = status.models.some(model => model.is_default) && visible('[data-tour="test-default-model"]')
+    return pick(defaultModelVisible ? '[data-tour="test-default-model"]' : '#sec-ai', 'ai')
   }
   if (step === 'analysis') return visible('[data-tour="analysis-result"]')
     ? pick('[data-tour="analysis-result"]', 'analysisRead')
