@@ -1,5 +1,11 @@
 export const configuration = {
   mcp: {
+    expandDescription: '展开', collapseDescription: '收起',
+    services: '内置 MCP', builtinHint: '选择服务，查看连接信息与支持的工具。',
+    account: '授权账号', accountHint: '优先显示邮箱(账号名)，以长桥实际返回的信息为准。', accountFallbackHint: '长桥未提供邮箱，显示可用账号信息；账户编号已脱敏。', accountUnavailable: '暂未获取，请检测连接',
+    connectedAt: '关联时间', timeNotRecorded: '此前未记录', serverVersion: '当前版本',
+    versionHint: '由长桥服务端提供，检测连接时更新。', versionPending: '检测后获取', versionUnavailable: '服务端未提供',
+    toolsHint: '列出 PanWatch 支持且当前连接发现的查询工具，介绍保留服务端原文。', noDescription: '此工具暂未提供介绍。',
     title: 'MCP', subtitle: '管理内置服务及账户授权。', longbridge: '长桥 Longbridge', builtin: '内置服务 · 仅查询',
     description: '连接长桥行情、资金流、账户余额与持仓。由你在长桥官方页面登录并授权，不支持下单、改单或撤单。',
     region: '连接区域', cn: '中国大陆', global: '全球', useAssistant: '供 AI 助手使用',

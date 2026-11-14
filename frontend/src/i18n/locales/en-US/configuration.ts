@@ -3,6 +3,12 @@ import { configuration as zhConfiguration } from '../zh-CN/configuration'
 
 export const configuration = {
   mcp: {
+    expandDescription: 'Expand', collapseDescription: 'Collapse',
+    services: 'Built-in MCP', builtinHint: 'Choose a service to view its connection and tools.',
+    account: 'Authorized account', accountHint: 'Email(account name) is shown when returned by Longbridge.', accountFallbackHint: 'Longbridge did not provide an email. Available account information is shown; account numbers are masked.', accountUnavailable: 'Not available yet. Test the connection.',
+    connectedAt: 'Connected on', timeNotRecorded: 'Not previously recorded', serverVersion: 'Current version',
+    versionHint: 'Reported by Longbridge and updated when testing the connection.', versionPending: 'Available after testing', versionUnavailable: 'Not provided by the server',
+    toolsHint: 'Queries supported by PanWatch and discovered on this connection. Descriptions use the original server text.', noDescription: 'No description provided for this tool.',
     title: 'MCP', subtitle: 'Manage built-in services and account authorization.', longbridge: 'Longbridge', builtin: 'Built in · Queries only',
     description: 'Connect quotes, capital flows, account balances and positions. Sign in and authorize on Longbridge. Placing, replacing and cancelling orders are unavailable.',
     region: 'Connection region', cn: 'Mainland China', global: 'Global', useAssistant: 'Use in AI Assistant',

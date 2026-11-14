@@ -107,7 +107,10 @@ def status(db: Session) -> dict:
     return {"id": "longbridge", "endpoint": ENDPOINTS[row.region], "region": row.region,
             "authorized": bool(row.credentials), "enabled": row.enabled,
             "pending": bool(row.pending) and row.pending_until > time.time(),
-            "tools": [{"name": t["name"], "title": READ_TOOLS[t["name"]]} for t in json.loads(row.tools)],
+            "account_label": row.account_label, "connected_at": row.connected_at, "server_version": row.server_version,
+            "tools": [{"name": t["name"], "title": READ_TOOLS[t["name"]],
+                       "description": t.get("description") if isinstance(t.get("description"), str) else ""}
+                      for t in json.loads(row.tools)],
             "checked_at": row.checked_at, "error_code": row.error_code, "docs_url": DOCS_URL}
 
 
@@ -190,8 +193,11 @@ async def complete(db: Session, state: str, browser_key: str, code: str | None, 
             "grant_type": "authorization_code", "client_id": pending["client_id"], "code": code,
             "redirect_uri": pending["redirect_uri"], "code_verifier": pending["verifier"], "resource": endpoint})
     credential = tokens(data, {"client_id": pending["client_id"], "region": pending["region"]})
+    from .longbridge_identity import account_label
+    identity = await account_label(credential["access_token"], endpoint)
     save(db, version, credentials=seal(credential), region=pending["region"], enabled=False,
-         tools="[]", checked_at=None, error_code="", refresh_until=0)
+         tools="[]", checked_at=None, error_code="", refresh_until=0,
+         connected_at=int(time.time()), account_label=identity, server_version="")
     return status(db)
 
 
@@ -228,7 +234,8 @@ async def access_token(db: Session, *, require_enabled=False) -> tuple[str, str,
             values = {"refresh_until": 0}
             detail = getattr(exc, "detail", {})
             if isinstance(detail, dict) and detail.get("code") == "mcp_authorization_required":
-                values.update(credentials="", enabled=False, tools="[]", error_code="mcp_authorization_required")
+                values.update(credentials="", enabled=False, tools="[]", account_label="", connected_at=None,
+                              server_version="", error_code="mcp_authorization_required")
             db.execute(update(MCPConnection).where(MCPConnection.provider == "longbridge",
                 MCPConnection.version == version).values(**values))
             db.commit()
@@ -248,15 +255,18 @@ async def remote(db: Session, tool: str | None = None, arguments: dict | None = 
         error_code = detail.get("code", "mcp_connection_failed") if isinstance(detail, dict) else "mcp_connection_failed"
         values = {"error_code": error_code}
         if error_code == "mcp_authorization_required":
-            values.update(credentials="", tools="[]", enabled=False)
+            values.update(credentials="", tools="[]", enabled=False, account_label="", connected_at=None, server_version="")
         save(db, version, **values)
         raise
     if tool is None:
-        approved = list({t["name"]: t for t in result if isinstance(t, dict)
+        approved = list({t["name"]: t for t in result["tools"] if isinstance(t, dict)
                          and isinstance(t.get("name"), str) and t["name"] in READ_TOOLS
                          and isinstance(t.get("inputSchema"), dict)
                          and t["inputSchema"].get("type") == "object"}.values())
-        save(db, version, tools=json.dumps(approved), checked_at=int(time.time()), error_code="")
+        from .longbridge_identity import account_label
+        identity = await account_label(token, endpoint) or read(db).account_label
+        save(db, version, tools=json.dumps(approved), checked_at=int(time.time()), error_code="",
+             account_label=identity, server_version=result["server_version"])
         return status(db)
     if read(db).version != version:
         raise fail("mcp_connection_changed")
@@ -266,5 +276,6 @@ async def remote(db: Session, tool: str | None = None, arguments: dict | None = 
 def disconnect(db: Session):
     row = read(db)
     save(db, row.version, credentials="", pending="", pending_until=0, enabled=False,
-         tools="[]", error_code="", checked_at=None, refresh_until=0)
+         tools="[]", error_code="", checked_at=None, refresh_until=0,
+         connected_at=None, account_label="", server_version="")
     return status(db)

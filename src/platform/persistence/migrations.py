@@ -2312,6 +2312,14 @@ def _m143_builtin_mcp_connections(conn: Connection) -> None:
         error_code VARCHAR NOT NULL DEFAULT '')"""))
 
 
+def _m144_mcp_connection_details(conn: Connection) -> None:
+    columns = {row[1] for row in conn.execute(text("PRAGMA table_info(mcp_connections)"))}
+    for name, definition in {"connected_at": "INTEGER", "account_label": "VARCHAR NOT NULL DEFAULT ''",
+                             "server_version": "VARCHAR NOT NULL DEFAULT ''"}.items():
+        if name not in columns:
+            conn.execute(text(f"ALTER TABLE mcp_connections ADD COLUMN {name} {definition}"))
+
+
 MIGRATIONS: tuple[Migration, ...] = (
     Migration(101, "agent_config_kind_and_visibility", _m101_agent_config_kind),
     Migration(102, "backfill_agent_kind_data", _m102_backfill_agent_kind),
@@ -2356,6 +2364,7 @@ MIGRATIONS: tuple[Migration, ...] = (
     Migration(141, "emotion_lifecycle", _m141_emotion_lifecycle),
     Migration(142, "emotion_regulatory_validation", _m142_emotion_regulatory_validation),
     Migration(143, "builtin_mcp_connections", _m143_builtin_mcp_connections),
+    Migration(144, "mcp_connection_details", _m144_mcp_connection_details),
 )
 
 

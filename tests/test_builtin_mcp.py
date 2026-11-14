@@ -127,8 +127,12 @@ def test_oauth_mcp_and_credential_persistence(setup):
         assert expected == query['code_challenge'][0]
     authorized = finish(client, start)
     assert authorized['authorized'] and not authorized['enabled']
+    assert authorized['connected_at'] <= time.time() and authorized['connected_at'] > time.time() - 5
     tested = client.post(PREFIX + '/test').json()['data']
     assert {tool['name'] for tool in tested['tools']} == set(service.READ_TOOLS)
+    assert tested['server_version'] == '1'
+    assert all(tool['description'] == tool['name'] for tool in tested['tools'])
+    assert tested['connected_at'] == authorized['connected_at']
     assert client.put(PREFIX, json={'enabled': True}).json()['data']['enabled']
     with Session(engine) as db:
         row = service.read(db)
@@ -249,16 +253,20 @@ def test_disable_disconnect_and_write_tools_cannot_be_called(setup):
         assert len(provider.calls) == count
     disconnected = client.delete(PREFIX).json()['data']
     assert not disconnected['authorized'] and not disconnected['enabled'] and not disconnected['tools']
+    assert disconnected['connected_at'] is None and not disconnected['account_label'] and not disconnected['server_version']
 
 
 def test_migration_is_additive_and_idempotent():
-    from src.platform.persistence.migrations import _m143_builtin_mcp_connections
+    from src.platform.persistence.migrations import _m143_builtin_mcp_connections, _m144_mcp_connection_details
     engine = create_engine('sqlite://')
     with engine.begin() as conn:
         _m143_builtin_mcp_connections(conn)
         conn.execute(text("INSERT INTO mcp_connections(provider) VALUES('longbridge')"))
         _m143_builtin_mcp_connections(conn)
         assert conn.execute(text('SELECT enabled, version FROM mcp_connections')).one() == (0, 0)
+        _m144_mcp_connection_details(conn)
+        _m144_mcp_connection_details(conn)
+        assert conn.execute(text('SELECT connected_at, account_label, server_version FROM mcp_connections')).one() == (None, '', '')
     engine.dispose()
 
 

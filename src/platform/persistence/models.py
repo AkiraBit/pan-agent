@@ -1469,6 +1469,9 @@ class MCPConnection(Base):
     refresh_until = Column(Integer, nullable=False, default=0, server_default="0")
     tools = Column(Text, nullable=False, default="[]", server_default="[]")
     checked_at = Column(Integer, nullable=True)
+    connected_at = Column(Integer, nullable=True)
+    account_label = Column(String, nullable=False, default="", server_default="")
+    server_version = Column(String, nullable=False, default="", server_default="")
     error_code = Column(String, nullable=False, default="", server_default="")
 
 

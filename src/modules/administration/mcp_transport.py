@@ -77,7 +77,9 @@ async def query(endpoint: str, token: str, tool: str | None, arguments: dict | N
                     if cursor is not None and not isinstance(cursor, str):
                         raise fail()
                     if not cursor:
-                        return found
+                        info = initialized.get("serverInfo")
+                        server_version = info.get("version") if isinstance(info, dict) else None
+                        return {"tools": found, "server_version": server_version[:128] if isinstance(server_version, str) else ""}
                 raise fail()
         except (httpx.HTTPError, ValueError, TimeoutError, TypeError):
             raise fail() from None
