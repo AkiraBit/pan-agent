@@ -1,0 +1,16 @@
+{
+  "status": "Recorded during data collection before inspecting any full-sample, validation or holdout outcome summary. The 3-symbol integration smoke check did not print outcome statistics.",
+  "confirmation": "Separate consecutive improvement confirmations from persistence of each descriptive candidate stage. Evaluate 1,2,3 consecutive days for cold,repair,expansion,hot,divergence,retreat. A poor result for consecutive improvement is not evidence against all two-day stage confirmation rules.",
+  "incremental_test": {
+    "target": "Next 5-session frozen eligible-cohort equal-weight return, with split endpoint purge",
+    "models": {"breadth": ["net_adv"], "prior_limit": ["p_med"], "gapr": ["net_adv","up_share","p_med","down_share"], "gapr_nh20": ["net_adv","up_share","p_med","down_share","net_hl20"], "gapr_nh60": ["net_adv","up_share","p_med","down_share","net_hl60"]},
+    "method": "Ridge regression, alpha=10 fixed without selection, intercept unpenalized, features standardized using training sample only; common complete-case dates for all models",
+    "splits": "Fit 2021-2022 and evaluate 2023. Refit identical fixed specifications on 2021-2023 and evaluate 2024-2025, also report each year separately. Do not retune alpha or features after holdout.",
+    "baselines": "Training mean prediction, zero prediction, always-positive direction accuracy",
+    "metrics": "RMSE, MAE, out-of-sample R2 versus training-mean prediction, direction accuracy, Pearson correlation. Paired MSE-difference moving-block intervals for GAPR versus breadth, blocks=10, replicates=1000.",
+    "interpretation": "A supplementary test of incremental forecasting content, not a trading strategy or proof that the full discretionary skill is valid. Additional model comparisons increase multiple-testing concerns."
+  },
+  "zero_ties": "Empirical ranks use (strictly-less count + half equal count)/valid-history count. Otherwise a long sequence of zero limit-down counts would incorrectly receive the top percentile.",
+  "listing_filter": "Use 60 exchange sessions since IPO as an explicit research-universe restriction for comparable high/low metrics. This is not a recommendation to discard new stocks in the eventual skill; report the resulting scope limitation.",
+  "stage_implementation": "Cold/hot: at least 2 of 4 midrank percentile groups in outer 20%; recent means preceding 5 sessions. Assignment order in source is expansion, hot with positive P and nonextreme risk, cold, retreat with negative direction and G percentile<0.5, divergence after recent hot, repair after recent cold; simultaneous cold and hot becomes mixed. Two consecutive identical candidate labels constitute a confirmed stage. These priorities and 5-day recent memory are unvalidated design choices, not estimated from outcomes."
+}

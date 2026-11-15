@@ -1,4 +1,111 @@
 export const emotion = {
+  "overview": {
+  "evidence": {
+    "coverage": "行情覆盖范围",
+    "breadth": "市场广度与收益分布",
+    "boards": "分板块强弱结构",
+    "feedback": "前强势组反馈",
+    "comparison": "前日可比观察",
+    "indices": "指数背景",
+    "temperature": "长桥温度背景",
+    "gaps": "数据缺口与代理边界",
+    "temperature-history": "历史温度背景"
+},
+  "failedHint": "请检查长桥连接与模型设置后重试。",
+  "latest": "最新交易日市场总览",
+  "sourceHint": "根据长桥交易日历和最新行情分析",
+  "provider": "长桥 MCP",
+  "intraday": "盘中观察 · 尚未收盘",
+  "closed": "收盘观察",
+  "refresh": "更新市场判断",
+  "cycleTitle": "市场情绪周期",
+  "current": "当前",
+  "between": "{{from}}与{{to}}之间",
+  "unplaced": "证据不足，暂不定位",
+  "chartLabel": "市场情绪周期，当前位置：{{position}}",
+  "phaseOrder": "阶段关系示意",
+  "chartHint": "曲线示意阶段关系，并非历史行情或未来走势。区间表示边界待确认，不代表精确进度；阶段可能跳转或反复。",
+  "connectionNeeded": "请先在 MCP & 技能中启用长桥连接并重新测试连接，确认总览所需行情工具可用。",
+  "skillDisabled": "情绪分析技能已停用。启用后将使用最新交易日数据生成总览。",
+  "configure": "打开 MCP & 技能",
+  "failed": "本次更新未完成。已有结果保留原行情日期，未替换为新的市场判断。",
+  "running": "正在读取长桥市场数据并按情绪技能形成判断…",
+  "stale": "等待更新：下方仍为 {{date}} 的已有结果，行情时点 {{time}}。",
+  "empty": "等待最新市场判断",
+  "emptyHint": "总览将读取长桥行情，计算市场广度与风险，并标明当前阶段或相邻阶段区间。未取得真实结果前不展示示例判断。",
+  "asOf": "行情截至 {{time}}",
+  "temperatureHint": "供应商指标 · 不直接映射阶段",
+  "coverage": "有效报价 {{valid}} / 长桥目录 {{total}}；已排除 ST/退市标记 {{excluded}}，停牌 {{halted}}，非支持证券 {{unsupported}}，报价缺失或非同日可用 {{missing}}，目录缺页 {{directoryMissing}}",
+  "complete": "长桥目录内采集完整",
+  "partial": "覆盖不完整",
+  "loss_relief": "亏损是否缓和",
+  "profit_diffusion": "盈利是否扩散",
+  "boardTitle": "分板块市场结构",
+  "proxyHint": "强势/弱势为涨跌幅代理：主板 ±5%、创业板与科创板 ±10%、北交所 ±15%。阈值待回测，不是涨跌停统计；无有效样本显示 —。",
+  "nextChecks": "下一观察时点",
+  "strengthens": "加强判断",
+  "limitations": "数据边界与未决问题",
+  "analyzed": "分析于 {{time}}",
+  "stages": {
+    "ice": "低迷/冰点",
+    "repair": "修复",
+    "expansion": "发酵/扩张",
+    "heat": "高热",
+    "divergence": "分歧",
+    "retreat": "退潮"
+  },
+  "certainty": {
+    "candidate": "候选判断",
+    "supported": "支持较充分",
+    "conflicted": "证据冲突",
+    "insufficient": "数据不足"
+  },
+  "directions": {
+    "improving": "改善",
+    "stable": "稳定",
+    "deteriorating": "恶化",
+    "mixed": "分化",
+    "insufficient": "变化方向待确认"
+  },
+  "metrics": {
+    "rising": "上涨家数",
+    "falling": "下跌家数",
+    "median": "涨幅中位数",
+    "temperature": "长桥市场温度"
+  },
+  "indices": {
+    "000001_SH": "上证指数",
+    "399001_SZ": "深证成指",
+    "399006_SZ": "创业板指",
+    "000688_SH": "科创50"
+  },
+  "columns": {
+    "board": "板块",
+    "sample": "有效 / 目录",
+    "positive": "上涨比例",
+    "median": "涨幅中位数",
+    "strong": "强势代理",
+    "weak": "弱势代理"
+  },
+  "boards": {
+    "main": "沪深主板",
+    "growth": "创业板",
+    "star": "科创板",
+    "beijing": "北交所"
+  },
+  "groups": {
+    "G": "参与广度",
+    "A": "进攻与接力",
+    "P": "行为反馈",
+    "R": "损伤与风险"
+  },
+  "groupStatus": {
+    "observed": "实测",
+    "proxy": "代理口径",
+    "missing": "数据缺失",
+    "conflicted": "存在冲突"
+  }
+},
   "title": "情绪策略台",
   "subtitle": "以真实证据形成判断，把预案和周期记忆留在产品里。",
   "eyebrow": "A 股市场情绪",

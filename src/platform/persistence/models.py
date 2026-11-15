@@ -1540,6 +1540,13 @@ class EmotionRun(Base):
     publication_id = Column(String, nullable=True)
 
 
+class EmotionOverview(Base):
+    """The current overview; immutable run facts remain in EmotionRun for audit."""
+    __tablename__ = "emotion_overviews"
+    id = Column(Integer, primary_key=True)
+    payload = Column(JSON, nullable=False)
+
+
 class EmotionPublication(Base):
     """Immutable analysis, source evidence and frozen memory; no 14-day deletion."""
     __tablename__ = "emotion_publications"

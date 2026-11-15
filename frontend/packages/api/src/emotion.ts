@@ -37,6 +37,8 @@ export type SessionValidation = {
   events: Array<{ at: string; type: string; states?: Record<string, string> }>;
 }
 export const emotionApi = {
+  overview: (signal?: AbortSignal) => fetchAPI<SentimentOverviewState>('/short-term/sentiment-overview', { signal }),
+  refreshOverview: (body: { request_key: string; language: 'zh-CN' | 'en-US'; force: boolean }) => fetchAPI<{ run: EmotionRun | null; started: boolean }>('/short-term/sentiment-overview/refresh', { method: 'POST', body: JSON.stringify(body) }),
   sessionValidation: (day: string, signal?: AbortSignal) => fetchAPI<SessionValidation>(`/short-term/session-validation/${encodeURIComponent(day)}`, { signal }),
   armSessionValidation: (day: string, enabled: boolean) => fetchAPI<SessionValidation>(`/short-term/session-validation/${encodeURIComponent(day)}`, { method: 'PUT', body: JSON.stringify({ enabled }) }),
   lifecycle: (id: string, signal?: AbortSignal) => fetchAPI<Lifecycle>(`/short-term/publications/${encodeURIComponent(id)}/lifecycle`, { signal }),
@@ -52,3 +54,23 @@ export const emotionApi = {
   context: (content: string, source_url: string | null) => fetchAPI<ContextNote>('/short-term/context-notes', { method: 'POST', body: JSON.stringify({ content, source_url }) }),
   contextStatus: (id: string, status: 'open' | 'archived') => fetchAPI<ContextNote>(`/short-term/context-notes/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify({ status }) }),
 }
+
+export type SentimentStage = 'ice' | 'repair' | 'expansion' | 'heat' | 'divergence' | 'retreat'
+export type SentimentDirection = 'improving' | 'stable' | 'deteriorating' | 'mixed' | 'insufficient'
+export type StagePosition = { kind: 'stage' | 'between' | 'unknown'; stages: SentimentStage[]; status: 'candidate' | 'supported' | 'conflicted' | 'insufficient'; rationale: string; evidence_ids: string[] }
+export type SentimentAxis = { state: SentimentDirection; explanation: string; evidence_ids: string[] }
+export type Breadth = { valid: number; rising: number; falling: number; flat: number; positive_ratio: number | null; median: number | null; p10: number | null; p90: number | null }
+export type SentimentOverview = {
+  schema_version: string; run_id: string; input_version: number; trade_date: string; previous_trade_date: string | null;
+  as_of: string; collected_at: string; analyzed_at: string; refresh_after: string; intraday: boolean; provider: string; model_label: string;
+  skill: { id: string; version: string };
+  coverage: { status: 'complete' | 'partial'; directory_total: number; directory_count: number; valid: number; excluded_st: number; excluded_halted: number; excluded_unsupported?: number; missing_or_stale: number; directory_missing: number };
+  metrics: { breadth: Breadth; boards: Array<Breadth & { board: 'main' | 'growth' | 'star' | 'beijing'; directory_count: number; strong_count: number | null; weak_count: number | null; threshold_pct: number }>; feedback: { status: string; valid: number; cohort_count: number; mean_change_pct: number | null } };
+  indices: Array<{ symbol: string; price: number; change_pct: number; source_time: string }>;
+  temperature: { temperature?: number; quality: string; timestamp?: string };
+  evidence: Evidence[];
+  analysis: { title: string; summary: string; direction: SentimentDirection; direction_reason: string; stage: StagePosition; loss_relief: SentimentAxis; profit_diffusion: SentimentAxis;
+    groups: Array<{ group: 'G' | 'A' | 'P' | 'R'; status: 'observed' | 'proxy' | 'missing' | 'conflicted'; explanation: string; evidence_ids: string[] }>;
+    supports: Claim[]; counters: Claim[]; next_checks: Array<{ window: string; observe: string; strengthens: string; invalidates: string }>; limitations: string[] };
+}
+export type SentimentOverviewState = { overview: SentimentOverview | null; stale: boolean; active_run: EmotionRun | null; last_run: EmotionRun | null; can_analyze: boolean; skill_enabled: boolean; connection_status: string; retry_after: string | null; server_time: string }

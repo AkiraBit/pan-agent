@@ -1,0 +1,25 @@
+{
+  "study_date": "2026-11-15",
+  "raw_source": "BaoStock 0.9.4 public API",
+  "scope": "Shanghai/Shenzhen historical A-share stocks; main-board primary analysis; Beijing excluded",
+  "downloaded_utc": "2026-11-14T16:37:51Z",
+  "raw_manifest_sha256": "64f1c99bbadc7cba611dc0a88287305e844376d914b27b6cf9bb3e2398d3c335",
+  "full_local_research_archive": "Optional original research archive; not distributed with this skill",
+  "archive_optional": true,
+  "copied_evidence_sha256": {
+    "critical-dates.csv": "4ac7ce76523cb1221078d30ca45431d218aa430be39e3e7689a18df5fe108dbe",
+    "block-bootstrap.csv": "841ef5dfa98c56a44b5cedee0b6d88af11d8b3fa164448c6d573b3a6b33b5a84",
+    "coverage.csv": "17046ad32a50cc85d1e43aa861f9792f48a13311d0d44e41f9e5dce9f29ff3c4",
+    "forecast-paired-bootstrap.csv": "7a0b5b8111982943aa6d71d44335448482fe23310f4beee4e5bc7daae2e32f1a",
+    "data-audit.json": "5eb3880ccb08522e280db5bb57d5d6cd09ef399eebb555f55071031516bd1d74",
+    "pre-outcome-calculation-clarifications.json": "8364010b364d9ae05543c3b88a7ee1232adec542cbb448b217e9ea20d8c8bd86",
+    "event-common-dates.csv": "47c5c91dcddab063bf2cd2430695dc17d593d60f363cf02701daf64c001dfd8f",
+    "protocol-clarifications.json": "d29db40b03b78a558b67106160837aa931f1958c82a6d9a58bcaeb07b22c46b2",
+    "parameter-results.csv": "fde0364232df82c17b880893fef5107b2d1cd2631a71773c15648b32078c2fb9",
+    "forecast-results.csv": "4da4a3798891ac5a9fb5052938fc29c91bb8b1619b7f51e314a7ad9c5fd416c9",
+    "protocol.json": "3b9fb3b85d68211789c68b553cc3946a736c39fbfc0a13a032e83c25d2a7425b",
+    "event-cohort-results.csv": "c14ca19c85cca0e617b5b02563e0b843a2b950a8de5b6a108c86e898db0fb782"
+  },
+  "analysis_script_sha256": "2245385e7ec50fc8ecba2d3e039aca6e9ea02d169cfc4a24b7e547095f0a4ca8",
+  "implementation_correction": "Empty bootstrap comparison groups return unavailable intervals, with definitions unchanged."
+}

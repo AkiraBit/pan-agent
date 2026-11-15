@@ -30,6 +30,10 @@ READ_TOOLS = {
     "candlesticks": ("K 线", "Candlesticks"), "capital_flow": ("资金流向", "Capital flow"),
     "capital_distribution": ("资金分布", "Capital distribution"),
     "account_balance": ("账户余额", "Account balance"), "stock_positions": ("股票持仓", "Stock positions"),
+    "trading_days": ("交易日历", "Trading calendar"),
+    "screener_search": ("市场股票目录", "Market stock universe"),
+    "market_temperature": ("市场温度", "Market temperature"),
+    "history_market_temperature": ("历史市场温度", "Historical market temperature"),
 }
 
 

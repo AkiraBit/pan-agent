@@ -73,7 +73,31 @@ class EmotionRunner:
                     return enable_reasoning_tools(self.client_factory(db))
             client = await asyncio.to_thread(make_client)
             review = run.inputs.get('kind') == 'postmarket'
-            if review:
+            overview = run.inputs.get('kind') == 'overview'
+            if overview:
+                from .overview_facts import collect_overview
+                from .overview_repository import SKILL_ID
+                from src.modules.administration import builtin_skills, longbridge_mcp
+
+                async def skill_check():
+                    item = await asyncio.to_thread(self.read, lambda r: builtin_skills.status(r.db, SKILL_ID))
+                    if not item['available']:
+                        raise ValueError('overview_skill_unavailable')
+
+                async def query(tool, arguments):
+                    await skill_check()
+                    with self.session_factory() as db:
+                        return await longbridge_mcp.remote(db, tool, arguments)
+
+                await skill_check()
+                await self.write(lambda r: r.append_event(identity, 'collecting', {'source': 'longbridge_mcp'}))
+                facts = await asyncio.wait_for(collect_overview(query, run.inputs.get('previous')), 300)
+                from .facts import evidence
+                facts['evidence'] += [evidence('note:' + n['id'], 'user_context', n['content'][:100], 'user',
+                    {'text': n['content'], 'verification': 'user_unverified'}, facts['collected_at'], status='user_unverified') for n in run.inputs['notes']]
+                await self.write(lambda r: r.save_facts(identity, facts))
+                await self.write(lambda r: r.append_event(identity, 'analyzing', {'source': 'longbridge_mcp', 'quote_count': facts['coverage']['valid']}))
+            elif review:
                 facts = {'evidence': run.inputs['evidence']}
                 await self.write(lambda r: r.append_event(identity, 'analyzing', {'mode': 'postmarket'}))
             else:
@@ -113,7 +137,7 @@ class EmotionRunner:
                     data = {k: v for k, v in event.data.items() if k in allowed}
                     if event.data.get('tool'):
                         data['tool_name'] = event.data['tool']
-                    if event.data.get('tool') in {'validate_analysis', 'validate_review'} and event.type == EventType.TOOL_COMPLETED:
+                    if event.data.get('tool') in {'validate_analysis', 'validate_review', 'validate_overview'} and event.type == EventType.TOOL_COMPLETED:
                         result = event.data.get('data') or {}
                         data['accepted'] = result.get('accepted')
                         if result.get('errors'):
@@ -123,10 +147,16 @@ class EmotionRunner:
                     if status != 'running':
                         raise asyncio.CancelledError()
 
-            publication = await (self.reviewer if review else self.analyzer)(client, run, facts, Sink())
-            if review:
+            if overview:
+                from .overview_agent import run_overview
+                from .overview_repository import OverviewRepository
+                analysis = await run_overview(client, run, facts, Sink(), skill_check)
+                await self.write(lambda r: OverviewRepository(r.db).publish(identity, facts, analysis, client.used_model_label))
+            elif review:
+                publication = await self.reviewer(client, run, facts, Sink())
                 await self.write(lambda r: LifecycleRepository(r.db).publish_review(identity, publication, client.used_model_label))
             else:
+                publication = await self.analyzer(client, run, facts, Sink())
                 published = await self.write(lambda r: r.publish(identity, publication, client.used_model_label))
                 if run.inputs['settings'].get('monitoring_enabled'):
                     await self.write(lambda r: LifecycleRepository(r.db).set_monitor(published['id'], True))

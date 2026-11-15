@@ -1,0 +1,22 @@
+{
+  "missing_symbols": [],
+  "stock_count": 5388,
+  "delisted_count": 230,
+  "raw_rows": 6864626,
+  "duplicates": 0,
+  "bars_outside_calendar": 0,
+  "missing_between_listing_and_delisting": 0,
+  "internal_missing_examples": [],
+  "from": "2020-01-02",
+  "to": "2025-12-31",
+  "sessions_with_warmup": 1455,
+  "study_sessions": 1212,
+  "return_formula_abs_error_99pct_bps": 0.004958677686274504,
+  "excluded_limit_inconsistent_stockdays": 92,
+  "excluded_unknown_st_stockdays": 0,
+  "eligible_stockdays": {
+    "main": 4144854,
+    "growth": 1577320,
+    "star": 584128
+  }
+}

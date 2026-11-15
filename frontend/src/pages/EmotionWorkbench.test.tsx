@@ -8,7 +8,7 @@ import i18n from '@/i18n'
 import EmotionWorkbench from './EmotionWorkbench'
 
 vi.mock('@panwatch/api/emotion', () => ({ emotionApi: {
-  workspace: vi.fn(), publication: vi.fn(), run: vi.fn(), cancel: vi.fn(),
+  overview: vi.fn(), refreshOverview: vi.fn(), workspace: vi.fn(), publication: vi.fn(), run: vi.fn(), cancel: vi.fn(),
   sessionValidation: vi.fn(), armSessionValidation: vi.fn(), lifecycle: vi.fn(), monitor: vi.fn(), review: vi.fn(), saveAuctionSource: vi.fn(),
   settings: vi.fn(), context: vi.fn(), contextStatus: vi.fn(),
 } }))
@@ -19,14 +19,14 @@ const publication: EmotionPublication = {
   analysis: { title: '保留的原始判断', summary: '修复与独强需要竞争验证。', stage: 'unknown', supports: [{ text: '仅有采样证据。', evidence_ids: ['q1'] }], counters: [{ text: '缺少广度响应。', evidence_ids: ['q1'] }], cycles: [], watchlist: [], scenarios: [],
     conditions: [{ id: 'c1', title: '开盘联合响应', subject: null, window: 'opening', criterion: '检查多个分支。', invalidation: '只有核心独强。', evidence_ids: ['q1'], expression: null }],
     memory_summary: '旧假设需要再验证。', open_questions: ['分支是否响应？'], changes: ['首次观察。'], blocks: [
-      { id: 'v1', page: 'overview', kind: 'verdict', title: '本轮判断', entity_ids: [] },
+      { id: 'v1', page: 'playbook', kind: 'verdict', title: '本轮判断', entity_ids: [] },
       { id: 'c1', page: 'playbook', kind: 'conditions', title: '观察条件', entity_ids: [] },
     ] },
   facts: { collected_at: '2026-11-14T00:00:00Z', reference_trade_date: '2026-11-13', phase: 'closed', coverage: { status: 'partial', count: 1, expected: 5000 }, quotes: [],
     evidence: [{ id: 'q1', kind: 'quote', title: '行情证据', source: 'test-only', content: { price: 10.5 }, observed_at: '2026-11-14T00:00:00Z', published_at: '2026-11-13T07:00:00Z', url: 'https://example.com/source', status: 'available', content_hash: 'test-hash' }], capabilities: { auction: false }, snapshot: { market: { rising: 1, falling: 0, valid: 1, median: 1 }, sentiment: { counts: {}, break_rate: null, yesterday_mean: null } } },
   context: [], memory_input: [], condition_states: [{ id: 'c1', state: 'waiting', reason: 'window_not_reached', observed_value: null, observed_at: '2026-11-14T00:00:00Z' }],
 }
-function mount(path = '/short-term') {
+function mount(path = '/short-term/playbook') {
   return render(<MemoryRouter initialEntries={[path]}><ToastProvider><ConfirmProvider labels={{ title: '确认', cancel: '取消', confirm: '确定' }}><EmotionWorkbench /></ConfirmProvider></ToastProvider></MemoryRouter>)
 }
 beforeEach(async () => { vi.clearAllMocks(); await i18n.changeLanguage('zh-CN'); await i18n.loadNamespaces('emotion'); vi.mocked(emotionApi.workspace).mockResolvedValue(empty); vi.mocked(emotionApi.lifecycle).mockResolvedValue({ monitor: null, sample_count: 0, latest: null, timeline: [], review: null, auction_source: { enabled: false, endpoint: '', provider_name: 'licensed_gateway', has_api_key: false } }) })
@@ -43,7 +43,7 @@ describe('sentiment workbench user entry', () => {
   })
 
   it('saves an unresolved constraint and restores it on the normal read path', async () => {
-    mount()
+    mount('/short-term/evidence')
     await screen.findByText('开始第一份真实市场分析')
     fireEvent.click(screen.getAllByRole('button', { name: '补充上下文' })[0])
     fireEvent.change(screen.getByLabelText('事件、约束或不同解释'), { target: { value: '监管线索待核验' } })
@@ -145,4 +145,15 @@ it('renders exchange events as readable dates while keeping raw provider fields 
   expect(screen.getByText(/腾讯未复权日线 \/ 新浪逐日复权因子/)).toBeTruthy()
   expect(screen.getByText(/自 2026-11-16 起停牌；复牌日期：尚未公告/)).toBeTruthy()
   expect(screen.getByText(/原公告区间 2026-09-27—2026-09-28 与交易日历不符/)).toBeTruthy()
+})
+
+
+it('overview ignores publication bookmarks and hides date/version selection', async () => {
+  vi.mocked(emotionApi.overview).mockResolvedValue({ overview: null, stale: true, active_run: null, last_run: null, can_analyze: false, skill_enabled: false, connection_status: 'ready', retry_after: null, server_time: empty.server_time })
+  mount('/short-term?publication=pub1')
+  await screen.findByText('最新交易日市场总览')
+  expect(emotionApi.publication).not.toHaveBeenCalled()
+  expect(screen.queryByLabelText('分析版本')).toBeNull()
+  expect(screen.queryByLabelText('生成目标交易日')).toBeNull()
+  expect(screen.queryByRole('button', { name: '版本 1' })).toBeNull()
 })

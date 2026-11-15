@@ -1,0 +1,4 @@
+board,sessions,min_eligible,median_eligible,max_eligible,missing_p_days,p_n_lt5_days,median_p_n,f5_median_retention,f5_min_retention_matured,stage_unconfirmed_fraction,candidate_label_changes
+main,1212,2778,3042.0,3099,0,0,47.0,0.9990297542043984,0.9820026178010471,0.7054455445544554,855
+growth,1212,859,1225.0,1344,75,660,4.0,1.0,0.9871987951807228,0.7227722772277227,877
+star,1212,182,508.0,583,632,1171,0.0,1.0,0.9930434782608696,0.19224422442244224,234

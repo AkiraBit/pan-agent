@@ -14,6 +14,30 @@ from .schemas import AuctionSettings, MonitorCommand, ReviewCreate
 router = APIRouter()
 
 
+@router.get('/sentiment-overview')
+def sentiment_overview(db: Session = Depends(get_db)):
+    from .overview_repository import OverviewRepository
+    return OverviewRepository(db).view()
+
+
+from .overview_schema import OverviewRefresh
+
+
+@router.post('/sentiment-overview/refresh', status_code=202)
+async def refresh_overview(body: OverviewRefresh):
+    from .overview_repository import OverviewRepository
+    def create(repository):
+        row, created = OverviewRepository(repository.db).create(body)
+        return run_dto(row) if row else None, created
+    try:
+        row, created = await emotion_runner.write(create)
+    except WorkspaceError as exc:
+        raise api_error(409, 'emotion_' + str(exc), str(exc)) from None
+    if created:
+        emotion_runner.start(row['id'])
+    return {'run': row, 'started': created}
+
+
 def call(operation):
     try:
         return operation()

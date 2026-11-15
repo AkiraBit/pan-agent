@@ -1,0 +1,33 @@
+{
+  "frozen_at_utc": "2026-11-14T15:58:00Z",
+  "purpose": "Evaluate draft sentiment measurements and candidate parameters; do not create a skill or claim executable strategy returns.",
+  "data": {
+    "source": "BaoStock public historical daily bars; independent Shanghai index check with Longbridge where possible",
+    "start": "2020-01-01", "end": "2025-12-31",
+    "universe": "Historical stock_basic listing/delisting dates, Shanghai and Shenzhen A shares, including subsequently delisted securities if source supplies history; no current survivor-only selection",
+    "primary": "Main board, each date trading, non-ST, at least 60 exchange sessions since IPO; raw prices consistent with reconstructed 10% limits",
+    "secondary": "ChiNext and STAR separately, with their historical limit regimes; Beijing not included",
+    "vintage_limitation": "Data downloaded now; reconstructed historical information, not archived point-in-time releases; isST and bar coverage depend on vendor",
+    "limit_limitation": "Price limits reconstructed from raw preclose and board regime with cent half-up rounding. Not a verified exchange daily limit-price file. Special resumptions/delisting flags can be incomplete."
+  },
+  "split": {"development": ["2021-01-01", "2022-12-31"], "validation": ["2023-01-01", "2023-12-31"], "holdout": ["2024-01-01", "2025-12-31"], "purge": "For each forward horizon, exclude observations whose end date crosses that split boundary"},
+  "episodes": [
+    ["2022 spring decline and rebound", "2022-04-01", "2022-06-30"],
+    ["2023 structural market", "2023-02-01", "2023-06-30"],
+    ["2024 winter panic and recovery", "2024-01-02", "2024-03-15"],
+    ["2024 September rally and divergence", "2024-09-02", "2024-10-31"],
+    ["2025 April shock", "2025-03-17", "2025-05-16"]
+  ],
+  "metrics": ["net advance ratio", "cross-section median daily return", "MA20 breadth", "20/60-day close new highs and lows on chained return series", "close limit-up/down shares", "touched-limit close sealing rate", "previous-session limit-up cohort median, positive fraction and lower-decile return", "market lower-decile return", "turnover amount over prior-20-session median"],
+  "default": {"percentile_window": 120, "percentile_min_obs": 60, "extreme_q": 0.2, "change_baseline": 3, "confirmation": 2, "groups_required": 2, "highlow_window": 20, "volume_multiple": 1.5},
+  "predeclared_candidates": {"percentile_window": [60,120,250], "extreme_q": [0.1,0.2,0.3], "change_baseline": [1,3,5], "confirmation": [1,2,3], "groups_required": [2,3], "highlow_window": [20,60], "volume_multiple": [1.2,1.5,2.0]},
+  "test_design": "One-factor-at-a-time comparisons around default, no full Cartesian search; simple breadth and previous-limit-up-outcome baselines; compare both years in holdout and market segments; retain default unless validation and holdout support stable material improvement; report failures and selection uncertainty",
+  "direction": "Compare each group's proxy to prior k-session median: G=net advance, A=limit-up share, P=previous limit-up median return, R=negative limit-down share. Improving requires at least m positive deltas, positive P level and nonnegative R delta; deteriorating requires at least m negative deltas, nonpositive P level and nonpositive R delta. Exact ties are neutral. This is a test implementation, not an already validated definition.",
+  "dual_axes": "Damage easing: limit-down share below prior-3 median AND market lower-decile return above prior-3 median. Profit diffusion: previous-limit-up cohort median positive AND positive-return fraction > 0.5. Compare the four cells, with missing P excluded rather than filled.",
+  "labels": "Descriptive stages are algorithmic hypotheses, not human ground truth. Low/high require at least two group percentiles below q/above 1-q. Repair combines improvement with recent low state; expansion is improvement without recent low; divergence combines recent high and weakening; retreat combines deterioration and lower G percentile. Primary parameter evaluation uses numeric forward outcomes, not agreement with these labels.",
+  "forward_outcomes": "Frozen day-t eligible cohort mean compounded total-adjustment proxy return to t+1,t+3,t+5, using product(1+pctChg/100), plus up fraction and next-day downside breadth. No assumed fills at signal-day close. Missing future bars not zero-filled; report retention and do not call these trading PnL.",
+  "event_cohorts": "At t: close above all previous 20 closes on chained return series; same breakout plus turnover amount > 1.2/1.5/2.0 times prior20 median; first limit-up after previous nonlimit-up. At t+h report cohort mean return and excess over same-day broad market cohort. Only matured cohorts enter summaries.",
+  "uncertainty": "Resample contiguous blocks of 10 trading dates, 1000 replicates, for holdout forward-5-day mean-return differences; chronological splits, overlapping outcome purge and daily aggregation reduce false stock-level sample size claims. Intervals are descriptive and not multiple-testing-adjusted. Sensitivity 5/20 blocks for principal result.",
+  "not_tested": ["PIT concept membership and theme birthday", "ex-ante true leader/follower identification", "minute-level opening/resealing counts and auction order book", "causal theme/style attribution", "executable strategy profitability after costs and T+1/limit locks", "all-market inclusion of Beijing"],
+  "amendment_policy": "Any data-driven exclusions, unavailable fields or changed implementation must be recorded explicitly; no silent parameter retuning after holdout results."
+}

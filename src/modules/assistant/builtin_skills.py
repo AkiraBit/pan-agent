@@ -25,8 +25,8 @@ def register_builtin_skills(registry, session: Session, language: str):
                 return ToolResult.failure(summary="Check the skill and its Longbridge MCP connection in MCP & Skills." if english else
                                           "请在 MCP & 技能中检查技能开关和长桥 MCP 连接。", error_code="skill_unavailable")
         return ToolResult.success(summary=skills.instructions(skill_id),
-            data={"skill_id": skill_id, "version": skills.VERSION, "upstream_revision": skills.UPSTREAM_REVISION},
-            sources=[{"name": "Longbridge Skill · PanWatch adaptation", "url": item["source_url"]}],
+            data={"skill_id": skill_id, "version": item['version'], "upstream_revision": item['upstream_revision']},
+            sources=[{"name": "PanWatch built-in skill", **({'url': item['source_url']} if item['source_url'].startswith('https://') else {})}],
             observed_at=datetime.now(UTC))
 
     choices = "; ".join(f"{key}: {item['title'][1 if english else 0]}" for key, item in available.items())
