@@ -281,7 +281,11 @@ async def collect_overview(query, previous=None, *, now=None):
     else:
         refresh_after = datetime.combine(datetime.fromisoformat(future_days[0]).date(), time(9, 31), TZ) if future_days else observed + timedelta(hours=6)
     raw.update(calendar=calendar, directory_pages=pages, quotes=raw_quotes, indices=index_data, calls=calls)
-    return {'trade_date': day, 'previous_trade_date': previous_day, 'as_of': max(r['source_time'] for r in rows),
+    result = {'trade_date': day, 'previous_trade_date': previous_day, 'next_trade_date': future_days[0] if future_days else None,
+            'universe_hash': universe_hash, 'as_of': max(r['source_time'] for r in rows),
             'collected_at': observed.isoformat(), 'refresh_after': refresh_after.isoformat(), 'intraday': intraday,
             'provider': 'longbridge_mcp', 'coverage': coverage, 'metrics': metrics, 'indices': indices,
             'temperature': temperature, 'evidence': ev, 'daily_observations': history[-10:], 'raw': raw}
+    from .overview_reporting import engine
+    result['continuity'] = engine().continuity(previous, result)
+    return result

@@ -7,6 +7,8 @@ import { emotionApi, type Evidence, type SentimentOverviewState } from '@panwatc
 import { formatNumber } from '@/i18n/format'
 import SentimentCycleChart from './SentimentCycleChart'
 import { EmotionCard, emotionStamp } from './EmotionBlocks'
+import SentimentReportDetails, { SentimentReportExport } from './SentimentReportDetails'
+import SentimentStructure from './SentimentStructure'
 
 const number = (v: number | null | undefined, suffix = '') => v == null ? '—' : formatNumber(v, { maximumFractionDigits: 2 }) + suffix
 
@@ -47,6 +49,8 @@ export default function SentimentOverview({ inputVersion, onEvidence }: { inputV
     {p && <>
       <section className="rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/5 to-card p-5 sm:p-6"><div className="flex flex-wrap items-center gap-2 text-xs"><span className="rounded-full border px-3 py-1 text-primary">{t(`overview.directions.${p.analysis.direction}`)}</span><span className="text-muted-foreground">{t('overview.asOf', { time: emotionStamp(p.as_of) })}</span></div><h2 className="text-xl sm:text-2xl font-semibold mt-4 leading-snug">{p.analysis.title}</h2><p className="text-sm leading-7 text-muted-foreground mt-3">{p.analysis.summary}</p><p className="text-xs leading-6 text-muted-foreground mt-3">{p.analysis.direction_reason}</p></section>
       <SentimentCycleChart position={p.analysis.stage} />
+      <SentimentReportExport runId={p.run_id} />
+      <SentimentStructure data={p.supplement} />
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">{([
         ['rising', p.metrics.breadth.rising, ''], ['falling', p.metrics.breadth.falling, ''], ['median', p.metrics.breadth.median, '%'], ['temperature', p.temperature.quality === 'available' ? p.temperature.temperature : null, ''],
       ] as const).map(([key, value, suffix]) => <div key={key} className="rounded-xl border bg-card p-4"><p className="text-xs text-muted-foreground">{t(`overview.metrics.${key}`)}</p><p className="text-2xl font-semibold tabular-nums mt-2">{number(value, suffix)}</p>{key === 'temperature' && <p className="text-[10px] text-muted-foreground mt-2">{t('overview.temperatureHint')}</p>}</div>)}</div>
@@ -56,7 +60,8 @@ export default function SentimentOverview({ inputVersion, onEvidence }: { inputV
       <EmotionCard title={t('overview.boardTitle')}><div className="overflow-x-auto scrollbar"><table className="w-full text-sm"><thead><tr className="text-xs text-muted-foreground">{['board', 'sample', 'positive', 'median', 'strong', 'weak'].map(k => <th key={k} className="text-left font-normal pb-3 px-2 whitespace-nowrap">{t(`overview.columns.${k}` as 'overview.columns.board')}</th>)}</tr></thead><tbody>{p.metrics.boards.map(b => <tr key={b.board} className="border-t"><td className="py-3 px-2 whitespace-nowrap">{t(`overview.boards.${b.board}`)}</td><td className="px-2">{b.valid} / {b.directory_count}</td><td className="px-2">{number(b.positive_ratio == null ? null : b.positive_ratio * 100, '%')}</td><td className="px-2">{number(b.median, '%')}</td><td className="px-2">{number(b.strong_count)}</td><td className="px-2">{number(b.weak_count)}</td></tr>)}</tbody></table></div><p className="text-xs text-muted-foreground leading-6 mt-4">{t('overview.proxyHint')}</p></EmotionCard>
       <div className="grid md:grid-cols-2 gap-4">{p.analysis.groups.map(g => <EmotionCard key={g.group} title={`${g.group} · ${t(`overview.groups.${g.group}`)}`} extra={<span className="text-xs text-muted-foreground">{t(`overview.groupStatus.${g.status}`)}</span>}><p className="text-sm leading-7">{g.explanation}</p>{refs(g.evidence_ids)}</EmotionCard>)}</div>
       <div className="grid md:grid-cols-2 gap-4">{(['supports', 'counters'] as const).map(key => <EmotionCard key={key} title={t(key)}><ul className="space-y-4">{p.analysis[key].map((c, i) => <li key={i} className="text-sm leading-7">{c.text}{refs(c.evidence_ids)}</li>)}</ul></EmotionCard>)}</div>
-      <EmotionCard title={t('overview.nextChecks')}><div className="space-y-4">{p.analysis.next_checks.map((c, i) => <article key={i} className="rounded-xl border p-4"><span className="text-xs text-primary">{c.window}</span><p className="text-sm font-medium mt-2">{c.observe}</p><p className="text-xs leading-6 text-muted-foreground mt-2">{t('overview.strengthens')}：{c.strengthens}</p><p className="text-xs leading-6 text-muted-foreground">{t('invalidates')}：{c.invalidates}</p></article>)}</div></EmotionCard>
+      <SentimentReportDetails overview={p} />
+      <EmotionCard title={t('overview.nextChecks')}><div className="space-y-4">{p.analysis.next_checks.map((c, i) => <article key={i} className="rounded-xl border p-4"><span className="text-xs text-primary">{c.window}</span><p className="text-sm font-medium mt-2">{c.observe}</p><p className="text-xs leading-6 text-muted-foreground mt-2">{t('overview.strengthens')}：{c.strengthens}</p><p className="text-xs leading-6 text-muted-foreground">{t('invalidates')}：{c.invalidates}</p><p className="text-xs text-muted-foreground mt-3">{t(c.rule ? 'overview.report.numericCheck' : 'overview.report.proseCheck')}</p></article>)}</div></EmotionCard>
       <EmotionCard title={t('overview.limitations')}><ul className="list-disc pl-4 text-sm text-muted-foreground leading-7 space-y-2">{p.analysis.limitations.map((item, i) => <li key={i}>{item}</li>)}</ul><p className="text-xs text-muted-foreground mt-5 border-t pt-4">{t('overview.analyzed', { time: emotionStamp(p.analyzed_at) })} · {p.model_label}</p></EmotionCard>
     </>}
   </div>

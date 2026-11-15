@@ -503,15 +503,15 @@
   {
     "id": "analyze-a-share-sentiment",
     "provider": "panwatch",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "default_enabled": true,
     "title": [
       "A股市场情绪周期分析",
       "A-share sentiment cycle"
     ],
     "description": [
-      "为情绪策略总览提供最新交易日的结构化诊断、G/A/P/R证据与阶段区间。行情来自长桥 MCP。",
-      "Structured latest-session diagnosis, G/A/P/R evidence and cycle placement for the sentiment overview, using Longbridge MCP."
+      "最新情绪诊断、冻结条件验证、判断修订与可导出结果页；长桥基础行情，扶摇专项补充。",
+      "Latest sentiment diagnosis, frozen-check verification, revision audit and exportable reports; Longbridge quotes with optional Fuyao evidence."
     ],
     "capabilities": [
       {

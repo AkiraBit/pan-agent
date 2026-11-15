@@ -2,6 +2,7 @@
 from datetime import date
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
+from fastapi.responses import HTMLResponse, JSONResponse
 
 from src.platform.persistence.database import get_db
 from src.web.errors import api_error
@@ -18,6 +19,29 @@ router = APIRouter()
 def sentiment_overview(db: Session = Depends(get_db)):
     from .overview_repository import OverviewRepository
     return OverviewRepository(db).view()
+
+
+@router.get('/sentiment-overview/report')
+def sentiment_report(format: str = 'html', run_id: str | None = None, db: Session = Depends(get_db)):
+    from .overview_repository import OverviewRepository
+    from .overview_reporting import engine
+    from src.platform.persistence.models import EmotionRun
+    payload = OverviewRepository(db).view()['overview']
+    if run_id and (not payload or payload['run_id'] != run_id):
+        run = db.get(EmotionRun, run_id)
+        payload = run.inputs.get('published_overview') if run and run.status == 'succeeded' else None
+    if not payload:
+        raise api_error(404, 'emotion_overview_not_found', 'No published overview.')
+    if format not in {'html', 'json'}:
+        raise api_error(400, 'emotion_report_format', 'Use html or json.')
+    filename = f'sentiment-{payload["trade_date"]}-{payload["run_id"][:8]}.{format}'
+    headers = {'Content-Disposition': f'attachment; filename="{filename}"', 'Cache-Control': 'no-store',
+               'X-Content-Type-Options': 'nosniff'}
+    if format == 'json':
+        # Download the original envelope; the normal application/json API wrapper
+        # would add a transport-level data envelope unsuitable for the skill CLI.
+        return JSONResponse(payload, headers=headers, media_type='application/vnd.panwatch.sentiment+json')
+    return HTMLResponse(engine().render_html(payload), headers=headers)
 
 
 from .overview_schema import OverviewRefresh

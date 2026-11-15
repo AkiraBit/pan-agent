@@ -27,7 +27,9 @@ class OverviewRepository:
         active = self.db.query(EmotionRun).filter(EmotionRun.status.in_(['queued', 'running'])).first()
         latest = self.db.query(EmotionRun).filter(EmotionRun.inputs['kind'].as_string() == 'overview').order_by(EmotionRun.created_at.desc()).first()
         skill = builtin_skills.status(self.db, SKILL_ID)
-        stale = not payload or datetime.fromisoformat(payload['refresh_after']) <= now or payload['input_version'] != (workspace.input_version if workspace else 0)
+        stale = (not payload or datetime.fromisoformat(payload['refresh_after']) <= now
+                 or payload['input_version'] != (workspace.input_version if workspace else 0)
+                 or payload.get('skill', {}).get('version') != skill['version'])
         # A failed automatic attempt is not retried on every poll or browser mount.
         retry_after = (datetime.fromisoformat(latest.finished_at) + timedelta(minutes=10)).isoformat() if latest and latest.finished_at and latest.status in {'failed', 'interrupted', 'cancelled'} else None
         return {'overview': payload, 'stale': bool(stale), 'active_run': run_dto(active) if active else None,
@@ -86,9 +88,14 @@ class OverviewRepository:
             self.db.rollback()
             raise WorkspaceError('overview_skill_unavailable')
         payload = {k: deepcopy(v) for k, v in facts.items() if k != 'raw'}
-        payload.update(schema_version='1.0', run_id=identity, input_version=run.input_version,
+        payload.update(schema_version='1.1', run_id=identity, input_version=run.input_version,
                        analysis=analysis, analyzed_at=utc_now().isoformat(), model_label=model_label,
                        skill={'id': SKILL_ID, 'version': builtin_skills.definition(SKILL_ID)['version']})
+        from .overview_reporting import engine
+        payload['report'] = engine().enrich_report(payload, run.inputs.get('previous'))
+        # A successful run keeps its original publication. Latest UI replacement must
+        # never erase the as-published diagnosis or its registered conditions.
+        run.inputs = {**run.inputs, 'published_overview': deepcopy(payload)}
         row = self.db.get(EmotionOverview, 1)
         if row:
             row.payload = payload

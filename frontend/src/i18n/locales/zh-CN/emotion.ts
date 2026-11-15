@@ -1,5 +1,66 @@
 export const emotion = {
   "overview": {
+  "report": {
+    "preview": "预览结果页",
+    "structure": "涨跌停与接力结构",
+    "fuyaoAt": "扶摇 REST · 交易日 {{day}} · 采集 {{at}}",
+    "limitUp": "供应商封板家数",
+    "opened": "供应商涨停打开家数",
+    "sealRate": "供应商封板率",
+    "limitDown": "原始跌停池家数",
+    "vendorScope": "汇总按供应商口径；梯队按板块排除 ST、新股及状态未知记录，分母分别保留。页面档位晋级率不当作冻结队列一进二。",
+    "ladderSample": "有效涨停记录 {{count}}；排除或状态未知 {{excluded}}",
+    "level": "{{level}} 板 · {{count}} 家",
+    "noEligibleEvents": "完整返回池中无符合过滤口径的记录。",
+    "eventsMissing": "事件池或板数字段不完整，不能据此认定梯队空缺。",
+    "dragonTitle": "龙虎榜单日记录 · 按披露买卖差额展示前五条",
+    "cny": "元",
+    "dragonScope": "仅展示 range_days=1 的上榜记录，三日记录单列于证据，不叠加；不是全市场资金流，不代表候选买点。",
+    "exportHtml": "导出结果页",
+    "exportJson": "导出源数据 JSON",
+    "exportFailed": "导出失败，请重试。",
+    "validation": "上次预期 → 本次验证",
+    "noRegistration": "尚无可用的前一交易日登记条件。首次运行不补造历史命中记录。",
+    "registered": "登记于 {{at}}；验证 {{day}} 收盘",
+    "unvalidated": "参数待回测",
+    "revision": "判断修订记录",
+    "immutable": "原判断按发布时点保留；本次修订不覆盖历史记录。",
+    "gaps": "仍缺少什么数据",
+    "required": "所需数据",
+    "execution": "观察条件成立不等于可成交。本总览不读取账户仓位；普通 A 股当日新买入部分不能同日卖出，撤销未成交委托与卖出已成交股份分开处理。",
+    "numericCheck": "已登记数值条件 · 下一交易日收盘验证 · 参数待回测",
+    "proseCheck": "文字观察条件 · 需复核，不能自动认定命中",
+    "states": {
+      "waiting": "等待收盘",
+      "met": "观察条件成立",
+      "not_met": "观察条件未成立",
+      "invalidated": "反证条件成立",
+      "expired": "错过验证窗口",
+      "insufficient": "无法验证",
+      "review_required": "需要人工复核"
+    },
+    "reasons": {
+      "window_not_complete": "目标交易日尚未收盘。",
+      "missed_session": "缺少目标交易日快照，不能用后一天替代。",
+      "qualitative_condition": "原条件为文字，程序不能自动判定。",
+      "coverage_or_universe_changed": "覆盖不完整或比较股票池变化。",
+      "metric_missing": "所需指标缺失。",
+      "evaluated": "按登记时冻结的条件计算。",
+      "registration_after_observation": "登记时间晚于本次观察，不能回填验证。"
+    },
+    "metrics": {
+      "positive_ratio": "上涨占比（小数）",
+      "median": "涨幅中位数（%）",
+      "p10": "收益第10分位（%）",
+      "feedback_mean": "前日强势队列平均反馈（%）"
+    },
+    "gapLabels": {
+      "limit_events": "涨停 / 炸板与精确连板梯队",
+      "themes": "题材持续性与登记板块验证",
+      "execution": "回封事件与可成交性",
+      "dragon_tiger": "龙虎榜明细"
+    }
+  },
   "evidence": {
     "coverage": "行情覆盖范围",
     "breadth": "市场广度与收益分布",

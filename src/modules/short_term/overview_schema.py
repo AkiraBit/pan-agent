@@ -44,11 +44,28 @@ class EvidenceGroup(Contract):
     evidence_ids: list[Identity] = Field(max_length=12)
 
 
+class ObservationRule(Contract):
+    metric: Literal['positive_ratio', 'median', 'p10', 'feedback_mean']
+    operator: Literal['gt', 'gte', 'lt', 'lte']
+    value: float = Field(allow_inf_nan=False)
+    basis: Text
+    calibration: Literal['unvalidated'] = 'unvalidated'
+
+
 class NextCheck(Contract):
     window: Text
     observe: Text
     strengthens: Text
     invalidates: Text
+    verification_window: Literal['qualitative', 'next_session_close'] = 'qualitative'
+    rule: ObservationRule | None = None
+    invalidation_rule: ObservationRule | None = None
+
+    @model_validator(mode='after')
+    def numeric_window(self):
+        if (self.rule is not None) != (self.verification_window == 'next_session_close'):
+            raise ValueError('numeric conditions require verification_window=next_session_close; prose uses qualitative')
+        return self
 
 
 class OverviewAnalysis(Contract):

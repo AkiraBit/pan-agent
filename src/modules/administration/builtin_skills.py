@@ -121,7 +121,7 @@ def instructions(skill_id: str = SKILL_ID) -> str:
         # Runtime agents have no filesystem tool: resolve the required guidance here.
         # Keep raw study tables out of daily context, while preserving rule provenance.
         resources = ['SKILL.md', 'references/data-and-metrics.md', 'references/interpretation.md',
-                     'references/parameters-and-evidence.md', 'references/panwatch-overview.md']
+                     'references/parameters-and-evidence.md', 'references/panwatch-overview.md', 'references/result-page.md']
         return '\n\n'.join((folder / name).read_text(encoding='utf-8') for name in resources)
     specific = [f"\n## Selected skill: {skill_id} — {item['title'][1]}", item["description"][1],
         "\n### Supported workflow", *[f"{index}. {step[1]}" for index, step in enumerate(item["workflow"], 1)],

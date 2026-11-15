@@ -2,6 +2,67 @@ import type { emotion as zh } from '../zh-CN/emotion'
 import type { TranslationShape } from '../../resource-types'
 export const emotion = {
   "overview": {
+  "report": {
+    "preview": "Preview report page",
+    "structure": "Limit events and relay structure",
+    "fuyaoAt": "Fuyao REST · session {{day}} · retrieved {{at}}",
+    "limitUp": "Vendor sealed count",
+    "opened": "Vendor opened count",
+    "sealRate": "Vendor seal rate",
+    "limitDown": "Raw limit-down pool count",
+    "vendorScope": "Vendor aggregates retain their own scope. Board ladders exclude ST, new and unknown-status records. Page-tier promotion is not frozen-cohort promotion.",
+    "ladderSample": "Eligible limit-up records {{count}}; excluded or unknown {{excluded}}",
+    "level": "{{level}} boards · {{count}} stocks",
+    "noEligibleEvents": "No eligible records in the complete returned pool.",
+    "eventsMissing": "Incomplete event pool or streak data; gaps cannot be inferred.",
+    "dragonTitle": "Single-day disclosed records · five largest buy–sell differences",
+    "cny": "CNY",
+    "dragonScope": "Only range_days=1 records are listed. Three-day records remain separate in evidence. These are neither whole-market flows nor entry candidates.",
+    "exportHtml": "Export report page",
+    "exportJson": "Export source JSON",
+    "exportFailed": "Export failed. Please retry.",
+    "validation": "Previous expectations → current verification",
+    "noRegistration": "No registered checks from the preceding session are available. No historical hits are reconstructed.",
+    "registered": "Registered {{at}}; verify at the {{day}} close",
+    "unvalidated": "Parameter not backtested",
+    "revision": "Judgment revision",
+    "immutable": "The original publication is preserved. This revision does not overwrite the historical judgment.",
+    "gaps": "Remaining data gaps",
+    "required": "Required data",
+    "execution": "An observation passing does not establish tradability. This overview does not read account positions. Newly purchased ordinary A shares cannot be sold on the same day; cancellation of unfilled orders is separate from selling filled shares.",
+    "numericCheck": "Numeric condition registered · next-session close · parameter not backtested",
+    "proseCheck": "Qualitative observation · review required; no automatic hit",
+    "states": {
+      "waiting": "Awaiting close",
+      "met": "Condition met",
+      "not_met": "Condition not met",
+      "invalidated": "Countercondition met",
+      "expired": "Verification window missed",
+      "insufficient": "Cannot verify",
+      "review_required": "Review required"
+    },
+    "reasons": {
+      "window_not_complete": "The target session has not closed.",
+      "missed_session": "No target-session snapshot. Later data cannot replace it.",
+      "qualitative_condition": "The original prose condition cannot be evaluated automatically.",
+      "coverage_or_universe_changed": "Incomplete coverage or a changed comparison universe.",
+      "metric_missing": "A required metric is missing.",
+      "evaluated": "Calculated against the originally registered condition.",
+      "registration_after_observation": "Registration occurred after this observation; backfilling is not allowed."
+    },
+    "metrics": {
+      "positive_ratio": "Advancing fraction",
+      "median": "Median return (%)",
+      "p10": "10th percentile return (%)",
+      "feedback_mean": "Prior strong-cohort mean return (%)"
+    },
+    "gapLabels": {
+      "limit_events": "Limit events and exact streak ladder",
+      "themes": "Theme persistence and registered-sector verification",
+      "execution": "Resealing events and tradability",
+      "dragon_tiger": "Dragon-tiger disclosure details"
+    }
+  },
   "evidence": {
     "coverage": "Market coverage",
     "breadth": "Breadth and return distribution",

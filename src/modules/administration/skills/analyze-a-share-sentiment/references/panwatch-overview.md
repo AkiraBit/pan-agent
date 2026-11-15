@@ -2,7 +2,7 @@
 
 存在 `validate_overview` 时按本契约执行；在 Codex 或普通助手中无此工具时直接输出符合文末 JSON Schema 的分析对象，并单独提供实际计算数据与时间口径，不调用不存在的宿主工具。
 
-总览使用宿主传入的 `get_market_facts`，其行情来自长桥 MCP；不得借用模型记忆补造数值。先 `load_builtin_skill`，读取事实后，通过 `validate_overview` 返回 schema 约束的 JSON。Codex 独立使用时可调用对应长桥 MCP 工具，遵循相同口径。禁止读取账户余额、持仓或交易记录用于市场情绪分析。
+总览使用宿主传入的 `get_market_facts`，基础行情来自长桥 MCP，专项数据可来自已授权且启用的扶摇 REST；不得借用模型记忆补造数值。先 `load_builtin_skill`，读取事实后，通过 `validate_overview` 返回 schema 约束的 JSON。Codex 独立使用时可调用对应长桥 MCP 工具，遵循相同口径。禁止读取账户余额、持仓或交易记录用于市场情绪分析。
 
 ## 时间与输出归属
 
@@ -45,3 +45,9 @@
 研究依据仍见 [参数与依据](parameters-and-evidence.md) 与 [首轮实证](study-2026-11.md)；这些结论不证明当前长桥代理指标的预测能力。
 
 机器可读的分析字段定义见 [overview.schema.json](overview.schema.json)。宿主负责附加行情卡片、覆盖、来源、数据时点和更新状态；这些数值不得由模型重写。
+
+## 1.2 连续验证与结果页
+
+`next_checks` 可附 `rule` 与 `invalidation_rule`（默认 null），字段与冻结协议见[综合结果页](result-page.md)。模型不能写入宿主 `report` 的验证状态、登记时点与修订记录。宿主的 `supplement` 提供扶摇专项证据；A 在完整事件池、有效汇总均存在时可为 observed，其他条件仍需分别核验。
+
+总览导出 `/sentiment-overview/report?format=html|json&run_id=...`，绑定实际发布 run。旧结果保留实际日期，不补造登记条件或跨日命中。

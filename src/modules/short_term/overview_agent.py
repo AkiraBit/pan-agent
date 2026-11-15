@@ -14,8 +14,20 @@ PROMPT = """你是 PanWatch A股情绪策略台总览 Agent。先调用 load_bui
 as_of 是股票报价时点，不是知识截止时间；本轮已知信息截止 collected_at。指数和温度各有源时间，不得将较晚发布但在 collected_at 前的同交易日资料误标为未来数据。
 只用给定事实。按技能输出结构化方向、双轴、六阶段/相邻区间、G/A/P/R、支持、反证和下次验证条件。
 无可靠时序比较时 direction/loss_relief/profit_diffusion 的 state 使用 insufficient，说明当前水平，不能用温度历史替代全市场双轴历史。
-没有真实涨停限价和事件池时，A只能是proxy/missing，P按冻结强势代理队列口径。若已有证据能缩小到两个相邻阶段而边界未确认，使用between并说明候选依据；候选不要求所有组齐全。无法缩小范围才用unknown，不要为了填图假定阶段。
+没有真实涨停事件池时，A只能是proxy/missing；存在完整扶摇事件池和可核验汇总时可引用供应商事件观察，仍区分ST/新股及不同板块。P按冻结强势代理队列口径。若已有证据能缩小到两个相邻阶段而边界未确认，使用between并说明候选依据；候选不要求所有组齐全。无法缩小范围才用unknown，不要为了填图假定阶段。
 正文不要打印内部证据ID。最多修正一次；校验通过后结束。"""
+
+PROMPT += """\ncontinuity 是程序对已冻结条件的验证结果，不能改写其状态或补造历史命中。
+next_checks 的 rule / invalidation_rule 可用 positive_ratio（0到1）、median / p10 / feedback_mean（百分点）定义数值观察条件。
+这些规则只在下一交易日收盘验证；若给数值规则，verification_window=next_session_close，window 说明次日收盘，basis 说明阈值来源，calibration 固定 unvalidated。
+无数值规则时 verification_window=qualitative。
+盘中、题材、梯队等当前无法机器核验的条件使用 null 规则，保留文字观察；条件成立不代表买点或可成交。
+阶段、日内修复和题材结构分别解释，不输出账户仓位、立即卖出当天新买入A股、或提前按后来回封价格成交。"""
+PROMPT += """\n扶摇 supplement 是授权的专项补充。长桥广度和扶摇池的股票范围不同，不直接混算分母。
+statistics 的页面档位晋级率不是冻结前日首板队列晋级率；五板以上合并档位不能冒充精确五板。
+龙虎榜按 range_days 分开，单日/多日不叠加，不将上榜记录差额称为全市场资金或席位所有者意图。
+池日期按请求日绑定，timestamp 是供应商采样时刻，不是原始发布时刻；仅可用于本轮可知资料，不冒充历史时点已知。
+没有历史题材成分时，涨停原因和概念标签只能说明个股背景，不能确认题材持续领涨或合成主题收益。"""
 
 
 def validate_overview(arguments, facts):
@@ -32,11 +44,24 @@ def validate_overview(arguments, facts):
             for child in value:
                 visit(child)
     visit(draft.model_dump())
+    for check in draft.next_checks:
+        for rule in (check.rule, check.invalidation_rule):
+            if rule and rule.metric == 'positive_ratio' and not 0 <= rule.value <= 1:
+                raise ValueError('positive_ratio thresholds must be between zero and one')
+        if check.invalidation_rule and not check.rule:
+            raise ValueError('invalidation_rule requires a registered positive rule')
     groups = {g.group: g for g in draft.groups}
-    if groups['A'].status == 'observed':
+    supplement = facts.get('supplement', {})
+    complete_events = (supplement.get('statistics', {}).get('status') == 'available' and
+                       all(supplement.get('pools', {}).get(k, {}).get('status') == 'available' for k in ('up', 'down', 'broken')))
+    if groups['A'].status == 'observed' and not complete_events:
         raise ValueError('A is a strong-return proxy; exact limit events are unavailable')
+    if groups['A'].status == 'observed' and not set(groups['A'].evidence_ids) & {'overview:fuyao-statistics', 'overview:fuyao-ladders', 'overview:fuyao-pools'}:
+        raise ValueError('observed A must cite the supplementary event evidence')
     if facts['metrics']['feedback']['status'] == 'missing' and groups['P'].status != 'missing':
         raise ValueError('P has no frozen preceding-session cohort')
+    if facts['metrics']['feedback']['status'] == 'proxy' and groups['P'].status == 'observed':
+        raise ValueError('P remains a strong-return proxy, not exact limit-up cohort feedback')
     if draft.stage.status == 'supported' and (facts['coverage']['status'] != 'complete' or any(g.status != 'observed' for g in draft.groups)):
         raise ValueError('incomplete or proxy evidence supports candidate/conflicted positions only')
     if facts['metrics']['comparison']['status'] != 'available' and any(v != 'insufficient' for v in
@@ -60,7 +85,7 @@ async def run_overview(client, run, facts, sink, skill_check):
     async def get_facts(_request, _args):
         reads.add('facts')
         visible = {k: v for k, v in facts.items() if k not in {'raw', 'daily_observations'}}
-        return ToolResult.success(summary='Frozen Longbridge evidence with program-calculated numbers.', data=visible, sources=[], observed_at=observed)
+        return ToolResult.success(summary='Frozen Longbridge breadth and optional Fuyao structure; distinct source scopes and program-calculated validation.', data=visible, sources=[], observed_at=observed)
 
     async def validate(_request, arguments):
         nonlocal accepted, attempts

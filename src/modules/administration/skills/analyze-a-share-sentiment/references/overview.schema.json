@@ -139,6 +139,37 @@
           "minLength": 1,
           "title": "Invalidates",
           "type": "string"
+        },
+        "verification_window": {
+          "default": "qualitative",
+          "enum": [
+            "qualitative",
+            "next_session_close"
+          ],
+          "title": "Verification Window",
+          "type": "string"
+        },
+        "rule": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ObservationRule"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "invalidation_rule": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ObservationRule"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         }
       },
       "required": [
@@ -148,6 +179,55 @@
         "invalidates"
       ],
       "title": "NextCheck",
+      "type": "object"
+    },
+    "ObservationRule": {
+      "additionalProperties": false,
+      "properties": {
+        "metric": {
+          "enum": [
+            "positive_ratio",
+            "median",
+            "p10",
+            "feedback_mean"
+          ],
+          "title": "Metric",
+          "type": "string"
+        },
+        "operator": {
+          "enum": [
+            "gt",
+            "gte",
+            "lt",
+            "lte"
+          ],
+          "title": "Operator",
+          "type": "string"
+        },
+        "value": {
+          "title": "Value",
+          "type": "number"
+        },
+        "basis": {
+          "maxLength": 2400,
+          "minLength": 1,
+          "title": "Basis",
+          "type": "string"
+        },
+        "calibration": {
+          "const": "unvalidated",
+          "default": "unvalidated",
+          "title": "Calibration",
+          "type": "string"
+        }
+      },
+      "required": [
+        "metric",
+        "operator",
+        "value",
+        "basis"
+      ],
+      "title": "ObservationRule",
       "type": "object"
     },
     "StagePosition": {
