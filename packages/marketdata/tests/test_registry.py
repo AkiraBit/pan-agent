@@ -11,17 +11,17 @@ from marketdata.registry import VENDOR_CLASSES_BY_TYPE, build_vendors
 def test_package_vendors_by_type_content():
     """内容必须与 client.py 现状(quote/kline/capital_flow/events 各 vendor)完全一致。"""
     assert PACKAGE_VENDORS_BY_TYPE == {
-        "quote": frozenset({"tencent", "sina", "eastmoney", "yfinance"}),
-        "kline": frozenset({"tencent", "stooq", "eastmoney", "yahoo"}),
-        "capital_flow": frozenset({"eastmoney", "sina"}),
-        "events": frozenset({"eastmoney"}),
+        "quote": frozenset({"longbridge", "tencent", "sina", "eastmoney", "yfinance"}),
+        "kline": frozenset({"longbridge", "tencent", "stooq", "eastmoney", "yahoo"}),
+        "capital_flow": frozenset({"longbridge", "eastmoney", "sina"}),
+        "events": frozenset({"longbridge", "eastmoney"}),
         "flash_news": frozenset({"cls", "sina", "eastmoney"}),
-        "news": frozenset({"xueqiu", "eastmoney_news", "eastmoney"}),
-        "fundamentals": frozenset({"tencent", "eastmoney"}),
+        "news": frozenset({"longbridge", "xueqiu", "eastmoney_news", "eastmoney"}),
+        "fundamentals": frozenset({"longbridge", "tencent", "eastmoney"}),
         "dragon_tiger": frozenset({"eastmoney"}),
         "margin": frozenset({"eastmoney"}),
         "shareholders": frozenset({"eastmoney"}),
-        "dividend": frozenset({"eastmoney"}),
+        "dividend": frozenset({"longbridge", "eastmoney"}),
         "northbound": frozenset({"ths"}),
     }
 

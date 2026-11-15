@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 from typing import Any, Callable
 
 from marketdata import PACKAGE_VENDORS_BY_TYPE, capture_errors
+from src.platform.marketdata.marketdata_client import create_market_data
 
 from src.platform.persistence.database import SessionLocal
 from src.platform.persistence.models import DataSource
@@ -432,6 +433,8 @@ class DataCollectorManager:
         self, source: DataSource, test_symbols: list[str]
     ) -> CollectorResult:
         """测试数据源的具体实现"""
+        if source.provider == 'longbridge':
+            return await self._test_longbridge(source, test_symbols)
         if source.type == "news":
             return await self._test_news_source(source, test_symbols)
 
@@ -565,6 +568,48 @@ class DataCollectorManager:
             success=False, error=f"不支持的数据源类型: {source.type}"
         )
 
+    async def _test_longbridge(self, source, test_symbols):
+        from dataclasses import asdict
+        from datetime import timedelta
+        from marketdata import SourceConfig, StaticConfigProvider, Symbol
+        from src.modules.market.etf import turnover
+        from src.platform.marketdata.longbridge import TOOLS_BY_TYPE
+
+        if source.type not in TOOLS_BY_TYPE:
+            return CollectorResult(success=False, error='Unsupported Longbridge data type')
+        md = create_market_data(config=StaticConfigProvider({source.type: [
+            SourceConfig(vendor='longbridge', config=source.config or {}, enabled=True)]}))
+        result, errors = [], []
+        for code in test_symbols[:_TEST_SYMBOL_LIMIT]:
+            market = Symbol.parse(code).market.value
+            try:
+                if source.type == 'etf_turnover':
+                    end = turnover.last_closed_day()
+                    start = (datetime.fromisoformat(end) - timedelta(days=14)).date().isoformat()
+                    rows = await turnover.fetch(code, start, end)
+                    items = [{k: r[k] for k in ('code', 'date', 'turnover_cny')} for r in rows]
+                else:
+                    def read():
+                        if source.type == 'quote': return md.quotes([code], market=market)
+                        if source.type == 'kline': return md.klines(code, market=market, days=30)
+                        if source.type == 'capital_flow':
+                            value = md.capital_flow(code, market=market)
+                            return [value] if value else []
+                        if source.type == 'fundamentals':
+                            return md.fundamentals([code], market=market)
+                        if source.type == 'news': return md.news([code], market=market, since_hours=24 * 365)
+                        if source.type == 'events': return md.events([code], market=market, since_days=365)
+                        return md.dividend([code], market=market)
+                    items = [asdict(item) for item in await asyncio.to_thread(read)]
+                if items:
+                    result.extend(items)
+                else:
+                    errors.append({'symbol': code, 'market': market, 'error': '长桥未返回该标的数据'})
+            except Exception:
+                errors.append({'symbol': code, 'market': market, 'error': '长桥查询失败，请检查连接与数据权限'})
+        return CollectorResult(success=bool(result), data=result[:100], count=len(result), errors=errors,
+                               error='' if result else '长桥未返回数据，请检查连接、标的和数据权限')
+
     # 包内 kline/quote/flash_news/fundamentals Engine 各自只注册了这些 vendor(权威来源见 marketdata.PACKAGE_VENDORS_BY_TYPE)。
     # provider 不在这个集合里 = 包内没实现该源,测试应给出明确 error,不能构造 Engine 硬跑。
     _NEWS_PACKAGE_VENDORS = PACKAGE_VENDORS_BY_TYPE["news"]
@@ -595,7 +640,7 @@ class DataCollectorManager:
             )
 
         cfg = source.config or {}
-        md = MarketData(
+        md = create_market_data(
             config=StaticConfigProvider(
                 {"kline": [SourceConfig(vendor=source.provider, config=cfg, enabled=True)]}
             )
@@ -650,7 +695,7 @@ class DataCollectorManager:
             )
 
         cfg = source.config or {}
-        md = MarketData(
+        md = create_market_data(
             config=StaticConfigProvider(
                 {"quote": [SourceConfig(vendor=source.provider, config=cfg, enabled=True)]}
             )
@@ -695,7 +740,7 @@ class DataCollectorManager:
             )
 
         cfg = source.config or {}
-        md = MarketData(
+        md = create_market_data(
             config=StaticConfigProvider(
                 {"news": [SourceConfig(vendor=source.provider, config=cfg, enabled=True)]}
             )
@@ -737,7 +782,7 @@ class DataCollectorManager:
             )
 
         cfg = source.config or {}
-        md = MarketData(
+        md = create_market_data(
             config=StaticConfigProvider(
                 {"flash_news": [SourceConfig(vendor=source.provider, config=cfg, enabled=True)]}
             )
@@ -781,7 +826,7 @@ class DataCollectorManager:
             return CollectorResult(success=False, error="请配置测试股票代码")
 
         cfg = source.config or {}
-        md = MarketData(
+        md = create_market_data(
             config=StaticConfigProvider(
                 {
                     "fundamentals": [
@@ -828,7 +873,7 @@ class DataCollectorManager:
             )
 
         cfg = source.config or {}
-        md = MarketData(
+        md = create_market_data(
             config=StaticConfigProvider(
                 {
                     "dragon_tiger": [
@@ -879,7 +924,7 @@ class DataCollectorManager:
             return CollectorResult(success=False, error="请配置测试股票代码")
 
         cfg = source.config or {}
-        md = MarketData(
+        md = create_market_data(
             config=StaticConfigProvider(
                 {"margin": [SourceConfig(vendor=source.provider, config=cfg, enabled=True)]}
             )
@@ -922,7 +967,7 @@ class DataCollectorManager:
             return CollectorResult(success=False, error="请配置测试股票代码")
 
         cfg = source.config or {}
-        md = MarketData(
+        md = create_market_data(
             config=StaticConfigProvider(
                 {
                     "shareholders": [
@@ -969,7 +1014,7 @@ class DataCollectorManager:
             return CollectorResult(success=False, error="请配置测试股票代码")
 
         cfg = source.config or {}
-        md = MarketData(
+        md = create_market_data(
             config=StaticConfigProvider(
                 {"dividend": [SourceConfig(vendor=source.provider, config=cfg, enabled=True)]}
             )
@@ -1008,7 +1053,7 @@ class DataCollectorManager:
             )
 
         cfg = source.config or {}
-        md = MarketData(
+        md = create_market_data(
             config=StaticConfigProvider(
                 {
                     "northbound": [

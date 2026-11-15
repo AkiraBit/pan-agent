@@ -350,6 +350,22 @@ def seed_agents():
 # 预置数据源种子(供 seed_data_sources / reconcile_data_sources 复用)。
 # 只增不删的 upsert 目标;删孤儿的对账逻辑见 reconcile_data_sources。
 DATA_SOURCE_SEEDS: list[dict] = [
+        *[
+            {"name": name, "type": kind, "provider": "longbridge", "config": {},
+             "enabled": True, "priority": 10 if kind == 'capital_flow' else 0,
+             "supports_batch": kind in {'quote', 'fundamentals'},
+             "test_symbols": symbols}
+            for kind, name, symbols in [
+                ('quote', '长桥行情', ['510300', '159919', '00700', 'AAPL']),
+                ('kline', '长桥 K 线', ['510300', '159919', '00700', 'AAPL']),
+                ('capital_flow', '长桥资金分布', ['600519', '00700', 'AAPL']),
+                ('fundamentals', '长桥基本面', ['600519', '00700', 'AAPL']),
+                ('news', '长桥资讯', ['600519', '00700', 'AAPL']),
+                ('events', '长桥公告', ['00700', 'AAPL']),
+                ('dividend', '长桥分红', ['00700', 'AAPL']),
+                ('etf_turnover', '长桥 ETF 成交额', ['510300', '159919']),
+            ]
+        ],
         # 新闻类数据源
         {
             "name": "雪球资讯",

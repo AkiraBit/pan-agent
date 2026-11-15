@@ -42,6 +42,16 @@ class EtfMinute(Base):
     snapshot_id = Column(Integer, ForeignKey('etf_source_snapshots.id'), nullable=False)
 
 
+class EtfTurnover(Base):
+    """Latest supplemental daily turnover, with independent source provenance."""
+    __tablename__ = 'etf_turnover_daily'
+    code = Column(String, primary_key=True)
+    trade_date = Column(String, primary_key=True)
+    turnover_cny = Column(Float, nullable=False)
+    snapshot_id = Column(Integer, ForeignKey('etf_source_snapshots.id'), nullable=False)
+    checked_at = Column(String, nullable=False)
+
+
 class EtfFlowDay(Base):
     __tablename__ = 'etf_basket_daily'
     trade_date = Column(String, primary_key=True)

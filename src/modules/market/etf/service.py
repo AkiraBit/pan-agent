@@ -13,7 +13,7 @@ from sqlalchemy.dialects.sqlite import insert
 
 from src.platform.persistence.database import SessionLocal
 from . import sources
-from .models import EtfDaily, EtfFlowDay, EtfHolding, EtfMinute, EtfSnapshot
+from .models import EtfDaily, EtfFlowDay, EtfHolding, EtfMinute, EtfSnapshot, EtfTurnover
 
 log = logging.getLogger(__name__)
 _inflight = {}
@@ -54,11 +54,15 @@ def save_board(payload, raw):
     with SessionLocal() as db:
         snap = snapshot(db, 'board', payload['date'], raw, 'kanpanba', sources.BOARD_URL, raw.get('updated_at'))
         day = payload['date']
+        supplements = {r.code: r.turnover_cny for r in db.scalars(select(EtfTurnover).where(EtfTurnover.trade_date == day))}
         rows = [{'code': r['code'], 'trade_date': day, 'name': r['name'], 'index_name': r['index'],
                  'close': r.get('close'), 'change_percent': r.get('change_percent'), 'turnover_cny': money(r.get('amount')),
                  'shares_delta': money(r.get('shares_delta')), 'net_subscription_estimate_cny': money(r.get('net')),
                  'scale_cny': money(r.get('scale')), 'peak_ratio': (r.get('peak_window') or {}).get('ratio'),
                  'snapshot_id': snap.id} for r in payload['etfs']]
+        for row in rows:
+            if row['turnover_cny'] is None:
+                row['turnover_cny'] = supplements.get(row['code'])
         upsert(db, EtfDaily, rows, ['code', 'trade_date'])
         profile = dict(payload.get('profile') or [])
         upsert(db, EtfMinute, [{'trade_date': day, 'time': t, 'turnover_cny': money(v),
@@ -96,7 +100,10 @@ def saved_board(requested=None, knowledge_cutoff=None):
         snap = db.scalar(query.order_by(EtfSnapshot.key.desc(), EtfSnapshot.id.desc()))
         if not snap:
             return None
-        return {'payload': sources.validate_board(snap.payload, requested), 'snapshot_id': snap.id,
+        from . import turnover
+        payload = turnover.overlay(sources.validate_board(snap.payload, requested),
+                                   turnover.observations(db, knowledge_cutoff, snap.key))
+        return {'payload': payload, 'snapshot_id': snap.id,
                 'observed_at': snap.observed_at, 'source': snap.source, 'source_url': snap.source_url}
 
 
@@ -235,6 +242,7 @@ def national_team(payload, knowledge_cutoff=None):
 
 
 async def run_collection():
+    from . import turnover
     while True:
         try:
             result = await board()
@@ -251,6 +259,14 @@ async def run_collection():
             raise
         except Exception:
             log.exception('ETF collection failed; saved observations retained')
+        # Independent of the board provider: saved historical gaps can be filled
+        # even when Kanpanba or holder disclosure collection is unavailable.
+        try:
+            await turnover.collect()
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            log.warning('ETF turnover collection failed; saved observations retained')
         await asyncio.sleep(60)
 
 

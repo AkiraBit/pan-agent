@@ -28,6 +28,11 @@ SCOPE = "account.read"
 READ_TOOLS = {
     "quote": ("行情快照", "Quotes"), "static_info": ("证券资料", "Security information"),
     "candlesticks": ("K 线", "Candlesticks"), "capital_flow": ("资金流向", "Capital flow"),
+    "history_candlesticks_by_date": ("历史 K 线", "Historical candlesticks"),
+    "calc_indexes": ("估值指标", "Valuation metrics"),
+    "financial_report_snapshot": ("财报快照", "Financial report snapshot"),
+    "news": ("个股新闻", "Security news"), "news_search": ("新闻搜索", "News search"),
+    "filings": ("公司公告", "Company filings"), "dividend": ("分红历史", "Dividend history"),
     "capital_distribution": ("资金分布", "Capital distribution"),
     "account_balance": ("账户余额", "Account balance"), "stock_positions": ("股票持仓", "Stock positions"),
     "trading_days": ("交易日历", "Trading calendar"),

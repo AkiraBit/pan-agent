@@ -103,7 +103,15 @@ class TestKlineSourceTestPath(unittest.IsolatedAsyncioTestCase):
         from src.modules.market.data_collector import DEFAULT_TEST_SYMBOLS
 
         for seed in DATA_SOURCE_SEEDS:
-            if seed["test_symbols"]:
+            if seed["provider"] == "longbridge":
+                # ETF-only and HK/US-only endpoints need matching test universes.
+                from marketdata import Symbol
+                symbols = seed["test_symbols"]
+                assert symbols and len(symbols) == len(set(symbols))
+                markets = {Symbol.parse(code).market.value for code in symbols}
+                expected = {"CN"} if seed["type"] == "etf_turnover" else {"HK", "US"} if seed["type"] in {"events", "dividend"} else {"CN", "HK", "US"}
+                self.assertEqual(markets, expected)
+            elif seed["test_symbols"]:
                 self.assertEqual(seed["test_symbols"], list(DEFAULT_TEST_SYMBOLS), seed["name"])
 
     async def test_empty_symbols_report_effective_defaults(self):

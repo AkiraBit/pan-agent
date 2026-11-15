@@ -1618,6 +1618,18 @@ class EmotionRegulatoryEvent(Base):
     payload = Column(JSON, nullable=False)
 
 
+class LongbridgeObservation(Base):
+    """Versioned public market responses; never account, order or credential data."""
+    __tablename__ = 'longbridge_market_observations'
+    id = Column(Integer, primary_key=True)
+    tool = Column(String, nullable=False, index=True)
+    request_key = Column(String, nullable=False, index=True)
+    arguments = Column(JSON, nullable=False)
+    payload = Column(JSON, nullable=False)
+    checksum = Column(String, nullable=False)
+    observed_at = Column(String, nullable=False, index=True)
+
+
 class EmotionSessionValidation(Base):
     __tablename__ = 'emotion_session_validations'
     trade_date = Column(String, primary_key=True)

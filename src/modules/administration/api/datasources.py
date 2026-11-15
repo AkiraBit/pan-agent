@@ -1,12 +1,13 @@
 """数据源管理 API"""
 
 import logging
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
+from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 
 from src.platform.persistence.database import get_db
-from src.platform.persistence.models import DataSource
+from src.platform.persistence.models import DataSource, MCPConnection, LongbridgeObservation
 from src.web.errors import api_error
 
 logger = logging.getLogger(__name__)
@@ -16,6 +17,7 @@ router = APIRouter()
 
 # 数据源类型说明
 TYPE_LABELS = {
+    "etf_turnover": "ETF 成交额",
     "news": "新闻资讯",
     "kline": "K线数据",
     "capital_flow": "资金流向",
@@ -99,7 +101,7 @@ def _is_orphan(type_: str, provider: str) -> bool:
     return provider not in legal
 
 
-def _to_response(source: DataSource, health_map: dict | None = None) -> dict:
+def _to_response(source: DataSource, health_map: dict | None = None, connection_status=None) -> dict:
     """转换为响应格式。health_map: {provider: 指标快照};缺失则 health=None。"""
     health = (health_map or {}).get(source.provider)
     return {
@@ -116,6 +118,7 @@ def _to_response(source: DataSource, health_map: dict | None = None) -> dict:
         "engine_attached": source.type in _ENGINE_ATTACHED_TYPES,
         "health": health,
         "is_orphan": _is_orphan(source.type, source.provider),
+        "connection_status": connection_status if source.provider == 'longbridge' else None,
     }
 
 
@@ -128,7 +131,33 @@ def list_datasources(type: str | None = None, db: Session = Depends(get_db)):
     sources = query.order_by(DataSource.type, DataSource.priority, DataSource.id).all()
     from src.platform.marketdata.marketdata_client import get_market_data
     health_map = get_market_data().health()
-    return [_to_response(s, health_map) for s in sources]
+    connection = db.get(MCPConnection, 'longbridge')
+    status = 'authorization_required' if not connection or not connection.credentials else 'ready' if connection.enabled else 'disabled'
+    return [_to_response(s, health_map, status) for s in sources]
+
+
+@router.get('/{source_id}/observations')
+def source_observations(source_id: int, before_id: int | None = Query(None, ge=1),
+                        limit: int = Query(20, ge=1, le=100), known_at: datetime | None = None,
+                        db: Session = Depends(get_db)):
+    from src.platform.marketdata.longbridge import TOOLS_BY_TYPE
+    source = db.get(DataSource, source_id)
+    if source is None or source.provider != 'longbridge':
+        raise api_error(404, 'datasource_not_found', '长桥数据源不存在')
+    if known_at and known_at.tzinfo is None:
+        raise api_error(422, 'invalid_known_at', 'known_at 必须包含时区')
+    if source.type == 'etf_turnover':
+        from src.modules.market.api.etf import observations
+        return observations(resource='turnover', before_id=before_id, limit=limit, known_at=known_at)
+    query = db.query(LongbridgeObservation).filter(LongbridgeObservation.tool.in_(TOOLS_BY_TYPE.get(source.type, set())))
+    if before_id:
+        query = query.filter(LongbridgeObservation.id < before_id)
+    if known_at:
+        query = query.filter(LongbridgeObservation.observed_at <= known_at.astimezone(timezone.utc).isoformat())
+    rows = query.order_by(LongbridgeObservation.id.desc()).limit(limit + 1).all()
+    return {'items': [{'id': r.id, 'source': 'longbridge', 'tool': r.tool, 'arguments': r.arguments,
+                      'observed_at': r.observed_at, 'checksum': r.checksum, 'payload': r.payload}
+                     for r in rows[:limit]], 'next_before_id': rows[limit - 1].id if len(rows) > limit else None}
 
 
 @router.get("/types")

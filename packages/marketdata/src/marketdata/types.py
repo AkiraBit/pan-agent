@@ -62,6 +62,8 @@ class Bar:
     high: float
     low: float
     volume: float = 0.0
+    turnover: float | None = None
+    source: str = ''
 
 
 @dataclass
@@ -77,6 +79,10 @@ class CapitalFlow:
     mid_net_inflow: float | None = None        # 中单净流入
     small_net_inflow: float | None = None      # 小单净流入
     main_net_5d: float | None = None           # 5日主力净流入
+    source: str = ''
+    measurement: str = ''
+    source_timestamp: str | None = None
+    currency: str = ''
 
 
 @dataclass(frozen=True)
@@ -147,6 +153,8 @@ class Fundamentals:
     net_profit_yoy: float | None = None             # 净利润同比增长(%)
     report_date: str = ""                           # 报告期(原样字符串,不做日期解析)
     timestamp: datetime = field(default_factory=datetime.now)
+    source: str = ''
+    currency: str = ''
 
 
 @dataclass
@@ -202,6 +210,10 @@ class DividendItem:
     transfer_ratio: float | None = None      # 每10股转增(股)
     bonus_ratio: float | None = None         # 每10股送股(股)
     progress: str = ""                       # 方案进度
+    description: str = ''
+    record_date: str | None = None
+    payment_date: str | None = None
+    source: str = ''
 
 
 @dataclass

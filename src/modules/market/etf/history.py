@@ -9,7 +9,7 @@ from datetime import date
 import httpx
 from sqlalchemy import func, select
 
-from . import service, sources
+from . import service, sources, turnover
 from .models import EtfSnapshot
 
 PROVIDER_ERRORS = (httpx.HTTPError, ValueError, KeyError, TypeError, IndexError)
@@ -88,6 +88,7 @@ async def collect_range(days, codes, start, end, national):
     if national:
         tasks.append(fill_reports(codes, start, end))
     await asyncio.gather(*tasks)
+    await turnover.collect()
 
 
 def complete_sum(values):
@@ -164,8 +165,9 @@ def read_history(start, end, catalog, *, national=False, code=None, institution=
         target = watched if national else set(selected)
         # Prefer the newest board containing a day, independent of backfill arrival order.
         aggregate, daily = {}, {}
+        supplements = turnover.observations(db, cutoff)
         for snapshot in boards:
-            payload = sources.validate_board(snapshot.payload)
+            payload = turnover.overlay(sources.validate_board(snapshot.payload), supplements)
             for point in payload.get('series', []):
                 aggregate[point['date']] = {**point, 'snapshot_id': snapshot.id}
             point = aggregate.get(payload['date'], {})
@@ -196,7 +198,8 @@ def read_history(start, end, catalog, *, national=False, code=None, institution=
                            'cumulative_net_days': cumulative_days,
                            'hs300': baseline.get('hs300'), 'hs300_change_percent': baseline.get('hs300_change_percent'),
                            'peak_ratio': ratio, 'covered': baseline.get('covered', 0) if basket else sum(r.get('net') is not None for r in rows), 'expected': len(target),
-                           'snapshot_ids': list({v for v in [baseline.get('snapshot_id'), snapshot_id] if v is not None})})
+                           'amount_snapshot_ids': payload.get('amount_snapshot_ids', []),
+                           'snapshot_ids': list({v for v in [baseline.get('snapshot_id'), snapshot_id, *payload.get('amount_snapshot_ids', [])] if v is not None})})
         funds = []
         for fund_code, values in fund_values.items():
             rows = [row for _, row in values]

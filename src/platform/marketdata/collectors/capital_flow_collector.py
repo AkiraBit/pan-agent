@@ -24,6 +24,10 @@ class CapitalFlow:
 
     # 5日资金流
     main_net_5d: float | None = None  # 5日主力净流入
+    source: str = ''
+    measurement: str = ''
+    source_timestamp: str | None = None
+    currency: str = ''
 
 
 def get_market_data():
@@ -58,6 +62,8 @@ class CapitalFlowCollector:
             mid_net_inflow=md_cf.mid_net_inflow,
             small_net_inflow=md_cf.small_net_inflow,
             main_net_5d=md_cf.main_net_5d,
+            source=getattr(md_cf, 'source', ''), measurement=getattr(md_cf, 'measurement', ''),
+            source_timestamp=getattr(md_cf, 'source_timestamp', None), currency=getattr(md_cf, 'currency', ''),
         )
         _FLOW_CACHE.set(cache_key, capital_flow)
         return capital_flow
@@ -70,7 +76,11 @@ class CapitalFlowCollector:
             return {"error": "无资金流向数据"}
 
         # 判断资金状态
-        if flow.main_net_inflow > 0:
+        if flow.main_net_inflow is None:
+            status = "主力口径暂无数据"
+        elif flow.main_net_inflow_pct is None and flow.main_net_inflow != 0:
+            status = "主力净流入" if flow.main_net_inflow > 0 else "主力净流出"
+        elif flow.main_net_inflow > 0:
             if flow.main_net_inflow_pct > 10:
                 status = "主力大幅流入"
             elif flow.main_net_inflow_pct > 5:
@@ -96,6 +106,8 @@ class CapitalFlowCollector:
                 trend_5d = f"5日净流出{abs(flow.main_net_5d)/1e8:.2f}亿"
 
         return {
+            "source": flow.source, "measurement": flow.measurement,
+            "source_timestamp": flow.source_timestamp, "currency": flow.currency,
             "status": status,
             "main_net_inflow": flow.main_net_inflow,
             "main_net_inflow_pct": flow.main_net_inflow_pct,

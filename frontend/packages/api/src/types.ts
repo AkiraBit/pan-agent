@@ -32,6 +32,7 @@ export interface SourceHealth {
 }
 
 export interface DataSource {
+  connection_status?: 'ready' | 'disabled' | 'authorization_required' | null
   id: number
   name: string
   type: string

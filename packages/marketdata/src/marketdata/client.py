@@ -56,12 +56,15 @@ INDEX_TENCENT: dict[str, str] = {
 
 
 class MarketData:
-    def __init__(self, config: ConfigProvider, metrics: MetricsSink | None = None):
+    def __init__(self, config: ConfigProvider, metrics: MetricsSink | None = None, *, longbridge_transport=None):
+        def vendors(datatype):
+            return build_vendors(datatype, longbridge_transport)
+
         self.config = config
         self.metrics = metrics or InMemoryMetricsSink()
         self._quote_engine = Engine(
             datatype="quote",
-            vendors=build_vendors("quote"),
+            vendors=vendors("quote"),
             config=config,
             metrics=self.metrics,
             cache=TTLCache(default_ttl_sec=5.0),
@@ -69,19 +72,19 @@ class MarketData:
         )
         self._kline_engine = Engine(
             datatype="kline",
-            vendors=build_vendors("kline"),
+            vendors=vendors("kline"),
             config=config, metrics=self.metrics,
             cache=TTLCache(default_ttl_sec=0.0), default_ttl=0.0,
         )
         self._capital_flow_engine = Engine(
             datatype="capital_flow",
-            vendors=build_vendors("capital_flow"),
+            vendors=vendors("capital_flow"),
             config=config, metrics=self.metrics,
             cache=TTLCache(default_ttl_sec=0.0), default_ttl=0.0,
         )
         self._events_engine = Engine(
             datatype="events",
-            vendors=build_vendors("events"),
+            vendors=vendors("events"),
             config=config, metrics=self.metrics,
             cache=TTLCache(default_ttl_sec=0.0), default_ttl=0.0,
         )
@@ -89,7 +92,7 @@ class MarketData:
         # 与 discovery(不进 Engine)的区别是:flash_news 有多源竞争、需要统一 TTL 缓存。
         self._flash_news_engine = Engine(
             datatype="flash_news",
-            vendors=build_vendors("flash_news"),
+            vendors=vendors("flash_news"),
             config=config, metrics=self.metrics,
             cache=TTLCache(default_ttl_sec=30.0), default_ttl=30.0,
         )
@@ -99,10 +102,10 @@ class MarketData:
         # news(新闻资讯)是聚合语义(并发查所有已启用源、结果合并去重),非失败转移
         # (找到一个就停),硬套 Engine 的主备模型是设计错配,故不进 Engine —— 只借 registry
         # 的 build_vendors 复用 vendor 实例,合并/去重/排序/since 过滤逻辑在 news() 里自己做。
-        self._news_vendors = build_vendors("news")
+        self._news_vendors = vendors("news")
         self._fundamentals_engine = Engine(
             datatype="fundamentals",
-            vendors=build_vendors("fundamentals"),
+            vendors=vendors("fundamentals"),
             config=config, metrics=self.metrics,
             cache=TTLCache(default_ttl_sec=300.0), default_ttl=300.0,
         )
@@ -110,25 +113,25 @@ class MarketData:
         # 更新频率低(日频/期频),沿用 fundamentals 同款 300s TTL。
         self._dragon_tiger_engine = Engine(
             datatype="dragon_tiger",
-            vendors=build_vendors("dragon_tiger"),
+            vendors=vendors("dragon_tiger"),
             config=config, metrics=self.metrics,
             cache=TTLCache(default_ttl_sec=300.0), default_ttl=300.0,
         )
         self._margin_engine = Engine(
             datatype="margin",
-            vendors=build_vendors("margin"),
+            vendors=vendors("margin"),
             config=config, metrics=self.metrics,
             cache=TTLCache(default_ttl_sec=300.0), default_ttl=300.0,
         )
         self._shareholders_engine = Engine(
             datatype="shareholders",
-            vendors=build_vendors("shareholders"),
+            vendors=vendors("shareholders"),
             config=config, metrics=self.metrics,
             cache=TTLCache(default_ttl_sec=300.0), default_ttl=300.0,
         )
         self._dividend_engine = Engine(
             datatype="dividend",
-            vendors=build_vendors("dividend"),
+            vendors=vendors("dividend"),
             config=config, metrics=self.metrics,
             cache=TTLCache(default_ttl_sec=300.0), default_ttl=300.0,
         )
@@ -136,7 +139,7 @@ class MarketData:
         # 但当日累计值短期内变化不大,沿用 flash_news 同款 60s TTL(比 300s 更贴合"盘中递增")。
         self._northbound_engine = Engine(
             datatype="northbound",
-            vendors=build_vendors("northbound"),
+            vendors=vendors("northbound"),
             config=config, metrics=self.metrics,
             cache=TTLCache(default_ttl_sec=60.0), default_ttl=60.0,
         )

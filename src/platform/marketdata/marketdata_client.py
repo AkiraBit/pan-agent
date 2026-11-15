@@ -57,8 +57,13 @@ def get_market_data() -> MarketData:
     """进程级单例。vendor 无状态、配置现查 DB,故无需失效钩子。"""
     global _md
     if _md is None:
-        _md = MarketData(config=DbConfigProvider())
+        _md = create_market_data(config=DbConfigProvider())
     return _md
+
+
+def create_market_data(**kwargs):
+    from .longbridge import query
+    return MarketData(longbridge_transport=query, **kwargs)
 
 
 def reset_market_data() -> None:

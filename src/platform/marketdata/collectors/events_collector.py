@@ -168,6 +168,9 @@ class EventsCollector:
     """Aggregate events collectors."""
 
     COLLECTOR_MAP = {
+        # This adapter delegates to the configured marketdata Engine, including
+        # Longbridge; the provider name here does not select a private fallback.
+        "longbridge": lambda config: EastMoneyEventsCollector(),
         "eastmoney": lambda config: EastMoneyEventsCollector(
             timeout_s=(config or {}).get("timeout_s", 10.0),
             connect_timeout_s=(config or {}).get("connect_timeout_s"),
@@ -196,6 +199,8 @@ class EventsCollector:
                 .all()
             )
             for ds in data_sources:
+                if ds.provider in {'eastmoney', 'longbridge'} and any(isinstance(c, EastMoneyEventsCollector) for c in collectors):
+                    continue  # Both delegate to the same configured Engine.
                 factory = cls.COLLECTOR_MAP.get(ds.provider)
                 if not factory:
                     continue

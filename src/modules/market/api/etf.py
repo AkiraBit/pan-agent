@@ -65,7 +65,7 @@ async def national_team(date: Date | None = None, known_at: datetime | None = No
 
 
 @router.get('/observations')
-def observations(resource: Literal['board', 'holdings', 'signals', 'dates'] = 'board',
+def observations(resource: Literal['board', 'holdings', 'signals', 'dates', 'turnover'] = 'board',
                  before_id: int | None = Query(None, ge=1), limit: int = Query(20, ge=1, le=100),
                  known_at: datetime | None = None):
     if known_at and known_at.tzinfo is None:
@@ -82,7 +82,8 @@ def observations(resource: Literal['board', 'holdings', 'signals', 'dates'] = 'b
                 'checksum': r.checksum, 'payload': r.payload} for r in rows[:limit]],
                 'next_before_id': rows[limit - 1].id if len(rows) > limit else None,
                 'units': {'board_money': '100000000 CNY', 'board_shares_delta': '100000000 units',
-                          'holding_shares': 'units', 'holding_ratio': 'percent', 'signals_money': 'CNY'}}
+                          'holding_shares': 'units', 'holding_ratio': 'percent', 'signals_money': 'CNY',
+                          'turnover_money': 'CNY'}}
 
 
 @router.get('/history')

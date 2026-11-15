@@ -74,6 +74,7 @@ interface DataSourceForm {
 }
 
 const DATASOURCE_TYPES = {
+  etf_turnover: { icon: BarChart3, color: 'text-indigo-500' },
   news: { icon: Newspaper, color: 'text-blue-500' },
   kline: { icon: LineChart, color: 'text-orange-500' },
   capital_flow: { icon: DollarSign, color: 'text-yellow-500' },
@@ -91,7 +92,7 @@ const DATASOURCE_TYPES = {
 
 // 数据源分类分组:仅用于页面展示时的二级归组,不影响数据结构与后端
 const DATASOURCE_CATEGORIES: { key: string; types: string[] }[] = [
-  { key: 'quote_kline', types: ['quote', 'kline'] },
+  { key: 'quote_kline', types: ['quote', 'kline', 'etf_turnover'] },
   { key: 'news', types: ['news', 'flash_news', 'events'] },
   { key: 'fundamentals', types: ['fundamentals'] },
   { key: 'capital', types: ['capital_flow', 'dragon_tiger', 'margin', 'shareholders', 'northbound', 'dividend'] },
@@ -312,7 +313,9 @@ export default function DataSourcesPage() {
                       <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                         <span className="text-[11px] text-muted-foreground font-mono">{source.provider}</span>
                         <span className="text-[11px] text-muted-foreground">{t('configuration:dataSources.priority', { priority: source.priority })}</span>
-                        {source.engine_attached ? (
+                        {source.type === 'etf_turnover' ? (
+                          <span className="text-[10px] text-muted-foreground">{t('configuration:dataSources.longbridge.automatic')}</span>
+                        ) : source.engine_attached ? (
                           <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">{t('configuration:dataSources.engineAttached')}</span>
                         ) : (
                           <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">{t('configuration:dataSources.legacyEngine')}</span>
@@ -334,6 +337,11 @@ export default function DataSourcesPage() {
                           </span>
                         )}
                       </div>
+                      {source.provider === 'longbridge' && (
+                        <a href="/integrations/mcp" className="text-[11px] text-primary hover:underline">
+                          {configT(`dataSources.longbridge.${source.connection_status || 'authorization_required'}`)} · {t('configuration:dataSources.longbridge.connection')}
+                        </a>
+                      )}
                     </div>
                   </div>
                   <div className="flex items-center gap-1 flex-shrink-0">
@@ -431,6 +439,12 @@ export default function DataSourcesPage() {
             <DialogDescription>{form.provider}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 mt-2">
+            {form.provider === 'longbridge' && (
+              <div className="text-sm text-muted-foreground">
+                <p>{t('configuration:dataSources.longbridge.authorization')}</p>
+                <a href="/integrations/mcp" className="text-primary hover:underline">{t('configuration:dataSources.longbridge.connection')}</a>
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label>{t('configuration:dataSources.form.priority')} <span className="text-muted-foreground font-normal">{t('configuration:dataSources.form.priorityHint')}</span></Label>
