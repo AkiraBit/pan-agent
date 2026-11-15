@@ -8,6 +8,9 @@ HTTP 中间件、认证依赖和各模块 router；具体业务规则仍由 ``mo
 from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
+from src.modules.administration import longbridge_mcp
+from src.platform.marketdata.longbridge import configure_remote
+
 from src.modules.administration.api import (
     auth,
     builtin_skills,
@@ -53,6 +56,8 @@ from src.modules.short_term import workspace_api as emotion_api
 from src.modules.short_term.service import emotion_runner
 from src.modules.strategy.api import factors
 from src.web.response import ResponseWrapperMiddleware
+
+configure_remote(lambda db, tool, arguments: longbridge_mcp.remote(db, tool, arguments))
 
 app = FastAPI(
     title="PanWatch API",

@@ -8,7 +8,6 @@ from datetime import datetime, timezone
 
 from sqlalchemy import select
 
-from src.modules.administration import longbridge_mcp
 from src.platform.persistence.database import SessionLocal
 from src.platform.persistence.models import DataSource, LongbridgeObservation
 
@@ -20,6 +19,13 @@ TOOLS_BY_TYPE = {
 }
 MARKET_TOOLS = set().union(*TOOLS_BY_TYPE.values())
 _gate = threading.Lock()
+_remote_transport = None
+
+
+def configure_remote(transport):
+    """The application composition root supplies its authenticated MCP port."""
+    global _remote_transport
+    _remote_transport = transport
 
 
 def enabled(datatype, factory=None):
@@ -56,8 +62,10 @@ def persist(tool, arguments, payload):
 
 
 async def _remote(tool, arguments):
+    if _remote_transport is None:
+        raise RuntimeError('Longbridge transport is not configured')
     with SessionLocal() as db:
-        return await longbridge_mcp.remote(db, tool, arguments)
+        return await _remote_transport(db, tool, arguments)
 
 
 def query(tool, arguments):
