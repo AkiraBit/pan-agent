@@ -10,12 +10,13 @@ beforeEach(async () => { vi.clearAllMocks(); await i18n.changeLanguage('zh-CN');
 afterEach(cleanup)
 
 it('previews the exact exported document in a sandboxed dialog', async () => {
-  vi.mocked(emotionApi.previewOverview).mockResolvedValue('<html><body>Report snapshot</body></html>')
+  vi.mocked(emotionApi.previewOverview).mockResolvedValue('<html><body>Report snapshot<a href="#evidence">Source</a><details id="evidence">Source content</details></body></html>')
   render(<SentimentReportExport runId="preview-run" />)
   fireEvent.click(screen.getByRole('button', { name: '预览结果页' }))
   const frame = await screen.findByTitle('预览结果页')
   expect(frame.getAttribute('sandbox')).toBe('')
   expect(frame.getAttribute('srcdoc')).toContain('Report snapshot')
+  expect(frame.getAttribute('srcdoc')).toContain('href="about:srcdoc#evidence"')
   expect(emotionApi.previewOverview).toHaveBeenCalledWith('preview-run')
 })
 

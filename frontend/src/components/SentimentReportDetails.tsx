@@ -14,7 +14,12 @@ export function SentimentReportExport({ runId }: { runId: string }) {
   const [preview, setPreview] = useState<string | null>(null)
   const openPreview = async () => {
     setBusy(true); setFailed(false)
-    try { setPreview(await emotionApi.previewOverview(runId)) }
+    try {
+      const html = await emotionApi.previewOverview(runId)
+      // srcdoc inherits the app URL as its base; keep evidence fragments inside
+      // the sandboxed report instead of navigating the frame to the app route.
+      setPreview(html.replace(/href="#/g, 'href="about:srcdoc#'))
+    }
     catch { setFailed(true) }
     finally { setBusy(false) }
   }
