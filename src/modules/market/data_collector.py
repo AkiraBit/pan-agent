@@ -433,6 +433,10 @@ class DataCollectorManager:
         self, source: DataSource, test_symbols: list[str]
     ) -> CollectorResult:
         """测试数据源的具体实现"""
+        from .etf.free_sources import SPECS
+        if (source.type, source.provider) in SPECS:
+            from .etf.free_collector import test_source
+            return await test_source(source, test_symbols)
         if source.provider == 'longbridge':
             return await self._test_longbridge(source, test_symbols)
         if source.type == "news":

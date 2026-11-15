@@ -18,6 +18,8 @@ router = APIRouter()
 # 数据源类型说明
 TYPE_LABELS = {
     "etf_turnover": "ETF 成交额",
+    "etf_shares": "ETF 份额", "etf_nav": "ETF 净值",
+    "etf_history": "ETF 历史行情", "etf_pcf": "ETF 申赎清单",
     "news": "新闻资讯",
     "kline": "K线数据",
     "capital_flow": "资金流向",
@@ -136,16 +138,36 @@ def list_datasources(type: str | None = None, db: Session = Depends(get_db)):
     return [_to_response(s, health_map, status) for s in sources]
 
 
+@router.get('/{source_id}/collection')
+def collection_state(source_id: int, limit: int = Query(50, ge=1, le=200), db: Session = Depends(get_db)):
+    from src.modules.market.etf.free_sources import SPECS
+    from src.modules.market.etf.models import EtfFetchState, EtfMeasurement
+    source = db.get(DataSource, source_id)
+    spec = SPECS.get((source.type, source.provider)) if source else None
+    if not spec:
+        raise api_error(404, 'datasource_not_found', '免费 ETF 数据源不存在')
+    states = db.query(EtfFetchState).filter(EtfFetchState.resource == spec[0], EtfFetchState.source == source.provider)
+    rows = states.order_by(EtfFetchState.checked_at.desc()).limit(limit).all()
+    count = db.query(EtfMeasurement).filter(EtfMeasurement.resource == spec[0], EtfMeasurement.source == source.provider).count()
+    return {'enabled': source.enabled, 'observations': count, 'pending_retries': states.filter(EtfFetchState.status == 'error').count(),
+            'items': [{key: getattr(row, key) for key in ('key', 'status', 'checked_at', 'retry_after', 'failures', 'error', 'record_count')} for row in rows]}
+
+
 @router.get('/{source_id}/observations')
 def source_observations(source_id: int, before_id: int | None = Query(None, ge=1),
                         limit: int = Query(20, ge=1, le=100), known_at: datetime | None = None,
                         db: Session = Depends(get_db)):
     from src.platform.marketdata.longbridge import TOOLS_BY_TYPE
     source = db.get(DataSource, source_id)
-    if source is None or source.provider != 'longbridge':
-        raise api_error(404, 'datasource_not_found', '长桥数据源不存在')
+    from src.modules.market.etf.free_sources import SPECS
+    if source is None or (source.provider != 'longbridge' and (source.type, source.provider) not in SPECS):
+        raise api_error(404, 'datasource_not_found', '数据源不存在')
     if known_at and known_at.tzinfo is None:
         raise api_error(422, 'invalid_known_at', 'known_at 必须包含时区')
+    if (source.type, source.provider) in SPECS:
+        from src.modules.market.api.etf import observations
+        return observations(resource=SPECS[(source.type, source.provider)][0], source=source.provider,
+                            before_id=before_id, limit=limit, known_at=known_at)
     if source.type == 'etf_turnover':
         from src.modules.market.api.etf import observations
         return observations(resource='turnover', before_id=before_id, limit=limit, known_at=known_at)

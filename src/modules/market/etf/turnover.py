@@ -128,8 +128,8 @@ def save(rows, requested_days):
                            'turnover_cny': row['turnover_cny'], 'snapshot_id': snap.id,
                            'checked_at': service.timestamp()}], ['code', 'trade_date'])
             # Preserve provider precedence even if a board arrived during the request.
-            board = db.get(EtfSnapshot, daily.snapshot_id).payload
-            original = next(r for r in board['etfs'] if r['code'] == row['code'])
+            from .free_store import original_row
+            original = original_row(db, daily)
             if original.get('amount') is None:
                 daily.turnover_cny = row['turnover_cny']
                 count += 1

@@ -349,7 +349,12 @@ def seed_agents():
 
 # 预置数据源种子(供 seed_data_sources / reconcile_data_sources 复用)。
 # 只增不删的 upsert 目标;删孤儿的对账逻辑见 reconcile_data_sources。
+from src.modules.market.etf.free_sources import SPECS as PUBLIC_ETF_SPECS
+
 DATA_SOURCE_SEEDS: list[dict] = [
+        *[{'name': spec[1], 'type': kind, 'provider': provider, 'config': {},
+           'enabled': True, 'priority': 0, 'supports_batch': kind == 'etf_shares' and provider == 'sse',
+           'test_symbols': spec[2]} for (kind, provider), spec in PUBLIC_ETF_SPECS.items()],
         *[
             {"name": name, "type": kind, "provider": "longbridge", "config": {},
              "enabled": True, "priority": 10 if kind == 'capital_flow' else 0,

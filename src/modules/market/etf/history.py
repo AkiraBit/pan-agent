@@ -9,7 +9,7 @@ from datetime import date
 import httpx
 from sqlalchemy import func, select
 
-from . import service, sources, turnover
+from . import free_collector, free_store, service, sources, turnover
 from .models import EtfSnapshot
 
 PROVIDER_ERRORS = (httpx.HTTPError, ValueError, KeyError, TypeError, IndexError)
@@ -35,14 +35,16 @@ def stored_dates(cutoff=None):
         boards = latest_snapshots(db, 'board', cutoff)
         catalogs = latest_snapshots(db, 'dates', cutoff)
         return sorted({day for snapshot in catalogs for day in snapshot.payload}
-                      | {snapshot.key for snapshot in boards})
+                      | {snapshot.key for snapshot in boards} | set(free_store.saved_dates(db, cutoff)))
 
 
 async def fill_boards(days):
     """Bound each backfill and share individual requests with the daily collector."""
     with service.SessionLocal() as db:
         have = set(db.scalars(select(EtfSnapshot.key).where(EtfSnapshot.resource == 'board')))
-    missing = [day for day in reversed(days) if day not in have][:240]
+        catalogs = latest_snapshots(db, 'dates')
+        supported = {d for s in catalogs for d in s.payload}
+    missing = [day for day in reversed(days) if day not in have and (not catalogs or day in supported)][:240]
     gate = asyncio.Semaphore(3)
 
     async def one(day):
@@ -83,11 +85,12 @@ async def fill_reports(codes, start, end):
     await asyncio.gather(*(one(code) for code in codes))
 
 
-async def collect_range(days, codes, start, end, national):
+async def collect_range(days, codes, start, end, national, public_start=None):
     tasks = [fill_boards(days)]
     if national:
         tasks.append(fill_reports(codes, start, end))
     await asyncio.gather(*tasks)
+    await free_collector.collect(public_start)
     await turnover.collect()
 
 
@@ -166,8 +169,9 @@ def read_history(start, end, catalog, *, national=False, code=None, institution=
         # Prefer the newest board containing a day, independent of backfill arrival order.
         aggregate, daily = {}, {}
         supplements = turnover.observations(db, cutoff)
+        public = free_store.derived(db, cutoff)
         for snapshot in boards:
-            payload = turnover.overlay(sources.validate_board(snapshot.payload), supplements)
+            payload = turnover.overlay(free_store.overlay(sources.validate_board(snapshot.payload), public), supplements)
             for point in payload.get('series', []):
                 aggregate[point['date']] = {**point, 'snapshot_id': snapshot.id}
             point = aggregate.get(payload['date'], {})
@@ -175,7 +179,20 @@ def read_history(start, end, catalog, *, national=False, code=None, institution=
                                         'covered': payload['covered'], 'peak_window': payload.get('peak_window'),
                                         'hs300_change_percent': payload.get('hs300_change_percent'), 'snapshot_id': snapshot.id}
             daily[payload['date']] = (payload, snapshot.id)
-        days = sorted(day for day in set(catalog) if start <= day <= end)
+        for day in {d for (c, d) in public if c in universe} - daily.keys():
+            payload = free_store.synthetic(day, universe, public)
+            if payload:
+                daily[day] = (turnover.overlay(payload, supplements), None)
+        # Reapply corrected daily aggregates after all provider history revisions.
+        for day, (payload, snapshot_id) in daily.items():
+            if payload.get('net_source') == free_store.METHOD or payload.get('source') == 'public_sources':
+                aggregate[day] = {**aggregate.get(day, {}), 'date': day, 'net': payload.get('net'),
+                    'covered': payload['covered'], 'hs300': payload.get('hs300') or aggregate.get(day, {}).get('hs300'),
+                    'hs300_change_percent': payload.get('hs300_change_percent'),
+                    'peak_window': payload.get('peak_window'), 'snapshot_id': snapshot_id}
+            elif payload.get('hs300') is not None:
+                aggregate[day].setdefault('hs300', payload['hs300'])
+        days = sorted(day for day in set(catalog) | set(daily) if start <= day <= end)
         series, fund_values = [], {c: [] for c in target}
         cumulative, cumulative_days = 0, 0
         for day in days:
@@ -199,7 +216,7 @@ def read_history(start, end, catalog, *, national=False, code=None, institution=
                            'hs300': baseline.get('hs300'), 'hs300_change_percent': baseline.get('hs300_change_percent'),
                            'peak_ratio': ratio, 'covered': baseline.get('covered', 0) if basket else sum(r.get('net') is not None for r in rows), 'expected': len(target),
                            'amount_snapshot_ids': payload.get('amount_snapshot_ids', []),
-                           'snapshot_ids': list({v for v in [baseline.get('snapshot_id'), snapshot_id, *payload.get('amount_snapshot_ids', [])] if v is not None})})
+                           'snapshot_ids': list({v for v in [baseline.get('snapshot_id'), snapshot_id, *payload.get('amount_snapshot_ids', []), *payload.get('supplement_snapshot_ids', [])] if v is not None})})
         funds = []
         for fund_code, values in fund_values.items():
             rows = [row for _, row in values]

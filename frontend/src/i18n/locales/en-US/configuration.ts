@@ -231,6 +231,10 @@ export const configuration = {
     title: 'Data sources',
     subtitle: 'Manage providers for news, candlesticks, capital flows, and real-time quotes',
     types: {
+      etf_shares: 'ETF shares',
+      etf_nav: 'ETF NAV',
+      etf_history: 'ETF historical prices',
+      etf_pcf: 'ETF PCF',
       etf_turnover: 'ETF turnover',
       news: 'News',
       kline: 'Candlesticks',
@@ -246,7 +250,7 @@ export const configuration = {
       dividend: 'Dividends',
       northbound: 'Northbound capital',
     },
-    categories: {
+    categories: { etf: 'Broad-market ETFs',
       quote_kline: 'Quotes and candlesticks',
       news: 'News and events',
       fundamentals: 'Fundamentals and financials',

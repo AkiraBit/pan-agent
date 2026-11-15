@@ -228,6 +228,10 @@ export const configuration = {
     title: '数据源',
     subtitle: '管理新闻、K 线、资金流向和行情数据来源',
     types: {
+      etf_shares: 'ETF 份额',
+      etf_nav: 'ETF 净值',
+      etf_history: 'ETF 历史行情',
+      etf_pcf: 'ETF 申赎清单',
       etf_turnover: 'ETF 成交额',
       news: '新闻资讯',
       kline: 'K 线数据',
@@ -243,7 +247,7 @@ export const configuration = {
       dividend: '分红',
       northbound: '北向资金',
     },
-    categories: {
+    categories: { etf: '宽基 ETF',
       quote_kline: '行情与 K 线',
       news: '资讯与快讯',
       fundamentals: '基本面与财务',

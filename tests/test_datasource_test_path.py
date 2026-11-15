@@ -111,6 +111,13 @@ class TestKlineSourceTestPath(unittest.IsolatedAsyncioTestCase):
                 markets = {Symbol.parse(code).market.value for code in symbols}
                 expected = {"CN"} if seed["type"] == "etf_turnover" else {"HK", "US"} if seed["type"] in {"events", "dividend"} else {"CN", "HK", "US"}
                 self.assertEqual(markets, expected)
+            elif seed["type"].startswith('etf_'):
+                from src.modules.market.etf.free_sources import code
+                self.assertTrue(seed['test_symbols'])
+                for symbol in seed['test_symbols']:
+                    self.assertEqual(code(symbol), symbol)
+                    if seed['provider'] in {'sse', 'szse'}:
+                        self.assertTrue(symbol.startswith('5' if seed['provider'] == 'sse' else '15'))
             elif seed["test_symbols"]:
                 self.assertEqual(seed["test_symbols"], list(DEFAULT_TEST_SYMBOLS), seed["name"])
 

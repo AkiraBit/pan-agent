@@ -65,13 +65,15 @@ async def national_team(date: Date | None = None, known_at: datetime | None = No
 
 
 @router.get('/observations')
-def observations(resource: Literal['board', 'holdings', 'signals', 'dates', 'turnover'] = 'board',
+def observations(resource: Literal['board', 'holdings', 'signals', 'dates', 'turnover', 'shares', 'nav', 'price', 'pcf', 'derived'] = 'board',
                  before_id: int | None = Query(None, ge=1), limit: int = Query(20, ge=1, le=100),
-                 known_at: datetime | None = None):
+                 known_at: datetime | None = None, source: str | None = None):
     if known_at and known_at.tzinfo is None:
         raise HTTPException(422, 'known_at 必须包含时区')
     with SessionLocal() as db:
         query = select(EtfSnapshot).where(EtfSnapshot.resource == resource)
+        if source:
+            query = query.where(EtfSnapshot.source == source)
         if before_id:
             query = query.where(EtfSnapshot.id < before_id)
         if known_at:
@@ -83,7 +85,7 @@ def observations(resource: Literal['board', 'holdings', 'signals', 'dates', 'tur
                 'next_before_id': rows[limit - 1].id if len(rows) > limit else None,
                 'units': {'board_money': '100000000 CNY', 'board_shares_delta': '100000000 units',
                           'holding_shares': 'units', 'holding_ratio': 'percent', 'signals_money': 'CNY',
-                          'turnover_money': 'CNY'}}
+                          'turnover_money': 'CNY', 'public_money': 'CNY', 'public_shares': 'units'}}
 
 
 @router.get('/history')
@@ -123,7 +125,7 @@ async def history(period: Literal['1m', '3m', '6m', '1y', 'all', 'custom'] = '3m
     if not cutoff:
         days = sorted(day for day in catalog if first <= day <= last)
         try:
-            await asyncio.wait_for(service.coalesce(key, lambda: history_service.collect_range(days, codes, first, last, scope == 'national')), timeout=2)
+            await asyncio.wait_for(service.coalesce(key, lambda: history_service.collect_range(days, codes, first, last, scope == 'national', requested_start)), timeout=2)
         except asyncio.TimeoutError:
             pass  # collection continues, and the next read returns the persisted progress
     result = await asyncio.to_thread(history_service.read_history, first, last, catalog, national=scope == 'national',

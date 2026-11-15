@@ -74,6 +74,10 @@ interface DataSourceForm {
 }
 
 const DATASOURCE_TYPES = {
+  etf_shares: { icon: Layers, color: 'text-indigo-500' },
+  etf_nav: { icon: DollarSign, color: 'text-indigo-500' },
+  etf_history: { icon: LineChart, color: 'text-indigo-500' },
+  etf_pcf: { icon: ArrowLeftRight, color: 'text-indigo-500' },
   etf_turnover: { icon: BarChart3, color: 'text-indigo-500' },
   news: { icon: Newspaper, color: 'text-blue-500' },
   kline: { icon: LineChart, color: 'text-orange-500' },
@@ -92,7 +96,8 @@ const DATASOURCE_TYPES = {
 
 // 数据源分类分组:仅用于页面展示时的二级归组,不影响数据结构与后端
 const DATASOURCE_CATEGORIES: { key: string; types: string[] }[] = [
-  { key: 'quote_kline', types: ['quote', 'kline', 'etf_turnover'] },
+  { key: 'quote_kline', types: ['quote', 'kline'] },
+  { key: 'etf', types: ['etf_shares', 'etf_nav', 'etf_history', 'etf_pcf', 'etf_turnover'] },
   { key: 'news', types: ['news', 'flash_news', 'events'] },
   { key: 'fundamentals', types: ['fundamentals'] },
   { key: 'capital', types: ['capital_flow', 'dragon_tiger', 'margin', 'shareholders', 'northbound', 'dividend'] },
@@ -313,7 +318,7 @@ export default function DataSourcesPage() {
                       <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                         <span className="text-[11px] text-muted-foreground font-mono">{source.provider}</span>
                         <span className="text-[11px] text-muted-foreground">{t('configuration:dataSources.priority', { priority: source.priority })}</span>
-                        {source.type === 'etf_turnover' ? (
+                        {source.type.startsWith('etf_') ? (
                           <span className="text-[10px] text-muted-foreground">{t('configuration:dataSources.longbridge.automatic')}</span>
                         ) : source.engine_attached ? (
                           <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">{t('configuration:dataSources.engineAttached')}</span>

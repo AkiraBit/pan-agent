@@ -53,6 +53,10 @@ def upsert(db, model, rows, keys):
 def save_board(payload, raw):
     with SessionLocal() as db:
         snap = snapshot(db, 'board', payload['date'], raw, 'kanpanba', sources.BOARD_URL, raw.get('updated_at'))
+        from . import free_store
+        public = free_store.derived(db)
+        public_days = {d for (c, d) in public if c != '000300'}
+        payload = free_store.overlay(payload, public)
         day = payload['date']
         supplements = {r.code: r.turnover_cny for r in db.scalars(select(EtfTurnover).where(EtfTurnover.trade_date == day))}
         rows = [{'code': r['code'], 'trade_date': day, 'name': r['name'], 'index_name': r['index'],
@@ -76,7 +80,8 @@ def save_board(payload, raw):
         upsert(db, EtfFlowDay, [{'trade_date': r['date'], 'covered': r.get('covered', 0),
               'net_subscription_estimate_cny': money(r.get('net')), 'index_close': r.get('hs300'),
               'index_change_percent': r.get('hs300_change_percent'), 'peak_ratio': (r.get('peak_window') or {}).get('ratio'),
-              'snapshot_id': snap.id} for r in history.values() if existing.get(r['date'], '') <= day], ['trade_date'])
+              'snapshot_id': snap.id} for r in history.values() if existing.get(r['date'], '') <= day
+              and (r['date'] == day or r['date'] not in public_days)], ['trade_date'])
         signals = []
         for r in history.values():
             peak = r.get('peak_window') or {}
@@ -91,18 +96,27 @@ def save_board(payload, raw):
 
 
 def saved_board(requested=None, knowledge_cutoff=None):
+    from . import free_store, turnover
     with SessionLocal() as db:
         query = select(EtfSnapshot).where(EtfSnapshot.resource == 'board')
-        if requested:
-            query = query.where(EtfSnapshot.key == requested)
         if knowledge_cutoff:
             query = query.where(EtfSnapshot.observed_at <= knowledge_cutoff)
-        snap = db.scalar(query.order_by(EtfSnapshot.key.desc(), EtfSnapshot.id.desc()))
-        if not snap:
+        latest = db.scalar(query.order_by(EtfSnapshot.key.desc(), EtfSnapshot.id.desc()))
+        if not latest:
             return None
-        from . import turnover
-        payload = turnover.overlay(sources.validate_board(snap.payload, requested),
-                                   turnover.observations(db, knowledge_cutoff, snap.key))
+        supplements = free_store.derived(db, knowledge_cutoff)
+        available = {d for (c, d) in supplements if c != '000300'}
+        day = requested or max({latest.key, *available})
+        snap = db.scalar(query.where(EtfSnapshot.key == day).order_by(EtfSnapshot.id.desc()))
+        if snap:
+            payload = free_store.overlay(sources.validate_board(snap.payload, day), supplements)
+        else:
+            universe = {r['code']: r for r in latest.payload['etfs']}
+            payload = free_store.synthetic(day, universe, supplements)
+            if payload is None:
+                return None
+            snap = max((r for (c, d), r in supplements.items() if d == day), key=lambda r: r.id)
+        payload = turnover.overlay(payload, turnover.observations(db, knowledge_cutoff, day))
         return {'payload': payload, 'snapshot_id': snap.id,
                 'observed_at': snap.observed_at, 'source': snap.source, 'source_url': snap.source_url}
 
@@ -127,6 +141,8 @@ async def board(requested=None):
     key = ('board', requested)
     cached = await asyncio.to_thread(saved_board, requested)
     ttl = 300 if requested else 60
+    if requested and cached and cached['payload'].get('source') == 'public_sources':
+        return {**cached, 'stale': False}
     if cached and time.monotonic() - _checked.get(key, -1e12) < ttl:
         return {**cached, 'stale': False}
     if cached and time.monotonic() < _retry.get(key, 0):
@@ -146,11 +162,14 @@ async def board(requested=None):
         raise
 
 
-async def dates():
+async def dates(include_public=True):
     with SessionLocal() as db:
         cached = db.scalar(select(EtfSnapshot).where(EtfSnapshot.resource == 'dates').order_by(EtfSnapshot.id.desc()))
         saved = list(cached.payload) if cached else []
         local = list(db.scalars(select(EtfSnapshot.key).where(EtfSnapshot.resource == 'board').distinct()))
+        if include_public:
+            from . import free_store
+            local += free_store.saved_dates(db)
     if time.monotonic() - _checked.get(('dates',), -1e12) > 600:
         try:
             saved = await coalesce(('dates',), sources.dates)
@@ -232,6 +251,14 @@ def national_team(payload, knowledge_cutoff=None):
                                  'snapshot_id': report.id})
         signal_snapshot = db.scalar(select(EtfSnapshot).where(EtfSnapshot.resource == 'signals', EtfSnapshot.key == payload['date'], EtfSnapshot.observed_at <= cutoff).order_by(EtfSnapshot.id.desc()))
         signals = signal_snapshot.payload['signals'] if signal_snapshot else []
+    if payload.get('supplement_snapshot_ids'):
+        from . import history
+        days = sorted({payload['date'], *[r['date'] for r in payload.get('series', [])]})
+        corrected = history.read_history(days[0], days[-1], days, cutoff=cutoff)
+        signals = [{'date': r['date'], 'kind': 'countertrend_subscription', 'actor': None,
+                    'net_subscription_estimate_cny': money(r['net']), 'peak_ratio': r['peak_ratio'],
+                    'index_change_percent': r['hs300_change_percent'], 'snapshot_ids': r['snapshot_ids'],
+                    'rule_version': r['rule_version']} for r in corrected['signals']]
     watched = {r['code'] for r in holdings}
     watchlist = [{**r, 'disclosed_ratio': sum(h['ratio_percent'] for h in holdings if h['code'] == r['code'])} for r in payload['etfs'] if r['code'] in watched]
     return {'date': payload['date'], 'knowledge_cutoff': cutoff, 'holdings': holdings, 'coverage': coverage,
@@ -242,7 +269,7 @@ def national_team(payload, knowledge_cutoff=None):
 
 
 async def run_collection():
-    from . import turnover
+    from . import free_collector, turnover
     while True:
         try:
             result = await board()
@@ -251,7 +278,7 @@ async def run_collection():
             # History is backfilled gradually, with a bounded number of requests per pass.
             with SessionLocal() as db:
                 have = set(db.scalars(select(EtfSnapshot.key).where(EtfSnapshot.resource == 'board')))
-            missing = [d for d in await dates() if d not in have][:3]
+            missing = [d for d in await dates(include_public=False) if d not in have][:3]
             for date in missing:
                 await board(date)
                 await asyncio.sleep(1)
@@ -261,6 +288,12 @@ async def run_collection():
             log.exception('ETF collection failed; saved observations retained')
         # Independent of the board provider: saved historical gaps can be filled
         # even when Kanpanba or holder disclosure collection is unavailable.
+        try:
+            await free_collector.collect()
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            log.exception('Public ETF collection failed; saved observations retained')
         try:
             await turnover.collect()
         except asyncio.CancelledError:

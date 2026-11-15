@@ -76,3 +76,28 @@ class EtfHolding(Base):
     # A provider without announcement dates cannot support historical knowledge claims.
     announced_at = Column(String)
     known_from = Column(String, nullable=False, index=True)
+
+
+class EtfMeasurement(Base):
+    """Validated public inputs, independently versioned from the original board."""
+    __tablename__ = 'etf_measurements'
+    resource = Column(String, primary_key=True)
+    source = Column(String, primary_key=True)
+    code = Column(String, primary_key=True)
+    trade_date = Column(String, primary_key=True)
+    payload = Column(JSON, nullable=False)
+    snapshot_id = Column(Integer, ForeignKey('etf_source_snapshots.id'), nullable=False)
+
+
+class EtfFetchState(Base):
+    """Durable retry/checkpoint state; a failed fetch never deletes observations."""
+    __tablename__ = 'etf_fetch_states'
+    key = Column(String, primary_key=True)
+    resource = Column(String, nullable=False, index=True)
+    source = Column(String, nullable=False, index=True)
+    status = Column(String, nullable=False)
+    checked_at = Column(String, nullable=False)
+    retry_after = Column(String, nullable=False)
+    failures = Column(Integer, nullable=False, default=0)
+    error = Column(String)
+    record_count = Column(Integer, nullable=False, default=0)

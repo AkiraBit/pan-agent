@@ -35,3 +35,23 @@ it('tests only the selected source', async () => {
   fireEvent.click(screen.getByTitle('测试连接'))
   await waitFor(() => expect(request).toHaveBeenCalledWith('/datasources/80/test', { method: 'POST' }))
 })
+
+it('shows public ETF sources in their group and controls each independently', async () => {
+  const publicSources = [
+    ['深交所 ETF 份额', 'etf_shares', 'szse'], ['上交所 ETF 份额', 'etf_shares', 'sse'],
+    ['天天基金 ETF 净值', 'etf_nav', 'eastmoney'], ['腾讯 ETF 历史行情', 'etf_history', 'tencent'],
+    ['深交所 ETF 申赎清单', 'etf_pcf', 'szse'], ['上交所 ETF 申赎清单', 'etf_pcf', 'sse'],
+  ].map(([name, type, provider], i) => ({ ...source, id: 90 + i, name, type, provider, connection_status: null }))
+  request.mockImplementation(async (path, options) => options?.method === 'PUT'
+    ? { ...publicSources[0], enabled: false }
+    : path.endsWith('/test') ? { test_passed: true, count: 2, items: [{ shares: 100 }], logs: [] } : publicSources)
+  render(<ConfirmProvider labels={{ title: "确认", confirm: "确定", cancel: "取消" }}><DataSourcesPage /></ConfirmProvider>)
+  await screen.findByText('深交所 ETF 份额')
+  expect(screen.getByText('宽基 ETF')).toBeTruthy()
+  expect(screen.getAllByText('自动采集 · 持久化')).toHaveLength(6)
+  expect(screen.queryByRole('link', { name: /管理长桥连接/ })).toBeNull()
+  fireEvent.click(screen.getAllByRole('switch')[0])
+  await waitFor(() => expect(request).toHaveBeenCalledWith('/datasources/90', { method: 'PUT', body: '{"enabled":false}' }))
+  fireEvent.click(screen.getAllByTitle('测试连接')[1])
+  await waitFor(() => expect(request).toHaveBeenCalledWith('/datasources/91/test', { method: 'POST' }))
+})
