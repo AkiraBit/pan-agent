@@ -6,6 +6,7 @@ export const navigation = {
     workspace: 'Workspace',
     gettingStarted: 'Guide center',
     home: 'Home',
+    etf: 'Broad-market ETFs',
     portfolio: 'Portfolio',
     shortTerm: 'Sentiment',
     opportunities: 'Opportunities',

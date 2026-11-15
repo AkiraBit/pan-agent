@@ -1,0 +1,17 @@
+export const etf = {
+  title: '宽基ETF', overview: '总览', national: '国家队追踪', previous: '前一交易日', next: '后一交易日', date: '交易日', latest: '最新交易日', refresh: '刷新行情',
+  closed: '收盘', trading: '盘中', published: '份额已公布', pending: '份额待公布', stale: '行情更新中',
+  minute: '分钟成交', basket: '{{count}}只宽基ETF合计', total: '当日成交', more: '比平时多 {{value}}%', less: '比平时少 {{value}}%',
+  quiet: '未见明显放量', loud: '成交明显放量', quietDetail: '累计成交低于历史同期均值', loudDetail: '累计成交高于历史同期均值',
+  baselinePending: '同期成交待更新', excess: '比平时多的部分', baseline: '平时这一分钟', auction: '收盘竞价',
+  halfHour: '半小时成交', times: '{{value}}倍', baselineDays: '{{count}}日同期均值', amountUnit: '亿', sharesUnit: '亿份',
+  details: '{{count}}只ETF明细', detailsHint: '成交额 · 涨跌 · 放量倍数', shares: '份额与申赎',
+  index: '指数', fund: 'ETF', change: '涨跌', turnover: '成交额', peak: '最放量时段', ratio: '较平时', units: '份额变化', net: '净申赎估算', size: '规模',
+  net20: '近20日净申购', net60: '近60日净申购', maxIn: '申购最多', maxOut: '赎回最多', inflow: '净申购', outflow: '净赎回', hs300: '沪深300', surge: '盘中放量', flowDays: '放量的日子',
+  loading: '行情加载中', unavailable: '行情暂不可用', retry: '重试', empty: '暂无行情',
+  disclosed: '已披露持仓', institutions: '持仓机构', heldFunds: '持仓ETF', watchFlow: '持仓ETF净申赎估算', signals: '逆势申购信号',
+  all: '全部机构', huijin: '中央汇金', csf: '中国证金', guoxin: '国新', chengtong: '诚通',
+  holder: '持有人', reportDate: '报告期', heldShares: '持有份额', heldRatio: '持有比例', heldDelta: '较上期份额',
+  noHoldings: '暂无已披露持仓', noSignals: '暂无逆势申购信号', watchlist: '持仓ETF资金动向',
+  countertrend: '逆势净申购', period: '披露期', coverage: '{{count}}只ETF已披露', history: '申赎历史',
+} as const

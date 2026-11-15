@@ -1,4 +1,6 @@
 import { emotion as zhEmotion } from './locales/zh-CN/emotion'
+import { etf as zhEtf } from './locales/zh-CN/etf'
+import { etf as enEtf } from './locales/en-US/etf'
 import { emotion as enEmotion } from './locales/en-US/emotion'
 import { marketReview as zhMarketReview } from './locales/zh-CN/marketReview'
 import { marketReview as enMarketReview } from './locales/en-US/marketReview'
@@ -19,6 +21,7 @@ import { bizUi as zhBizUi } from './locales/zh-CN/biz-ui'
 import type { TranslationShape } from './resource-types'
 
 export const zhCN = {
+  etf: zhEtf,
   emotion: zhEmotion,
   marketReview: zhMarketReview,
   shortTerm: zhShortTerm,
@@ -31,6 +34,7 @@ export const zhCN = {
 } as const
 
 export const enUS = {
+  etf: enEtf,
   emotion: enEmotion,
   marketReview: enMarketReview,
   shortTerm: enShortTerm,

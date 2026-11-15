@@ -21,6 +21,7 @@ import { NotificationBell, NotificationProvider } from '@/components/notificatio
 const {
   LoginPage,
   DashboardPage,
+  BroadEtfPage,
   WorkspacePage,
   GettingStartedPage,
   OpportunitiesPage,
@@ -40,6 +41,7 @@ const {
 
 const NAV_ITEMS: Array<{ to: string; icon: typeof LayoutDashboard; labelKey: NavigationItemKey }> = [
   { to: '/', icon: LayoutDashboard, labelKey: 'home' },
+  { to: '/etf', icon: TrendingUp, labelKey: 'etf' },
   { to: '/workspace', icon: Activity, labelKey: 'workspace' },
   { to: '/portfolio', icon: List, labelKey: 'portfolio' },
   { to: '/assistant', icon: MessageCircle, labelKey: 'assistant' },
@@ -104,8 +106,8 @@ function App() {
     icon: item.icon,
     label: t(`navigation:items.${item.labelKey}`),
   }))
-  const desktopPrimaryNavItems = navItems.slice(0, 6)
-  const desktopMoreNavItems = navItems.slice(6)
+  const desktopPrimaryNavItems = navItems.slice(0, 7)
+  const desktopMoreNavItems = navItems.slice(7)
   const mobilePrimaryNavItems = navItems.slice(0, 5)
   const mobileMoreNavItems = navItems.slice(5)
 
@@ -310,6 +312,7 @@ function App() {
             <Routes>
               <Route path="/" element={<DashboardPage />} />
               <Route path="/limit-up" element={<DashboardPage />} />
+              <Route path="/etf" element={<BroadEtfPage />} />
               <Route path="/workspace" element={<WorkspacePage />} />
               <Route path="/getting-started" element={<GettingStartedPage />} />
               <Route path="/short-term/*" element={<ShortTermPage />} />

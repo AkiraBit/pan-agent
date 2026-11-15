@@ -3,6 +3,7 @@ export const navigation = {
     workspace: '工作台',
     gettingStarted: '引导中心',
     home: '首页',
+    etf: '宽基ETF',
     portfolio: '持仓',
     shortTerm: '情绪策略',
     opportunities: '机会',

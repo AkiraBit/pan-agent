@@ -31,6 +31,7 @@ from src.modules.assistant.export_jobs import context_export_runner
 from src.modules.automation.api import agents, suggestions, templates
 from src.modules.market.api import (
     discovery,
+    etf,
     klines,
     market,
     news,
@@ -78,6 +79,7 @@ protected = [Depends(get_current_user)]
 app.include_router(mcp_connections.router, prefix="/api/mcp-connections", tags=["mcp-connections"])
 app.include_router(builtin_skills.router, prefix="/api/builtin-skills", tags=["builtin-skills"])
 app.include_router(review.router, prefix="/api/market-review", tags=["market-review"], dependencies=protected)
+app.include_router(etf.router, prefix="/api/etf", tags=["etf"], dependencies=protected)
 app.include_router(short_term_api.router, prefix="/api/short-term", tags=["short-term"], dependencies=protected)
 app.include_router(emotion_api.router, prefix="/api/short-term", tags=["emotion-workbench"], dependencies=protected)
 app.include_router(onboarding.router, prefix="/api/onboarding", tags=["onboarding"], dependencies=protected)
@@ -203,6 +205,9 @@ app.include_router(notifications_api.router, prefix="/api/notifications", tags=[
 app.router.on_startup.append(assistant_task_runner.recover_pending)
 app.router.on_startup.append(context_export_runner.recover_pending)
 app.router.on_startup.append(emotion_runner.recover_pending)
+from src.modules.market.etf import service as etf_service
+app.router.on_startup.append(etf_service.start)
+app.router.on_shutdown.append(etf_service.stop)
 app.router.on_shutdown.append(emotion_runner.shutdown)
 app.router.on_shutdown.append(context_export_runner.shutdown)
 app.router.on_shutdown.append(short_term_api.shutdown)

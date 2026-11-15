@@ -7,6 +7,7 @@ describe('route page loaders', () => {
     expect(Object.keys(pageLoaders)).toEqual([
       'login',
       'dashboard',
+      'etf',
       'workspace',
       'gettingStarted',
       'stocks',
