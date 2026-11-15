@@ -66,10 +66,13 @@ def save_board(payload, raw):
         history = {r['date']: r for r in payload.get('series', [])}
         history[day] = {**history.get(day, {}), 'date': day, 'covered': payload['covered'], 'net': payload.get('net'),
                         'hs300_change_percent': payload.get('hs300_change_percent'), 'peak_window': payload.get('peak_window')}
+        # Backfilling an old board must not replace a newer historical revision.
+        existing = dict(db.execute(select(EtfFlowDay.trade_date, EtfSnapshot.key)
+                                  .join(EtfSnapshot, EtfFlowDay.snapshot_id == EtfSnapshot.id)).all())
         upsert(db, EtfFlowDay, [{'trade_date': r['date'], 'covered': r.get('covered', 0),
               'net_subscription_estimate_cny': money(r.get('net')), 'index_close': r.get('hs300'),
               'index_change_percent': r.get('hs300_change_percent'), 'peak_ratio': (r.get('peak_window') or {}).get('ratio'),
-              'snapshot_id': snap.id} for r in history.values()], ['trade_date'])
+              'snapshot_id': snap.id} for r in history.values() if existing.get(r['date'], '') <= day], ['trade_date'])
         signals = []
         for r in history.values():
             peak = r.get('peak_window') or {}

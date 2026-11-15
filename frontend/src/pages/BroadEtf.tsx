@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { ChevronDown, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react'
@@ -8,32 +8,10 @@ import { Tabs, TabsList, TabsTrigger } from '@panwatch/base-ui/components/ui/tab
 import { etfApi, type EtfBoard, type EtfNationalTeam, type EtfRow } from '@panwatch/api/etf'
 import { marketSignTextClass } from '@/lib/market-colors'
 import { FlowChart, MinuteChart, numeric, signed } from '@/components/etf/charts'
+import { useEtf } from '@/components/etf/useEtf'
+import { EtfHistoryPanel } from '@/components/etf/HistoryPanel'
 import '@/components/etf/etf.css'
 
-function useEtf<T>(key: string, loader: (signal: AbortSignal) => Promise<T>, enabled: boolean, refresh: number) {
-  const [state, setState] = useState<{ key: string; data?: T; error?: boolean; loading: boolean }>({ key: '', loading: true })
-  useEffect(() => {
-    if (!enabled) return
-    const controller = new AbortController()
-    let timer: ReturnType<typeof setTimeout>
-    const load = async () => {
-      setState(previous => ({ key, data: previous.key === key ? previous.data : undefined, loading: !previous.data || previous.key !== key }))
-      try {
-        const data = await loader(controller.signal)
-        if (!controller.signal.aborted) setState({ key, data, loading: false })
-      } catch {
-        if (!controller.signal.aborted) setState(previous => ({ key, data: previous.key === key ? previous.data : undefined, error: true, loading: false }))
-      } finally {
-        if (!controller.signal.aborted) timer = setTimeout(() => { if (!document.hidden) void load(); else timer = setTimeout(load, 60000) }, 60000)
-      }
-    }
-    void load()
-    return () => { controller.abort(); clearTimeout(timer) }
-    // loader is bound to this resource key; refresh explicitly reloads it.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key, enabled, refresh])
-  return state.key === key ? state : { key, loading: true, data: undefined, error: false }
-}
 
 function FundTable({ rows }: { rows: EtfRow[] }) {
   const { t } = useTranslation('etf')
@@ -44,7 +22,7 @@ function FundTable({ rows }: { rows: EtfRow[] }) {
   </>
 }
 
-function Overview({ board, onDate }: { board: EtfBoard; onDate: (value: string) => void }) {
+function DailyOverview({ board, onDate }: { board: EtfBoard; onDate: (value: string) => void }) {
   const { t } = useTranslation('etf')
   const ratio = board.cumulative?.[board.cumulative.length - 1]?.[3]
   const difference = ratio == null ? null : Math.round((ratio - 1) * 100)
@@ -54,12 +32,12 @@ function Overview({ board, onDate }: { board: EtfBoard; onDate: (value: string) 
   const greatest = valid.length ? valid.reduce((a, b) => a.net! > b.net! ? a : b) : null
   const least = valid.length ? valid.reduce((a, b) => a.net! < b.net! ? a : b) : null
   return <>
-    <section className="etf-card etf-focus"><div className="etf-focus-heading"><div><h2>{t('minute')}</h2><span>{t('basket', { count: board.covered })}</span></div><div className="etf-total"><div><span>{t('total')}</span>{difference != null && <em className={marketSignTextClass(difference)}>{t(difference >= 0 ? 'more' : 'less', { value: Math.abs(difference) })}</em>}</div><b>{numeric(board.amount)}<small>{t('amountUnit')}</small></b></div></div>
+    <section className="etf-card etf-focus"><div className="etf-focus-heading"><div><h2>{t('minute')}</h2><span>{t('basket', { count: board.etfs.length })}</span></div><div className="etf-total"><div><span>{t('total')}</span>{difference != null && <em className={marketSignTextClass(difference)}>{t(difference >= 0 ? 'more' : 'less', { value: Math.abs(difference) })}</em>}</div><b>{numeric(board.amount)}<small>{t('amountUnit')}</small></b></div></div>
       <div className="etf-signal"><strong>{ratio == null ? t('baselinePending') : t(loud ? 'loud' : 'quiet')}</strong>{ratio != null && <p>{t(ratio >= 1 ? 'loudDetail' : 'quietDetail')}</p>}</div>
       <MinuteChart key={board.date} board={board} />
       <details className="etf-half"><summary><b>{t('halfHour')}</b><ChevronDown size={14} /></summary><div className="etf-periods">{(board.windows ?? []).map(window => <div className={(window.ratio ?? 0) >= 2 ? 'etf-period hot' : 'etf-period'} key={window.start}><span>{window.start}–{window.end}</span><b>{numeric(window.amount)}<small>{t('amountUnit')}</small></b><span>{window.ratio == null ? '—' : t('times', { value: numeric(window.ratio) })}</span></div>)}</div></details>
     </section>
-    <div className="etf-secondary"><details className="etf-card etf-fold"><summary><div>{t('details', { count: board.covered })}<small>{t('detailsHint')}</small></div><ChevronDown size={17} /></summary><div className="etf-fold-body"><FundTable rows={board.etfs} /></div></details>
+    <div className="etf-secondary"><details className="etf-card etf-fold"><summary><div>{t('details', { count: board.etfs.length })}<small>{t('detailsHint')}</small></div><ChevronDown size={17} /></summary><div className="etf-fold-body"><FundTable rows={board.etfs} /></div></details>
       <details className="etf-card etf-fold"><summary><div>{t('shares')}<small>{t(board.shares_published ? 'published' : 'pending')}</small></div><ChevronDown size={17} /></summary><div className="etf-fold-body">
         <div className="etf-share-stats"><div><span>{t('net')} · {board.date.slice(5).replace('-', '/')}</span><b className={marketSignTextClass(board.net)}>{signed(board.net, 0)}<small>{t('amountUnit')}</small></b></div><div><span>{t('net20')}</span><b className={marketSignTextClass(board.net20)}>{signed(board.net20, 0)}<small>{t('amountUnit')}</small></b></div></div>
         <FlowChart key={board.date} series={history} onDate={onDate} />
@@ -69,17 +47,18 @@ function Overview({ board, onDate }: { board: EtfBoard; onDate: (value: string) 
   </>
 }
 
-function NationalTeam({ data, onDate }: { data: EtfNationalTeam; onDate: (value: string) => void }) {
+function NationalTeam({ data, onDate, institution, code, onInstitution }: {
+  data: EtfNationalTeam; onDate: (value: string) => void; institution: string; code: string; onInstitution: (value: string) => void;
+}) {
   const { t } = useTranslation('etf')
-  const [institution, setInstitution] = useState('all')
-  const holdings = data.holdings.filter(row => institution === 'all' || row.institution === institution)
+  const holdings = data.holdings.filter(row => (institution === 'all' || row.institution === institution) && (!code || row.code === code))
   const groups = [...new Set(holdings.map(row => row.institution))]
   const codes = new Set(holdings.map(row => row.code))
   const rows = data.watchlist.filter(row => codes.has(row.code))
   const flow = rows.length && rows.every(row => row.net != null) ? rows.reduce((sum, row) => sum + row.net!, 0) : null
   const institutionLabel = (id: string) => t(id as 'huijin' | 'csf' | 'guoxin' | 'chengtong')
   return <div className="etf-national">
-    <div className="etf-national-tools"><span>{t('coverage', { count: data.coverage.filter(row => row.report_date).length })}</span><Select value={institution} onValueChange={setInstitution}><SelectTrigger aria-label={t('institutions')} className="w-44 h-9"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">{t('all')}</SelectItem>{data.institutions.map(id => <SelectItem key={id} value={id}>{institutionLabel(id)}</SelectItem>)}</SelectContent></Select></div>
+    <div className="etf-national-tools"><span>{t('coverage', { count: data.coverage.filter(row => row.report_date && (!code || row.code === code)).length })}</span>{code && <span>{t('fund')} · {code}</span>}<Select value={institution} onValueChange={onInstitution}><SelectTrigger aria-label={t('institutions')} className="w-44 h-9"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">{t('all')}</SelectItem>{['huijin', 'csf', 'guoxin', 'chengtong'].map(id => <SelectItem key={id} value={id}>{institutionLabel(id)}</SelectItem>)}</SelectContent></Select></div>
     <div className="etf-national-stats"><div className="etf-card"><span>{t('institutions')}</span><b>{groups.length || '—'}</b></div><div className="etf-card"><span>{t('heldFunds')}</span><b>{codes.size || '—'}</b></div><div className="etf-card"><span>{t('watchFlow')}</span><b className={marketSignTextClass(flow)}>{signed(flow)}<small>{t('amountUnit')}</small></b></div></div>
     <section className="etf-card"><h2>{t('disclosed')}</h2>{!holdings.length ? <p className="etf-empty">{t('noHoldings')}</p> : <div className="etf-holdings scrollbar overflow-x-auto"><table><thead><tr>{(['holder', 'fund', 'reportDate', 'heldShares', 'heldRatio', 'heldDelta'] as const).map(key => <th key={key}>{t(key)}</th>)}</tr></thead><tbody>{holdings.map(row => <tr key={`${row.code}:${row.holder_name}`}><td><strong>{row.holder_name}</strong></td><td>{row.name}<small>{row.code}</small></td><td>{row.report_date}</td><td>{numeric(row.shares / 1e8, 2)} {t('sharesUnit')}</td><td>{numeric(row.ratio_percent, 2)}%</td><td className={marketSignTextClass(row.shares_change)}>{signed(row.shares_change == null ? null : row.shares_change / 1e8, 2)}{row.shares_change == null ? '' : t('sharesUnit')}</td></tr>)}</tbody></table></div>}</section>
     {!!rows.length && <section className="etf-card"><h2>{t('watchlist')}</h2><FundTable rows={rows} /></section>}
@@ -91,25 +70,44 @@ export default function BroadEtf() {
   const { t } = useTranslation('etf')
   const [params, setParams] = useSearchParams()
   const date = params.get('date') || ''
-  const active = params.get('view') === 'national' ? 'national' : 'overview'
+  const view = params.get('view')
+  const active = view === 'national' ? 'national' : view === 'daily' || (!view && date) ? 'daily' : 'overview'
+  const mode = params.get('mode') === 'daily' ? 'daily' : 'trend'
+  const isDaily = active === 'daily' || (active === 'national' && mode === 'daily')
   const [refresh, setRefresh] = useState(0)
-  const boardState = useEtf(`board:${date}`, signal => etfApi.board(date, signal), true, refresh)
+  const boardState = useEtf(`board:${date}`, signal => etfApi.board(date, signal), isDaily, refresh)
   const datesState = useEtf('dates', etfApi.dates, true, refresh)
-  const nationalState = useEtf(`national:${date}`, signal => etfApi.national(date, signal), active === 'national', refresh)
+  const nationalState = useEtf(`national:${date}`, signal => etfApi.national(date, signal), active === 'national' && isDaily, refresh)
   const board = boardState.data?.payload
   const dates = datesState.data ?? []
   const index = dates.indexOf(date || board?.date || dates[0])
-  const change = (key: string, value: string) => setParams(previous => { const next = new URLSearchParams(previous); if (value) next.set(key, value); else next.delete(key); return next }, { replace: true })
-  const onDate = (value: string) => setParams(previous => { const next = new URLSearchParams(previous); next.set('date', value); next.delete('view'); return next })
+  const change = (key: string, value: string) => setParams(previous => {
+    const next = new URLSearchParams(previous)
+    if (value) next.set(key, value); else next.delete(key)
+    return next
+  })
+  const onDate = (value: string) => setParams(previous => {
+    const next = new URLSearchParams(previous)
+    next.set('date', value)
+    next.set('view', active === 'national' ? 'national' : 'daily')
+    if (active === 'national') next.set('mode', 'daily')
+    return next
+  })
   const retry = () => setRefresh(value => value + 1)
   const state = active === 'national' ? nationalState : boardState
   return <div className="etf-page">
-    <div className="etf-page-heading"><div><h1>{t('title')}</h1><span className="etf-status">{board?.date.slice(5).replace('-', '/')} {board && t(board.status === '盘中' ? 'trading' : 'closed')} {board && '·'} {board && t(board.shares_published ? 'published' : 'pending')}{(boardState.data?.stale || boardState.error) && ` · ${t('stale')}`}</span></div>
-      <div className="etf-date-controls"><Button variant="ghost" size="icon" aria-label={t('previous')} disabled={index < 0 || index >= dates.length - 1 || boardState.loading} onClick={() => change('date', dates[index + 1])}><ChevronLeft size={16} /></Button><Select value={date || 'latest'} onValueChange={value => change('date', value === 'latest' ? '' : value)}><SelectTrigger aria-label={t('date')} className="h-8 w-36 border-0 shadow-none"><SelectValue placeholder={t('date')} /></SelectTrigger><SelectContent><SelectItem value="latest">{dates[0] || t('latest')}</SelectItem>{dates.map(day => <SelectItem key={day} value={day}>{day}</SelectItem>)}</SelectContent></Select><Button variant="ghost" size="icon" aria-label={t('next')} disabled={index <= 0 || boardState.loading} onClick={() => change('date', index === 1 ? '' : dates[index - 1])}><ChevronRight size={16} /></Button><Button variant="ghost" size="icon" aria-label={t('refresh')} onClick={retry}><RefreshCw size={14} className={state.loading ? 'animate-spin' : ''} /></Button></div></div>
-    <Tabs value={active} onValueChange={value => change('view', value === 'overview' ? '' : value)} className="etf-tabs"><TabsList><TabsTrigger value="overview">{t('overview')}</TabsTrigger><TabsTrigger value="national">{t('national')}</TabsTrigger></TabsList></Tabs>
-    {state.loading && !state.data && <div className="etf-card etf-empty" role="status"><RefreshCw className="animate-spin" size={20} />{t('loading')}</div>}
-    {state.error && <div className="etf-error" role="alert">{t('unavailable')}<Button variant="ghost" size="sm" onClick={retry}>{t('retry')}</Button></div>}
-    {active === 'overview' && board && <Overview board={board} onDate={onDate} />}
-    {active === 'national' && nationalState.data && <NationalTeam data={nationalState.data} onDate={onDate} />}
+    <div className="etf-page-heading"><div><h1>{t('title')}</h1>{isDaily && <span className="etf-status">{board?.date.slice(5).replace('-', '/')} {board && t(board.status === '盘中' ? 'trading' : 'closed')} {board && '·'} {board && t(board.shares_published ? 'published' : 'pending')}{(boardState.data?.stale || boardState.error) && ` · ${t('stale')}`}</span>}</div>
+      <div className="etf-date-controls">{isDaily && <><Button variant="ghost" size="icon" aria-label={t('previous')} disabled={index < 0 || index >= dates.length - 1 || boardState.loading} onClick={() => change('date', dates[index + 1])}><ChevronLeft size={16} /></Button><Select value={date || 'latest'} onValueChange={value => change('date', value === 'latest' ? '' : value)}><SelectTrigger aria-label={t('date')} className="h-8 w-36 border-0 shadow-none"><SelectValue placeholder={t('date')} /></SelectTrigger><SelectContent><SelectItem value="latest">{dates[0] || t('latest')}</SelectItem>{dates.map(day => <SelectItem key={day} value={day}>{day}</SelectItem>)}</SelectContent></Select><Button variant="ghost" size="icon" aria-label={t('next')} disabled={index <= 0 || boardState.loading} onClick={() => change('date', index === 1 ? '' : dates[index - 1])}><ChevronRight size={16} /></Button></>}
+        <Button variant="ghost" size="icon" aria-label={t('refresh')} onClick={retry}><RefreshCw size={14} className={isDaily && state.loading ? 'animate-spin' : ''} /></Button></div>
+    </div>
+    <Tabs value={active} onValueChange={value => change('view', value)} className="etf-tabs"><TabsList><TabsTrigger value="overview">{t('overview')}</TabsTrigger><TabsTrigger value="daily">{t('daily')}</TabsTrigger><TabsTrigger value="national">{t('national')}</TabsTrigger></TabsList></Tabs>
+    {active === 'national' && <Tabs value={mode} onValueChange={value => change('mode', value)} className="etf-tabs"><TabsList><TabsTrigger value="trend">{t('trend')}</TabsTrigger><TabsTrigger value="daily">{t('daily')}</TabsTrigger></TabsList></Tabs>}
+    {!isDaily && <EtfHistoryPanel key={active} national={active === 'national'} refresh={refresh} onDate={onDate} />}
+    {isDaily && <>
+      {state.loading && !state.data && <div className="etf-card etf-empty" role="status"><RefreshCw className="animate-spin" size={20} />{t('loading')}</div>}
+      {state.error && <div className="etf-error" role="alert">{t('unavailable')}<Button variant="ghost" size="sm" onClick={retry}>{t('retry')}</Button></div>}
+      {active === 'daily' && board && <DailyOverview board={board} onDate={onDate} />}
+      {active === 'national' && nationalState.data && <NationalTeam data={nationalState.data} onDate={onDate} code={params.get('code') || ''} institution={params.get('institution') || 'all'} onInstitution={value => change('institution', value === 'all' ? '' : value)} />}
+    </>}
   </div>
 }

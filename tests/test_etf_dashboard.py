@@ -180,3 +180,120 @@ async def test_holder_source_parses_only_explicit_institutions(monkeypatch):
     reports = await sources.holding_reports('510300')
     assert reports[0]['holders'][0]['institution'] == 'huijin'
     assert reports[0]['holders'][1]['institution'] is None
+
+
+def historical_board(board, day, net):
+    value = copy.deepcopy(board)
+    value.update(date=day, net=net, series=[], scale=400)
+    value['etfs'][0]['net'] = net
+    value['etfs'][0]['scale'] = 400
+    value['etfs'][0]['peak_window'] = None
+    return value
+
+
+def test_history_range_cumulative_and_missing_days(database, board):
+    from src.modules.market.etf import history
+    for day, net in [('2026-11-10', 100), ('2026-11-11', 4), ('2026-11-13', -2)]:
+        value = historical_board(board, day, net)
+        service.save_board(value, value)
+    catalog = ['2026-11-10', '2026-11-11', '2026-11-12', '2026-11-13']
+    data = history.read_history('2026-11-11', '2026-11-13', catalog)
+    assert [p['date'] for p in data['series']] == catalog[1:]
+    assert [p['net'] for p in data['series']] == [4, None, -2]
+    assert [p['cumulative_net'] for p in data['series']] == [4, None, None]
+    assert data['summary']['net'] is None and data['summary']['net_days'] == 2
+    value = historical_board(board, '2026-11-12', 1)
+    service.save_board(value, value)
+    complete = history.read_history('2026-11-11', '2026-11-13', catalog)
+    assert complete['summary']['net'] == 3
+    assert complete['summary']['inflow'] == 5 and complete['summary']['outflow'] == -2
+    assert complete['series'][-1]['cumulative_net'] == 3
+    assert complete['funds'][0]['net'] == 3
+
+
+def test_backfill_preserves_newer_history_revision_and_cutoff(database, board, monkeypatch):
+    from src.modules.market.etf import history
+    monkeypatch.setattr(service, 'timestamp', lambda: '2026-11-14T01:00:00+00:00')
+    newer = historical_board(board, '2026-11-13', 4)
+    newer['series'] = [{'date': '2026-11-12', 'net': 7, 'covered': 1, 'hs300': 4000}]
+    service.save_board(newer, newer)
+    monkeypatch.setattr(service, 'timestamp', lambda: '2026-11-15T01:00:00+00:00')
+    old = historical_board(board, '2026-11-12', 2)
+    service.save_board(old, old)
+    result = history.read_history('2026-11-12', '2026-11-13', ['2026-11-12', '2026-11-13'])
+    assert result['series'][0]['net'] == 7
+    with database() as db:
+        assert db.get(EtfFlowDay, '2026-11-12').net_subscription_estimate_cny == 700_000_000
+    early = history.read_history('2026-11-12', '2026-11-13', ['2026-11-12', '2026-11-13'], cutoff='2026-11-14T02:00:00+00:00')
+    assert early['series'][0]['amount'] is None  # later backfill was not known yet
+    assert early['series'][0]['net'] == 7
+
+
+def test_national_history_keeps_reporting_dates_and_filters_institutions(database, board):
+    from src.modules.market.etf import history
+    value = historical_board(board, '2026-11-13', 4)
+    second = {**value['etfs'][0], 'code': '510050', 'name': '上证50ETF', 'net': 9}
+    value['etfs'].append(second);value['covered'] = 2;value['net'] = 13
+    service.save_board(value, value)
+    service.save_holdings([report('2025-06-30', 80), report('2025-12-31', 100),
+                          {**report('2025-12-31', 20, '北京诚通金控投资有限公司'), 'code': '510050'}])
+    data = history.read_history('2025-01-01', '2026-11-13', ['2026-11-13'], national=True, institution='huijin')
+    assert data['series'][0]['net'] == 4 and data['summary']['funds'] == 1
+    assert data['composition_mode'] == 'period_end_disclosed' and data['flow_attribution'] == 'all_etf_investors'
+    assert [r['date'] for r in data['holdings_trend']] == ['2025-06-30', '2025-12-31']
+    assert data['holdings_trend'][0]['shares'] is None  # missing disclosure coverage is not zero
+    assert data['holdings_trend'][1]['shares'] == 100 / 1e8
+    assert data['disclosures'][0]['shares_change'] == 20
+    recent = history.read_history('2026-08-01', '2026-11-13', ['2026-11-13'], national=True, code='510300')
+    assert len(recent['holdings_trend']) == 1
+    assert recent['holdings_trend'][0]['date'] == '2025-12-31'
+    assert recent['holdings_trend'][0]['before_range'] is True
+
+
+def test_history_api_validates_range_and_reads_persisted_data(database, board, monkeypatch):
+    from src.modules.market.etf import history
+    service.save_board(board, board)
+    monkeypatch.setattr(service, 'board', AsyncMock(return_value={**service.saved_board(), 'stale': False}))
+    monkeypatch.setattr(service, 'dates', AsyncMock(return_value=['2026-11-13', '2026-11-12']))
+    monkeypatch.setattr(history, 'collect_range', AsyncMock())
+    app = FastAPI();app.include_router(api.router, prefix='/api/etf')
+    client = TestClient(app)
+    for params in [{'period': 'custom'}, {'start': '2026-11-13', 'end': '2026-11-12'}, {'end': '2099-01-01'},
+                   {'code': '../x'}, {'institution': 'unknown'}, {'known_at': '2026-11-14T00:00:00'}]:
+        assert client.get('/api/etf/history', params=params).status_code == 422
+    data = client.get('/api/etf/history').json()
+    assert data['range'] == {'start': '2026-08-13', 'end': '2026-11-13'}
+    assert data['summary']['days'] == 2
+    assert client.get('/api/etf/history', params={'code': '000000'}).status_code == 404
+    assert client.get('/api/etf/history', params={'known_at': '2020-01-01T00:00:00Z'}).status_code == 404
+
+
+@pytest.mark.anyio
+async def test_holding_history_backfill_includes_prior_anchor_and_persists(database, monkeypatch):
+    from src.modules.market.etf import history
+    monkeypatch.setattr(sources, 'holding_periods', AsyncMock(return_value=['2025-12-31', '2025-06-30', '2024-12-31']))
+    async def fetch(code, period):return report(period)
+    monkeypatch.setattr(sources, 'holding_report', AsyncMock(side_effect=fetch))
+    await history.fill_reports(['510300'], '2025-07-01', '2026-11-13')
+    with database() as db:
+        assert db.scalar(select(func.count()).select_from(EtfHolding)) == 3
+    await history.fill_reports(['510300'], '2025-07-01', '2026-11-13')
+    assert sources.holding_report.await_count == 3
+
+
+def test_partial_historical_coverage_preserves_available_quotes_and_nulls(database, board):
+    from src.modules.market.etf import history
+    partial = copy.deepcopy(board)
+    partial['etfs'].append({**partial['etfs'][0], 'code': '159919', 'net': None, 'scale': None, 'shares_delta': None})
+    normalized = sources.validate_board(partial)
+    service.save_board(normalized, partial)
+    result = history.read_history('2026-11-13', '2026-11-13', ['2026-11-13'])
+    assert result['series'][0]['net'] == 4
+    assert result['series'][0]['covered'] == 1
+    assert result['series'][0]['expected'] == 2
+    missing = next(r for r in result['funds'] if r['code'] == '159919')
+    assert missing['net'] is None and missing['days'] == 0
+    assert missing['amount'] == 10
+    assert result['summary']['coverage_min'] == 1
+    partial.update(covered=0, net=None, shares_published=False)
+    assert sources.validate_board(partial)['net'] is None

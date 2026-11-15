@@ -8,7 +8,7 @@ from fastapi import APIRouter, HTTPException, Query
 from sqlalchemy import select
 
 from src.platform.persistence.database import SessionLocal
-from src.modules.market.etf import service, sources
+from src.modules.market.etf import history as history_service, service, sources
 from src.modules.market.etf.models import EtfSnapshot
 
 router = APIRouter()
@@ -83,3 +83,53 @@ def observations(resource: Literal['board', 'holdings', 'signals', 'dates'] = 'b
                 'next_before_id': rows[limit - 1].id if len(rows) > limit else None,
                 'units': {'board_money': '100000000 CNY', 'board_shares_delta': '100000000 units',
                           'holding_shares': 'units', 'holding_ratio': 'percent', 'signals_money': 'CNY'}}
+
+
+@router.get('/history')
+async def history(period: Literal['1m', '3m', '6m', '1y', 'all', 'custom'] = '3m',
+                  start: Date | None = None, end: Date | None = None,
+                  scope: Literal['market', 'national'] = 'market',
+                  code: str | None = Query(None, pattern=r'^\d{6}$'),
+                  institution: Literal['huijin', 'csf', 'guoxin', 'chengtong'] | None = None,
+                  known_at: datetime | None = None):
+    requested_start, requested_end = validate_date(start), validate_date(end)
+    if requested_start and requested_end and requested_start > requested_end:
+        raise HTTPException(422, '开始日期不能晚于结束日期')
+    if period == 'custom' and (not start or not end):
+        raise HTTPException(422, '请选择完整的日期范围')
+    if known_at and known_at.tzinfo is None:
+        raise HTTPException(422, 'known_at 必须包含时区')
+    cutoff = known_at.astimezone(timezone.utc).isoformat() if known_at else None
+    if cutoff:
+        latest = await asyncio.to_thread(service.saved_board, None, cutoff)
+        if latest is None:
+            raise HTTPException(404, '该时点尚无已采集的 ETF 行情')
+        catalog = await asyncio.to_thread(history_service.stored_dates, cutoff)
+    else:
+        latest = await load()
+        try:
+            catalog = await service.dates()
+        except history_service.PROVIDER_ERRORS:
+            catalog = await asyncio.to_thread(history_service.stored_dates)
+    last = requested_end or latest['payload']['date']
+    first = requested_start or ('2000-01-01' if period == 'all' else history_service.months_before(last, {'1m': 1, '3m': 3, '6m': 6, '1y': 12}.get(period, 3)))
+    if first > last:
+        raise HTTPException(422, '开始日期不能晚于结束日期')
+    codes = [r['code'] for r in latest['payload']['etfs'] if not code or r['code'] == code]
+    if not codes:
+        raise HTTPException(404, 'ETF 不在当前观察范围')
+    key = ('history', first, last, scope, code)
+    if not cutoff:
+        days = sorted(day for day in catalog if first <= day <= last)
+        try:
+            await asyncio.wait_for(service.coalesce(key, lambda: history_service.collect_range(days, codes, first, last, scope == 'national')), timeout=2)
+        except asyncio.TimeoutError:
+            pass  # collection continues, and the next read returns the persisted progress
+    result = await asyncio.to_thread(history_service.read_history, first, last, catalog, national=scope == 'national',
+                                     code=code, institution=institution, cutoff=cutoff)
+    if period == 'all':
+        actual = [p['date'] for p in result['series']] + [p['date'] for p in result['holdings_trend']]
+        result['range']['start'] = min(actual) if actual else last
+    return {**result, 'period': period, 'scope': scope, 'collecting': key in service._inflight,
+            'stale': latest.get('stale', False), 'available_start': min(catalog) if catalog else None,
+            'available_end': max(catalog) if catalog else None}

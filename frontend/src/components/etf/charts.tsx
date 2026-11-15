@@ -6,7 +6,7 @@ import type { EtfBoard, EtfDay } from '@panwatch/api/etf'
 export const numeric = (value: number | null | undefined, digits = 1) => value == null || !Number.isFinite(value) ? '—' : value.toLocaleString(undefined, { maximumFractionDigits: digits })
 export const signed = (value: number | null | undefined, digits = 1) => value == null ? '—' : `${value > 0 ? '+' : ''}${numeric(value, digits)}`
 
-function useChartWidth() {
+export function useChartWidth() {
   const ref = useRef<SVGSVGElement>(null)
   const [width, setWidth] = useState(960)
   useEffect(() => {

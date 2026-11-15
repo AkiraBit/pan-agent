@@ -63,8 +63,9 @@ def validate_board(payload, requested=None):
             finite(row.get(key))
         for key in ('close', 'scale', 'amount'):
             finite(row.get(key), nonnegative=True)
-    if len(set(codes)) != len(codes) or payload.get('covered') != len(codes):
-        raise ValueError('Incomplete or duplicate ETF coverage')
+    covered = payload.get('covered')
+    if len(set(codes)) != len(codes) or type(covered) is not int or not 0 <= covered <= len(codes):
+        raise ValueError('Invalid or duplicate ETF coverage')
     for key in ('minutes', 'profile'):
         previous = ''
         for time, value in payload.get(key, []):
@@ -106,31 +107,36 @@ async def dates():
     return sorted({day(value) for value in values}, reverse=True)
 
 
-async def holding_reports(code):
+async def holding_periods(code):
     html = await request(HOLDERS_PAGE, {'symbol': code}, text=True)
     select = re.search(r'<select[^>]*id="tc_slt"[^>]*>(.*?)</select>', html, re.S)
     if not select:
         raise ValueError('Missing holder report dates')
-    periods = re.findall(r'<option[^>]*value="(\d{4}-\d{2}-\d{2})"', select[1])[:2]
+    periods = sorted(set(re.findall(r'<option[^>]*value="(\d{4}-\d{2}-\d{2})"', select[1])), reverse=True)
     if not periods:
         raise ValueError('No holder reports')
-    reports = []
-    for period in periods:
-        day(period)
-        raw = await request(HOLDERS_URL, {'symbol': code, 'date': period})
-        result = raw['result']
-        rows = result.get('data')
-        if result['status']['code'] != 0 or not isinstance(rows, list) or not rows:
-            raise ValueError('Missing holder table')
-        holders = []
-        for row in rows:
-            name = row['cyrmc'].strip()
-            shares, ratio = finite(row['cyfe'], nonnegative=True), finite(row['zfeb'], nonnegative=True)
-            if not name or shares is None or ratio is None or ratio > 100:
-                raise ValueError('Invalid holder measurement')
-            holders.append({'holder_name': name, 'shares': shares, 'ratio_percent': ratio,
-                            'institution': INSTITUTIONS.get(name.replace('－', '-'))})
-        if len({r['holder_name'] for r in holders}) != len(holders):
-            raise ValueError('Duplicate holder')
-        reports.append({'code': code, 'report_date': period, 'holders': holders, 'raw': raw})
-    return reports
+    return [day(period) for period in periods]
+
+
+async def holding_report(code, period):
+    day(period)
+    raw = await request(HOLDERS_URL, {'symbol': code, 'date': period})
+    result = raw['result']
+    rows = result.get('data')
+    if result['status']['code'] != 0 or not isinstance(rows, list) or not rows:
+        raise ValueError('Missing holder table')
+    holders = []
+    for row in rows:
+        name = row['cyrmc'].strip()
+        shares, ratio = finite(row['cyfe'], nonnegative=True), finite(row['zfeb'], nonnegative=True)
+        if not name or shares is None or ratio is None or ratio > 100:
+            raise ValueError('Invalid holder measurement')
+        holders.append({'holder_name': name, 'shares': shares, 'ratio_percent': ratio,
+                        'institution': INSTITUTIONS.get(name.replace('－', '-'))})
+    if len({r['holder_name'] for r in holders}) != len(holders):
+        raise ValueError('Duplicate holder')
+    return {'code': code, 'report_date': period, 'holders': holders, 'raw': raw}
+
+
+async def holding_reports(code):
+    return [await holding_report(code, period) for period in (await holding_periods(code))[:2]]
