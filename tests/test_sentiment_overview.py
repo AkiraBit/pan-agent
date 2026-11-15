@@ -188,6 +188,8 @@ def test_runtime_actually_loads_installed_skill_before_validating():
             if self.turn == 1: calls = [('load_builtin_skill', {})]
             elif self.turn == 2:
                 assert 'PanWatch 总览契约' in str(messages)
+                assert '判断方法与七项补充' in str(messages)
+                assert '参数与依据登记表' in str(messages)
                 calls = [('get_market_facts', {})]
             else: calls = [('validate_overview', analysis())]
             yield 'message', {'content':'','tool_calls':[{'id':str(self.turn),'name':n,'arguments':json.dumps(a)} for n,a in calls]}

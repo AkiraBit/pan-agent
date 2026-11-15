@@ -118,7 +118,11 @@ def instructions(skill_id: str = SKILL_ID) -> str:
         raise api_error(409, "skill_not_supported", "此技能所需能力尚未接入，暂不能启用。")
     if item.get('provider') == 'panwatch':
         folder = SKILLS_PATH / skill_id
-        return (folder / 'SKILL.md').read_text(encoding='utf-8') + '\n' + (folder / 'references/panwatch-overview.md').read_text(encoding='utf-8')
+        # Runtime agents have no filesystem tool: resolve the required guidance here.
+        # Keep raw study tables out of daily context, while preserving rule provenance.
+        resources = ['SKILL.md', 'references/data-and-metrics.md', 'references/interpretation.md',
+                     'references/parameters-and-evidence.md', 'references/panwatch-overview.md']
+        return '\n\n'.join((folder / name).read_text(encoding='utf-8') for name in resources)
     specific = [f"\n## Selected skill: {skill_id} — {item['title'][1]}", item["description"][1],
         "\n### Supported workflow", *[f"{index}. {step[1]}" for index, step in enumerate(item["workflow"], 1)],
         "\n### Not supported by this skill", *[f"- {capability[1]}" for capability in item["unsupported_capabilities"]]]
