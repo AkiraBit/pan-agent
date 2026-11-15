@@ -165,12 +165,12 @@ def source_observations(source_id: int, before_id: int | None = Query(None, ge=1
     if known_at and known_at.tzinfo is None:
         raise api_error(422, 'invalid_known_at', 'known_at 必须包含时区')
     if (source.type, source.provider) in SPECS:
-        from src.modules.market.api.etf import observations
-        return observations(resource=SPECS[(source.type, source.provider)][0], source=source.provider,
+        from src.modules.market.etf.observations import read_observations
+        return read_observations(db, resource=SPECS[(source.type, source.provider)][0], source=source.provider,
                             before_id=before_id, limit=limit, known_at=known_at)
     if source.type == 'etf_turnover':
-        from src.modules.market.api.etf import observations
-        return observations(resource='turnover', before_id=before_id, limit=limit, known_at=known_at)
+        from src.modules.market.etf.observations import read_observations
+        return read_observations(db, resource='turnover', before_id=before_id, limit=limit, known_at=known_at)
     query = db.query(LongbridgeObservation).filter(LongbridgeObservation.tool.in_(TOOLS_BY_TYPE.get(source.type, set())))
     if before_id:
         query = query.filter(LongbridgeObservation.id < before_id)
