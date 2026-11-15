@@ -499,5 +499,63 @@
     ],
     "workflow": [],
     "examples": []
+  },
+  {
+    "id": "analyze-a-share-sentiment",
+    "provider": "panwatch",
+    "version": "1.1.0",
+    "default_enabled": true,
+    "title": [
+      "A股市场情绪周期分析",
+      "A-share sentiment cycle"
+    ],
+    "description": [
+      "为情绪策略总览提供最新交易日的结构化诊断、G/A/P/R证据与阶段区间。行情来自长桥 MCP。",
+      "Structured latest-session diagnosis, G/A/P/R evidence and cycle placement for the sentiment overview, using Longbridge MCP."
+    ],
+    "capabilities": [
+      {
+        "title": [
+          "最新交易日市场总览",
+          "Latest-session market overview"
+        ],
+        "tools": [
+          "trading_days",
+          "screener_search",
+          "quote",
+          "market_temperature"
+        ]
+      }
+    ],
+    "unsupported_capabilities": [
+      [
+        "未经校准的胜率、精确周期进度与交易指令",
+        "Uncalibrated probabilities, precise cycle progress or trading instructions"
+      ],
+      [
+        "缺少历史冻结队列时的涨停接力反馈",
+        "Limit-up cohort feedback without frozen historical cohorts"
+      ]
+    ],
+    "workflow": [
+      [
+        "确认长桥交易日历、行情时间与覆盖",
+        "Verify Longbridge calendar, timestamps and coverage"
+      ],
+      [
+        "计算分板块广度与风险，区分实测、代理和缺失",
+        "Calculate board breadth and risk; distinguish observations, proxies and missing data"
+      ],
+      [
+        "提交方向、双轴、六阶段或相邻阶段区间及反证",
+        "Return direction, two axes, one of six stages or an adjacent interval, and counterevidence"
+      ]
+    ],
+    "examples": [
+      [
+        "分析最新交易日的A股市场情绪",
+        "Analyze the latest A-share session"
+      ]
+    ]
   }
 ]

@@ -1,0 +1,15 @@
+{
+  "utc": "2026-11-14T16:34:16.308575+00:00",
+  "outcome_summaries_examined": false,
+  "notes": [
+    "MA and high/low breadth denominators use only stocks with valid histories; missing histories are not counted as below MA or failing to make a new high.",
+    "robustness.py compares percentile windows and volume thresholds on common evaluable dates; it does not tune parameters.",
+    "Add the draft-required index-only baseline: Shanghai index return on the known signal day, with the same fixed ridge model, chronological splits and common sample.",
+    "Opening/intraday P statistics only use positive open prices and actually trading observations; closing P retains the frozen prior-limit pool where daily return is available.",
+    "A nonpositive prior-20-day median turnover amount makes the volume ratio unavailable rather than infinite; long suspensions cannot create an artificial unlimited volume signal."
+  ],
+  "sha256": {
+    "analyze.py": "08497f7acaf0e45b2a2916d3e2a5ce5c32db51b161cb2d63eabf39661a2ebfe5",
+    "robustness.py": "275dec1a3572b035ae5bf39a58697c64819e91f8613d6c4156374c1c4c040ebf"
+  }
+}

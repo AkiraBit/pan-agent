@@ -1,0 +1,322 @@
+{
+  "$defs": {
+    "Axis": {
+      "additionalProperties": false,
+      "properties": {
+        "state": {
+          "enum": [
+            "improving",
+            "stable",
+            "deteriorating",
+            "mixed",
+            "insufficient"
+          ],
+          "title": "State",
+          "type": "string"
+        },
+        "explanation": {
+          "maxLength": 2400,
+          "minLength": 1,
+          "title": "Explanation",
+          "type": "string"
+        },
+        "evidence_ids": {
+          "items": {
+            "pattern": "^[a-zA-Z0-9_.:-]{1,100}$",
+            "type": "string"
+          },
+          "maxItems": 12,
+          "title": "Evidence Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "state",
+        "explanation",
+        "evidence_ids"
+      ],
+      "title": "Axis",
+      "type": "object"
+    },
+    "Claim": {
+      "additionalProperties": false,
+      "properties": {
+        "text": {
+          "maxLength": 2400,
+          "minLength": 1,
+          "title": "Text",
+          "type": "string"
+        },
+        "evidence_ids": {
+          "items": {
+            "pattern": "^[a-zA-Z0-9_.:-]{1,100}$",
+            "type": "string"
+          },
+          "maxItems": 12,
+          "minItems": 1,
+          "title": "Evidence Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "text",
+        "evidence_ids"
+      ],
+      "title": "Claim",
+      "type": "object"
+    },
+    "EvidenceGroup": {
+      "additionalProperties": false,
+      "properties": {
+        "group": {
+          "enum": [
+            "G",
+            "A",
+            "P",
+            "R"
+          ],
+          "title": "Group",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "observed",
+            "proxy",
+            "missing",
+            "conflicted"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "explanation": {
+          "maxLength": 2400,
+          "minLength": 1,
+          "title": "Explanation",
+          "type": "string"
+        },
+        "evidence_ids": {
+          "items": {
+            "pattern": "^[a-zA-Z0-9_.:-]{1,100}$",
+            "type": "string"
+          },
+          "maxItems": 12,
+          "title": "Evidence Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "group",
+        "status",
+        "explanation",
+        "evidence_ids"
+      ],
+      "title": "EvidenceGroup",
+      "type": "object"
+    },
+    "NextCheck": {
+      "additionalProperties": false,
+      "properties": {
+        "window": {
+          "maxLength": 2400,
+          "minLength": 1,
+          "title": "Window",
+          "type": "string"
+        },
+        "observe": {
+          "maxLength": 2400,
+          "minLength": 1,
+          "title": "Observe",
+          "type": "string"
+        },
+        "strengthens": {
+          "maxLength": 2400,
+          "minLength": 1,
+          "title": "Strengthens",
+          "type": "string"
+        },
+        "invalidates": {
+          "maxLength": 2400,
+          "minLength": 1,
+          "title": "Invalidates",
+          "type": "string"
+        }
+      },
+      "required": [
+        "window",
+        "observe",
+        "strengthens",
+        "invalidates"
+      ],
+      "title": "NextCheck",
+      "type": "object"
+    },
+    "StagePosition": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "enum": [
+            "stage",
+            "between",
+            "unknown"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "stages": {
+          "items": {
+            "enum": [
+              "ice",
+              "repair",
+              "expansion",
+              "heat",
+              "divergence",
+              "retreat"
+            ],
+            "type": "string"
+          },
+          "maxItems": 2,
+          "title": "Stages",
+          "type": "array"
+        },
+        "status": {
+          "enum": [
+            "candidate",
+            "supported",
+            "conflicted",
+            "insufficient"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "rationale": {
+          "maxLength": 2400,
+          "minLength": 1,
+          "title": "Rationale",
+          "type": "string"
+        },
+        "evidence_ids": {
+          "items": {
+            "pattern": "^[a-zA-Z0-9_.:-]{1,100}$",
+            "type": "string"
+          },
+          "maxItems": 12,
+          "title": "Evidence Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "kind",
+        "stages",
+        "status",
+        "rationale",
+        "evidence_ids"
+      ],
+      "title": "StagePosition",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "title": {
+      "maxLength": 2400,
+      "minLength": 1,
+      "title": "Title",
+      "type": "string"
+    },
+    "summary": {
+      "maxLength": 2400,
+      "minLength": 1,
+      "title": "Summary",
+      "type": "string"
+    },
+    "direction": {
+      "enum": [
+        "improving",
+        "stable",
+        "deteriorating",
+        "mixed",
+        "insufficient"
+      ],
+      "title": "Direction",
+      "type": "string"
+    },
+    "direction_reason": {
+      "maxLength": 2400,
+      "minLength": 1,
+      "title": "Direction Reason",
+      "type": "string"
+    },
+    "stage": {
+      "$ref": "#/$defs/StagePosition"
+    },
+    "loss_relief": {
+      "$ref": "#/$defs/Axis"
+    },
+    "profit_diffusion": {
+      "$ref": "#/$defs/Axis"
+    },
+    "groups": {
+      "items": {
+        "$ref": "#/$defs/EvidenceGroup"
+      },
+      "maxItems": 4,
+      "minItems": 4,
+      "title": "Groups",
+      "type": "array"
+    },
+    "supports": {
+      "items": {
+        "$ref": "#/$defs/Claim"
+      },
+      "maxItems": 6,
+      "minItems": 1,
+      "title": "Supports",
+      "type": "array"
+    },
+    "counters": {
+      "items": {
+        "$ref": "#/$defs/Claim"
+      },
+      "maxItems": 6,
+      "minItems": 1,
+      "title": "Counters",
+      "type": "array"
+    },
+    "next_checks": {
+      "items": {
+        "$ref": "#/$defs/NextCheck"
+      },
+      "maxItems": 4,
+      "minItems": 1,
+      "title": "Next Checks",
+      "type": "array"
+    },
+    "limitations": {
+      "items": {
+        "maxLength": 2400,
+        "minLength": 1,
+        "type": "string"
+      },
+      "maxItems": 8,
+      "minItems": 1,
+      "title": "Limitations",
+      "type": "array"
+    }
+  },
+  "required": [
+    "title",
+    "summary",
+    "direction",
+    "direction_reason",
+    "stage",
+    "loss_relief",
+    "profit_diffusion",
+    "groups",
+    "supports",
+    "counters",
+    "next_checks",
+    "limitations"
+  ],
+  "title": "OverviewAnalysis",
+  "type": "object"
+}

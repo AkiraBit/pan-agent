@@ -3,6 +3,7 @@ import { configuration as zhConfiguration } from '../zh-CN/configuration'
 
 export const configuration = {
   skills: {
+    openOverview: "Open sentiment overview",
     masterSwitch: 'Longbridge skills master switch', allEnabled: 'All enabled · {{total}} skills', partlyEnabled: 'Partially enabled · {{enabled}} / {{total}}', allDisabled: 'All disabled · {{total}} supported',
     masterHint: 'Turn on to enable all {{count}} adapted skills, or turn off to disable them all. Individual switches remain available. Using skills requires an authorized and enabled Longbridge MCP connection.', disableAll: 'Disable all',
     supportReasonTitle: 'Why are some skills unsupported?',

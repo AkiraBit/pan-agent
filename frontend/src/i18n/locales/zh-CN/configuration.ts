@@ -1,5 +1,6 @@
 export const configuration = {
   skills: {
+    openOverview: "打开情绪总览",
     masterSwitch: '长桥技能总开关', allEnabled: '全部启用 · {{total}} 个', partlyEnabled: '部分启用 · {{enabled}} / {{total}} 个', allDisabled: '全部停用 · {{total}} 个可启用',
     masterHint: '开启可启用当前已适配的 {{count}} 个技能，关闭可全部停用。仍可使用各技能的独立开关，实际使用需长桥 MCP 已授权并启用。', disableAll: '全部停用',
     supportReasonTitle: '为什么有未支持的技能？',

@@ -1,0 +1,4 @@
+interface:
+  display_name: "A股市场情绪周期分析"
+  short_description: "分析A股市场情绪方向与阶段，结合赚钱亏钱效应、题材结构和历史证据开展复盘"
+  default_prompt: "使用 $analyze-a-share-sentiment 和长桥 MCP 分析最新已有行情交易日的A股市场情绪，优先按总览结构化契约返回阶段或相邻阶段区间、证据、反证、缺口和后续验证条件。盘中标记临时判断。"

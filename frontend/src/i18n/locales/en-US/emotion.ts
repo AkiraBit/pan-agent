@@ -1,6 +1,113 @@
 import type { emotion as zh } from '../zh-CN/emotion'
 import type { TranslationShape } from '../../resource-types'
 export const emotion = {
+  "overview": {
+  "evidence": {
+    "coverage": "Market coverage",
+    "breadth": "Breadth and return distribution",
+    "boards": "Board structure",
+    "feedback": "Frozen cohort feedback",
+    "comparison": "Previous-session comparison",
+    "indices": "Index context",
+    "temperature": "Vendor temperature context",
+    "gaps": "Data and proxy boundaries",
+    "temperature-history": "Temperature history"
+},
+  "failedHint": "Check the Longbridge connection and model settings before retrying.",
+  "latest": "Latest-session market overview",
+  "sourceHint": "Analysis using the Longbridge calendar and latest quotes",
+  "provider": "Longbridge MCP",
+  "intraday": "Intraday · session incomplete",
+  "closed": "Closing observation",
+  "refresh": "Update market view",
+  "cycleTitle": "Market sentiment cycle",
+  "current": "Now",
+  "between": "Between {{from}} and {{to}}",
+  "unplaced": "Insufficient evidence to place",
+  "chartLabel": "Sentiment cycle, current position: {{position}}",
+  "phaseOrder": "Illustrative phase relationships",
+  "chartHint": "The curve illustrates phase relationships, not historical prices or a forecast. An interval means an uncertain boundary, not precise progress; phases may repeat or be skipped.",
+  "connectionNeeded": "Enable Longbridge and test its connection again in MCP & Skills to discover the market tools needed by this overview.",
+  "skillDisabled": "The sentiment skill is disabled. Enable it to analyze the latest trading session.",
+  "configure": "Open MCP & Skills",
+  "failed": "The update did not complete. Any retained result keeps its original quote date and is not a new market judgment.",
+  "running": "Reading Longbridge market data and applying the sentiment skill…",
+  "stale": "Update pending: the result below is from {{date}}, with quotes as of {{time}}.",
+  "empty": "Waiting for the latest market view",
+  "emptyHint": "The overview reads Longbridge quotes, calculates breadth and risk, and places the market at a phase or between adjacent phases. No sample judgment is shown before real results arrive.",
+  "asOf": "Quotes as of {{time}}",
+  "temperatureHint": "Vendor indicator · no direct phase mapping",
+  "coverage": "Valid quotes {{valid}} / Longbridge directory {{total}}; ST/delisting labels excluded {{excluded}}, halted {{halted}}, unsupported {{unsupported}}, quotes missing or not current-session usable {{missing}}, missing directory entries {{directoryMissing}}",
+  "complete": "Collection complete",
+  "partial": "Partial coverage",
+  "loss_relief": "Are losses easing?",
+  "profit_diffusion": "Are profits spreading?",
+  "boardTitle": "Market structure by board",
+  "proxyHint": "Strong/weak return proxies: main board ±5%, ChiNext/STAR ±10%, Beijing ±15%. These untested thresholds are not limit-up/down counts. No valid sample is shown as —.",
+  "nextChecks": "Next observations",
+  "strengthens": "Supports this view",
+  "limitations": "Data limits and open questions",
+  "analyzed": "Analyzed {{time}}",
+  "stages": {
+    "ice": "Depressed / ice",
+    "repair": "Repair",
+    "expansion": "Expansion",
+    "heat": "High heat",
+    "divergence": "Divergence",
+    "retreat": "Retreat"
+  },
+  "certainty": {
+    "candidate": "Candidate",
+    "supported": "Well supported",
+    "conflicted": "Conflicting evidence",
+    "insufficient": "Insufficient data"
+  },
+  "directions": {
+    "improving": "Improving",
+    "stable": "Stable",
+    "deteriorating": "Deteriorating",
+    "mixed": "Mixed",
+    "insufficient": "Change not yet established"
+  },
+  "metrics": {
+    "rising": "Advancers",
+    "falling": "Decliners",
+    "median": "Median return",
+    "temperature": "Longbridge temperature"
+  },
+  "indices": {
+    "000001_SH": "SSE Composite",
+    "399001_SZ": "SZSE Component",
+    "399006_SZ": "ChiNext",
+    "000688_SH": "STAR 50"
+  },
+  "columns": {
+    "board": "Board",
+    "sample": "Valid / directory",
+    "positive": "Advancing share",
+    "median": "Median return",
+    "strong": "Strong proxy",
+    "weak": "Weak proxy"
+  },
+  "boards": {
+    "main": "Main boards",
+    "growth": "ChiNext",
+    "star": "STAR",
+    "beijing": "Beijing"
+  },
+  "groups": {
+    "G": "Breadth",
+    "A": "Attack and relay",
+    "P": "Cohort feedback",
+    "R": "Damage and risk"
+  },
+  "groupStatus": {
+    "observed": "Observed",
+    "proxy": "Proxy",
+    "missing": "Missing",
+    "conflicted": "Conflicting"
+  }
+},
   "title": "Sentiment workbench",
   "subtitle": "Ground market theses in evidence and retain playbooks and cycle memory.",
   "eyebrow": "A-share market sentiment",

@@ -10,7 +10,7 @@ import LongbridgeIcon from '@/components/integrations/LongbridgeIcon'
 
 type Localized = [string, string]
 interface BuiltinSkill {
-  id: string; title: Localized; description: Localized; version: string | null
+  id: string; provider?: string; title: Localized; description: Localized; version: string | null
   upstream_revision: string; upstream_version: string | null; source_url: string; docs_url: string; bundled_file_count: number
   enabled: boolean; available: boolean; support: 'partial' | 'unsupported'
   connection_status: 'ready' | 'authorization_required' | 'mcp_disabled' | 'test_required' | 'tools_missing'
@@ -54,9 +54,9 @@ function SkillDetails({ item }: { item: BuiltinSkill }) {
     <p className="text-sm text-muted-foreground leading-relaxed">{local(item.description)}</p>
     <p className="text-xs text-muted-foreground leading-relaxed">{label(item.support === 'unsupported' ? 'unsupportedHint' : 'enableHint')}</p>
         <dl className="grid sm:grid-cols-3 gap-5 rounded-xl bg-accent/40 p-4">
-          <div><dt className="text-xs text-muted-foreground">{label('provider')}</dt><dd className="text-sm font-medium mt-2">{label('providerName')}</dd></div>
+          <div><dt className="text-xs text-muted-foreground">{label('provider')}</dt><dd className="text-sm font-medium mt-2">{item.provider === 'panwatch' ? 'PanWatch' : label('providerName')}</dd></div>
           <div><dt className="text-xs text-muted-foreground">{label('version')}</dt><dd className="text-sm font-medium mt-2">{item.version || label('notAdapted')}</dd>{item.version && <p className="text-xs text-muted-foreground mt-1">{label('adapted')}</p>}</div>
-          <div><dt className="text-xs text-muted-foreground">{label('sourceVersion')}</dt><dd className="text-sm font-medium mt-2"><a href={item.source_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-primary">{item.upstream_version ? `v${item.upstream_version} · ` : ''}{item.upstream_revision.slice(0, 7)}<ExternalLink className="w-3 h-3" /></a></dd></div>
+          <div><dt className="text-xs text-muted-foreground">{label('sourceVersion')}</dt><dd className="text-sm font-medium mt-2">{item.provider === 'panwatch' ? <span>v{item.upstream_version} · PanWatch</span> : <a href={item.source_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-primary">{item.upstream_version ? `v${item.upstream_version} · ` : ''}{item.provider === 'panwatch' ? 'PanWatch' : item.upstream_revision.slice(0, 7)}<ExternalLink className="w-3 h-3" /></a>}</dd></div>
         </dl>
         {item.support === 'partial' && <div className="rounded-xl border border-border/60 p-4 space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2"><h3 className="text-sm font-medium">{label('dependency')}</h3><Link to="/integrations/mcp" className="inline-flex items-center gap-1 text-xs text-primary">{label('manageMcp')}<ArrowUpRight className="w-3 h-3" /></Link></div>
@@ -82,11 +82,11 @@ function SkillDetails({ item }: { item: BuiltinSkill }) {
         </ol></div>}
         {item.examples.length > 0 && <div className="border-t border-border/60 pt-5 space-y-3"><h3 className="text-sm font-medium">{label('examples')}</h3>
           <ul className="space-y-2 text-sm text-muted-foreground">{item.examples.map(example => <li key={example[1]} className="rounded-xl border border-border/60 px-4 py-3 leading-relaxed">{local(example)}</li>)}</ul>
-          {item.available && <Button asChild size="sm"><Link to="/assistant">{label('openAssistant')}<ArrowUpRight className="w-4 h-4" /></Link></Button>}
+          {item.available && <Button asChild size="sm"><Link to={item.provider === 'panwatch' ? '/short-term' : '/assistant'}>{label(item.provider === 'panwatch' ? 'openOverview' : 'openAssistant')}<ArrowUpRight className="w-4 h-4" /></Link></Button>}
         </div>}
         <div className="border-t border-border/60 pt-5 space-y-3 text-xs text-muted-foreground leading-relaxed">
           <SkillSource key={item.id} item={item} />
-          <a href={item.docs_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-primary">{label('docs')}<ExternalLink className="w-3 h-3" /></a>
+          {item.provider === 'panwatch' ? <Link to="/short-term" className="text-primary">{label('openOverview')}</Link> : <a href={item.docs_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-primary">{label('docs')}<ExternalLink className="w-3 h-3" /></a>}
         </div>
   </div>
 }
@@ -126,7 +126,9 @@ export default function SkillsPage() {
     finally { setBusy(false) }
   }
   const status = (entry: BuiltinSkill) => label(entry.support === 'unsupported' ? 'unsupported' : !entry.enabled ? 'disabled' : entry.available ? 'ready' : 'waiting')
-  const supported = items.filter(entry => entry.support === 'partial')
+  const brokerItems = items.filter(entry => entry.provider !== 'panwatch')
+  const nativeItems = items.filter(entry => entry.provider === 'panwatch')
+  const supported = brokerItems.filter(entry => entry.support === 'partial')
   const partialCount = supported.length
   const enabledCount = supported.filter(entry => entry.enabled).length
   const allEnabled = partialCount > 0 && enabledCount === partialCount
@@ -143,6 +145,13 @@ export default function SkillsPage() {
     finally { setBusy(false) }
   }
   return <div className="space-y-6">
+    {nativeItems.map(entry => <section key={entry.id} className="card p-5 md:p-7 space-y-4">
+      <div className="flex justify-between items-start gap-4"><div><p className="text-xs text-muted-foreground">PanWatch</p><h2 className="font-semibold mt-2">{local(entry.title)}</h2><p className="text-sm text-muted-foreground mt-2 leading-6">{local(entry.description)}</p><p className="text-xs text-primary mt-2">{status(entry)}</p></div>
+        <Switch aria-label={t('configuration:skills.enableNamed', { name: local(entry.title) })} checked={entry.enabled} disabled={busy} onCheckedChange={value => void configure(entry.id, value)} />
+      </div>
+      <div className="flex flex-wrap gap-3"><Button size="sm" asChild><Link to="/short-term">{label('openOverview')}</Link></Button><Button size="sm" variant="outline" onClick={() => select(entry.id)} aria-expanded={selectedId === entry.id}>{label('expandHint')}</Button></div>
+      {selectedId === entry.id && <SkillDetails item={entry} />}
+    </section>)}
     {error && <div role="alert" className="rounded-xl border border-destructive/30 p-4 text-sm text-destructive space-y-3">
       <p>{error}</p><Button variant="secondary" size="sm" onClick={() => void load()}>{label('retry')}</Button>
     </div>}
@@ -152,7 +161,7 @@ export default function SkillsPage() {
         <a href="#longbridge-skills" aria-current="page" className="flex items-center gap-3 rounded-xl border border-primary/15 bg-primary/5 p-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
           <LongbridgeIcon className="w-10 h-10" />
           <span className="min-w-0 flex-1"><span className="block font-medium">{label('providerTitle')}</span>
-            <span className="block text-xs text-muted-foreground mt-1">{t('configuration:skills.skillCount', { count: items.length })}</span>
+            <span className="block text-xs text-muted-foreground mt-1">{t('configuration:skills.skillCount', { count: brokerItems.length })}</span>
           </span><ChevronRight className="w-4 h-4 text-primary shrink-0" />
         </a>
         <p className="px-2 pb-1 text-xs text-muted-foreground leading-relaxed">{label('builtinHint')}</p>
@@ -164,7 +173,7 @@ export default function SkillsPage() {
         </div>
         <p className="text-sm text-muted-foreground leading-relaxed">{label('providerDescription')}</p>
         <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-accent/40 p-4 text-xs text-muted-foreground">
-          <p>{t('configuration:skills.catalogCount', { count: items.length, partial: partialCount, unsupported: items.length - partialCount })}</p>
+          <p>{t('configuration:skills.catalogCount', { count: brokerItems.length, partial: partialCount, unsupported: brokerItems.length - partialCount })}</p>
           <p>{t('configuration:skills.enabledCount', { count: enabledCount })}</p>
         </div>
         <div className="rounded-xl border border-border/60 p-4 space-y-3">
@@ -187,7 +196,7 @@ export default function SkillsPage() {
         </div>
         <div className="space-y-3">
           <div className="flex items-center justify-between gap-3"><h3 className="text-sm font-medium">{label('includedSkills')}</h3><p className="text-xs text-muted-foreground">{label('expandHint')}</p></div>
-          {items.map(entry => <section key={entry.id} aria-labelledby={`skill-title-${entry.id}`} className={`rounded-xl border ${selectedId === entry.id ? 'border-primary/25' : 'border-border/60'} overflow-hidden`}>
+          {brokerItems.map(entry => <section key={entry.id} aria-labelledby={`skill-title-${entry.id}`} className={`rounded-xl border ${selectedId === entry.id ? 'border-primary/25' : 'border-border/60'} overflow-hidden`}>
             <div className="flex items-center gap-2 pr-4">
               <Button variant="ghost" aria-label={local(entry.title)} aria-expanded={selectedId === entry.id} aria-controls={`skill-details-${entry.id}`} onClick={() => select(entry.id)}
                 className="flex-1 min-w-0 h-auto justify-start gap-3 rounded-none px-4 py-4 text-left">

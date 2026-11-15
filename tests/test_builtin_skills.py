@@ -56,6 +56,7 @@ def test_skill_settings_require_login_and_cannot_install_custom_skills(setup):
 def test_disabled_skill_is_not_exposed_and_live_disable_or_disconnect_blocks_stale_registry(setup):
     client, engine, _, _ = setup
     finish(client); client.post(PREFIX + '/test'); client.put(PREFIX, json={'enabled': True})
+    client.put(BASE + '/analyze-a-share-sentiment', json={'enabled': False})
     request = RunRequest(run_id='skill-test', messages=[ModelMessage(role='user', content='用长桥查报价')])
     with Session(engine) as db:
         assert 'load_builtin_skill' not in {t.name for t in build_panwatch_tool_registry(db).registered_tools()}
@@ -131,7 +132,7 @@ def test_production_runtime_loads_skill_then_calls_longbridge_and_records_both(s
 
 def test_all_thirteen_sources_are_pinned_and_unsupported_skills_cannot_be_enabled(setup):
     client, engine, provider, _ = setup
-    items = client.get(BASE).json()['data']['items']
+    items = [item for item in client.get(BASE).json()['data']['items'] if item.get('provider') != 'panwatch']
     assert len(items) == 13
     assert sum(item['support'] == 'partial' for item in items) == 5
     assert skills.upstream()['revision'] == skills.UPSTREAM_REVISION
@@ -194,25 +195,26 @@ def test_master_switch_updates_only_supported_skills_and_keeps_individual_contro
         db.add(AppSettings(key='unrelated', value='preserve')); db.commit()
     response = client.put(BASE + '/providers/longbridge', json={'enabled': True})
     assert response.status_code == 200
-    items = response.json()['data']['items']
+    items = [i for i in response.json()['data']['items'] if i.get('provider') != 'panwatch']
     assert sum(item['enabled'] for item in items) == 5
     assert all(item['enabled'] == (item['support'] == 'partial') for item in items)
     with Session(engine) as db:
         assert db.query(AppSettings).filter(AppSettings.key.like('builtin_skill.%')).count() == 5
         registry = build_panwatch_tool_registry(db)
         spec = next(tool for tool in registry.registered_tools() if tool.name == 'load_builtin_skill')
-        assert len(spec.input_schema['properties']['skill_id']['enum']) == 5
+        assert len(spec.input_schema['properties']['skill_id']['enum']) == 6
     client.put(BASE + '/longbridge-technical', json={'enabled': False})
-    items = client.get(BASE).json()['data']['items']
+    items = [i for i in client.get(BASE).json()['data']['items'] if i.get('provider') != 'panwatch']
     assert sum(item['enabled'] for item in items) == 4
     assert not next(item for item in items if item['id'] == 'longbridge-technical')['enabled']
     for _ in range(2):
         response = client.put(BASE + '/providers/longbridge', json={'enabled': False})
-        assert not any(item['enabled'] for item in response.json()['data']['items'])
+        assert not any(item['enabled'] for item in response.json()['data']['items'] if item.get('provider') != 'panwatch')
+        assert next(i for i in response.json()['data']['items'] if i['id'] == 'analyze-a-share-sentiment')['enabled']
     with Session(engine) as db:
         assert db.query(AppSettings).filter(AppSettings.key.like('builtin_skill.%')).count() == 5
         assert db.query(AppSettings).filter_by(key='unrelated').one().value == 'preserve'
-        assert 'load_builtin_skill' not in {tool.name for tool in build_panwatch_tool_registry(db).registered_tools()}
+        assert skills.status(db, 'analyze-a-share-sentiment')['available']
     request = RunRequest(run_id='bulk-disabled', messages=[ModelMessage(role='user', content='查询行情')])
     assert not asyncio.run(registry.execute('load_builtin_skill', request, {'skill_id': 'longbridge-market-data'})).ok
     assert client.get('/api/mcp-connections').json()['data'] == before
@@ -225,7 +227,7 @@ def test_master_switch_requires_login_and_stores_preferences_without_granting_ac
     for body in [{'enabled': 'true'}, {'enabled': True, 'ids': ['longbridge-quant']}]:
         assert client.put(path, json=body).status_code == 422
     assert client.put(BASE + '/providers/custom', json={'enabled': True}).status_code == 404
-    items = client.put(path, json={'enabled': True}).json()['data']['items']
+    items = [i for i in client.put(path, json={'enabled': True}).json()['data']['items'] if i.get('provider') != 'panwatch']
     assert sum(item['enabled'] for item in items) == 5
     assert not any(item['available'] for item in items)
     assert all(item['connection_status'] == 'authorization_required' for item in items)

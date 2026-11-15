@@ -38,7 +38,11 @@ def definition(skill_id: str) -> dict:
 
 
 def source(skill_id: str) -> dict:
-    definition(skill_id)
+    item = definition(skill_id)
+    if item.get('provider') == 'panwatch':
+        folder = SKILLS_PATH / skill_id
+        return {'content': (folder / 'SKILL.md').read_text(encoding='utf-8'),
+                'upstream_version': item['version'], 'bundled_file_count': sum(p.is_file() for p in folder.rglob('*'))}
     files = upstream()["files"]
     content = files[f"{skill_id}/SKILL.md"]
     version = re.search(r'^\s*version:\s*[\"\']?([\d.]+)', content.split("---", 2)[1], re.MULTILINE)
@@ -65,14 +69,14 @@ def list_skills(db: Session) -> list[dict]:
                         for capability in item["capabilities"]]
         has_tools = any(capability["tools_present"] for capability in capabilities)
         state = "tools_missing" if supported and dependency == "ready" and not has_tools else dependency
-        enabled = supported and settings.get(f"builtin_skill.{skill_id}.enabled", False)
+        enabled = supported and settings.get(f"builtin_skill.{skill_id}.enabled", item.get('default_enabled', False))
         required = {tool for capability in capabilities for tool in capability["tools"]}
         original = source(skill_id)
         items.append({**item, "capabilities": capabilities, "support": "partial" if supported else "unsupported",
-            "version": VERSION if supported else None, "upstream_revision": UPSTREAM_REVISION,
+            "version": item.get('version', VERSION) if supported else None, "upstream_revision": '' if item.get('provider') == 'panwatch' else UPSTREAM_REVISION,
             "upstream_version": original["upstream_version"], "bundled_file_count": original["bundled_file_count"],
-            "source_url": f"https://github.com/longbridge/skills/blob/{UPSTREAM_REVISION}/skills/{skill_id}/SKILL.md",
-            "docs_url": "https://open.longbridge.com/zh-CN/skill", "enabled": enabled,
+            "source_url": f"/api/builtin-skills/{skill_id}/source" if item.get('provider') == 'panwatch' else f"https://github.com/longbridge/skills/blob/{UPSTREAM_REVISION}/skills/{skill_id}/SKILL.md",
+            "docs_url": "/short-term" if item.get('provider') == 'panwatch' else "https://open.longbridge.com/zh-CN/skill", "enabled": enabled,
             "available": enabled and state == "ready", "connection_status": state,
             "tools": [{"name": name, "title": title, "present": name in tools} for name, title in READ_TOOLS.items() if name in required]})
     return items
@@ -98,7 +102,7 @@ def configure(db: Session, enabled: bool, skill_id: str = SKILL_ID) -> dict:
 def configure_supported(db: Session, enabled: bool) -> list[dict]:
     """Update all adapted Longbridge skills in one transaction, preserving MCP authorization."""
     values = [{"key": f"builtin_skill.{skill_id}.enabled", "value": "true" if enabled else "false"}
-              for skill_id, item in catalog().items() if item["capabilities"]]
+              for skill_id, item in catalog().items() if item["capabilities"] and item.get('provider') != 'panwatch']
     if values:
         statement = insert(AppSettings).values(values)
         db.execute(statement.on_conflict_do_update(
@@ -112,6 +116,13 @@ def instructions(skill_id: str = SKILL_ID) -> str:
     item = definition(skill_id)
     if not item["capabilities"]:
         raise api_error(409, "skill_not_supported", "此技能所需能力尚未接入，暂不能启用。")
+    if item.get('provider') == 'panwatch':
+        folder = SKILLS_PATH / skill_id
+        # Runtime agents have no filesystem tool: resolve the required guidance here.
+        # Keep raw study tables out of daily context, while preserving rule provenance.
+        resources = ['SKILL.md', 'references/data-and-metrics.md', 'references/interpretation.md',
+                     'references/parameters-and-evidence.md', 'references/panwatch-overview.md']
+        return '\n\n'.join((folder / name).read_text(encoding='utf-8') for name in resources)
     specific = [f"\n## Selected skill: {skill_id} — {item['title'][1]}", item["description"][1],
         "\n### Supported workflow", *[f"{index}. {step[1]}" for index, step in enumerate(item["workflow"], 1)],
         "\n### Not supported by this skill", *[f"- {capability[1]}" for capability in item["unsupported_capabilities"]]]
