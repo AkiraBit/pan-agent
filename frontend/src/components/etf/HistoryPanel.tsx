@@ -19,22 +19,24 @@ function HistoryPlots({ data, national, onDate }: { data: EtfHistory; national: 
   const { t } = useTranslation('etf')
   const series = data.series
   const money = t('amountUnit')
+  const cumulativeLabel = t(data.summary.net_days < data.summary.days ? 'knownCumulativeNet' : 'cumulativeNet')
   return <div className="etf-history-content">
     <div className="etf-history-stats">{([
-      ['periodNet', data.summary.net], ['periodIn', data.summary.inflow], ['periodOut', data.summary.outflow], ['periodAmount', data.summary.amount],
-    ] as const).map(([key, value]) => <div className="etf-card" key={key}><span>{t(key)}</span><b className={key === 'periodAmount' ? '' : marketSignTextClass(value)}>{key === 'periodAmount' ? numeric(value, 0) : signed(value, 0)}<small>{money}</small></b></div>)}</div>
+      ['periodNet', data.summary.net, data.summary.net_days], ['periodIn', data.summary.inflow, data.summary.net_days],
+      ['periodOut', data.summary.outflow, data.summary.net_days], ['periodAmount', data.summary.amount, data.summary.amount_days],
+    ] as const).map(([key, value, count]) => <div className="etf-card" key={key}><span>{t(key)}</span><b className={key === 'periodAmount' ? '' : marketSignTextClass(value)}>{key === 'periodAmount' ? numeric(value, 0) : signed(value, 0)}<small>{money}</small></b>{count < data.summary.days && <span>{t('knownTotal', { count, total: data.summary.days })}</span>}</div>)}</div>
     <section className="etf-card"><div className="etf-panel-heading"><h2>{t(national ? 'heldEtfTrend' : 'netTrend')}</h2><span>{t('historyCoverage', { count: data.summary.days })}</span></div>
       {series.length ? <TrendChart points={series.map(p => ({ date: p.date, value: p.net, secondary: p.hs300, detail: t('pointCoverage', { count: p.covered, total: p.expected }) }))} label={t('net')} unit={money} secondaryLabel={t('hs300')} bars market onDate={onDate} /> : <p className="etf-empty">{t('noHistory')}</p>}
     </section>
-    <div className="etf-history-grid"><section className="etf-card"><h2>{t('cumulativeNet')}</h2><TrendChart points={series.map(p => ({ date: p.date, value: p.cumulative_net }))} label={t('cumulativeNet')} unit={money} market onDate={onDate} /></section>
+    <div className="etf-history-grid"><section className="etf-card"><h2>{cumulativeLabel}</h2><TrendChart points={series.map((p, i) => ({ date: p.date, value: p.cumulative_net, detail: p.cumulative_net_days < i + 1 ? t('knownTotal', { count: p.cumulative_net_days, total: i + 1 }) : undefined }))} label={cumulativeLabel} unit={money} market onDate={onDate} /></section>
       <section className="etf-card"><h2>{t('turnoverTrend')}</h2><TrendChart points={series.map(p => ({ date: p.date, value: p.amount }))} label={t('turnover')} unit={money} bars onDate={onDate} /></section></div>
     {national && <section className="etf-card"><div className="etf-panel-heading"><h2>{t('holdingsTrend')}</h2><span>{t('reportPoints', { count: data.holdings_trend.length })}</span></div>
       {data.holdings_trend.length ? <><TrendChart points={data.holdings_trend.map(p => ({ date: p.date, value: p.shares }))} label={t('heldShares')} unit={t('sharesUnit')} />
         <div className="etf-report-periods">{data.holdings_trend.map(p => <div key={p.date}><b>{p.date}</b>{p.before_range && <span>{t('beforeRange')}</span>}<span>{t('reportCoverage', { count: p.reported_funds, total: p.expected_funds })}</span><span>{t('heldShares')} {numeric(p.reported_shares, 2)} {t('sharesUnit')}</span></div>)}</div></> : <p className="etf-empty">{t('noHoldings')}</p>}
     </section>}
     <section className="etf-card"><div className="etf-panel-heading"><h2>{t('intervalFunds')}</h2><span>{t('basket', { count: data.summary.funds })}</span></div>
-      <div className="scrollbar overflow-x-auto"><table><thead><tr><th>{t('fund')}</th><th>{t('index')}</th><th>{t('periodNet')}</th><th>{t('periodAmount')}</th><th>{t('size')}</th><th>{t('availableDays')}</th></tr></thead>
-        <tbody>{data.funds.map(row => <tr key={row.code}><td><strong>{row.name}</strong><small>{row.code}</small></td><td>{row.index}</td><td className={marketSignTextClass(row.net)}>{signed(row.net)}{money}</td><td>{numeric(row.amount)}{money}</td><td>{numeric(row.scale)}{money}</td><td>{row.days}/{row.expected_days}</td></tr>)}</tbody></table></div>
+      <div className="scrollbar overflow-x-auto"><table><thead><tr><th>{t('fund')}</th><th>{t('index')}</th><th>{t('periodNet')}</th><th>{t('periodAmount')}</th><th>{t('size')}</th><th>{t('dataCoverage')}</th></tr></thead>
+        <tbody>{data.funds.map(row => <tr key={row.code}><td><strong>{row.name}</strong><small>{row.code}</small></td><td>{row.index}</td><td className={marketSignTextClass(row.net)}>{signed(row.net)}{money}</td><td>{numeric(row.amount)}{money}</td><td>{numeric(row.scale)}{money}</td><td><div>{t('flowCoverageDays', { count: row.days, total: row.expected_days })}</div><div>{t('amountCoverageDays', { count: row.amount_days, total: row.expected_days })}</div></td></tr>)}</tbody></table></div>
       {!data.funds.length && <p className="etf-empty">{t(national ? 'noHoldings' : 'noHistory')}</p>}
     </section>
     {national && <details className="etf-card etf-fold"><summary>{t('holdingsRecords')}</summary><div className="etf-fold-body scrollbar overflow-x-auto"><table><thead><tr><th>{t('reportDate')}</th><th>{t('holder')}</th><th>{t('fund')}</th><th>{t('heldShares')}</th><th>{t('heldRatio')}</th><th>{t('heldDelta')}</th></tr></thead>

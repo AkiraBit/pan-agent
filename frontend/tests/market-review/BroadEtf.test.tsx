@@ -28,10 +28,10 @@ function history(): EtfHistory {
   return { range: { start: '2026-08-13', end: '2026-11-13' }, period: '3m', scope: 'market',
     available_start: '2026-03-02', available_end: '2026-11-13', collecting: false, stale: false,
     series: ['2026-11-12', '2026-11-13'].map((date, i) => ({ date, net: i ? 4 : -2, amount: 10, scale: 400,
-      cumulative_net: i ? 2 : -2, hs300: 4000, hs300_change_percent: -1, peak_ratio: 1, covered: 1, expected: 1, snapshot_ids: [1] })),
-    summary: { net: 2, inflow: 4, outflow: -2, amount: 20, days: 2, net_days: 2, loaded_days: 2, funds: 1, coverage_min: 1, coverage_max: 1 },
+      cumulative_net: i ? 2 : -2, cumulative_net_days: i + 1, hs300: 4000, hs300_change_percent: -1, peak_ratio: 1, covered: 1, expected: 1, snapshot_ids: [1] })),
+    summary: { net: 2, inflow: 4, outflow: -2, amount: 20, days: 2, net_days: 2, amount_days: 2, aggregation: 'available_observations', missing_net_dates: [], missing_amount_dates: [], loaded_days: 2, funds: 1, coverage_min: 1, coverage_max: 1 },
     universe: [{ code: '510300', name: '沪深300ETF华泰柏瑞' }],
-    funds: [{ code: '510300', name: '沪深300ETF华泰柏瑞', index: '沪深300', net: 2, amount: 20, scale: 400, as_of: '2026-11-13', days: 2, expected_days: 2 }],
+    funds: [{ code: '510300', name: '沪深300ETF华泰柏瑞', index: '沪深300', net: 2, amount: 20, scale: 400, as_of: '2026-11-13', days: 2, amount_days: 2, expected_days: 2 }],
     holdings_trend: [{ date: '2025-12-31', shares: 1, reported_shares: 1, held_funds: 1, reported_funds: 1, expected_funds: 1, before_range: true, snapshot_ids: [2] }],
     disclosures: national.holdings, signals: [], flow_attribution: 'all_etf_investors', composition_mode: 'broad_market' }
 }
@@ -141,6 +141,24 @@ describe('broad-market ETF dashboard', () => {
     await screen.findByRole('alert')
     await user.click(screen.getByRole('button', { name: '重试' }))
     await screen.findByRole('img', { name: '净申赎估算' })
+  })
+
+
+  it.each(['1y', 'all'])('shows available totals and coverage for %s when a day is missing', async period => {
+    const data = history()
+    data.summary = { ...data.summary, days: 3, missing_net_dates: ['2026-11-11'], missing_amount_dates: ['2026-11-11'] }
+    data.series.unshift({ ...data.series[0], date: '2026-11-11', net: null, amount: null, cumulative_net: null, cumulative_net_days: 0 })
+    vi.mocked(etfApi.history).mockResolvedValue(data)
+    render(<MemoryRouter initialEntries={[`/etf?period=${period}`]}><BroadEtf /></MemoryRouter>)
+    await screen.findByRole('heading', { name: '已知净申赎累计' })
+    const totals = document.querySelector('.etf-history-stats')!
+    expect(totals.textContent).toContain('+2亿')
+    expect(totals.textContent).toContain('+4亿')
+    expect(totals.textContent).toContain('-2亿')
+    expect(totals.textContent).toContain('20亿')
+    expect(totals.querySelectorAll('.etf-card').length).toBe(4)
+    expect(screen.getAllByText('已知数据合计 · 2/3交易日').length).toBeGreaterThanOrEqual(4)
+    expect(etfApi.history).toHaveBeenCalledWith(expect.objectContaining({ period }), expect.any(AbortSignal))
   })
 
 })

@@ -42,6 +42,7 @@ export interface EtfHistoryPoint {
   date: string; net: number | null; amount: number | null; scale: number | null; cumulative_net: number | null;
   hs300: number | null; hs300_change_percent: number | null; peak_ratio: number | null;
   covered: number; expected: number; snapshot_ids: number[];
+  cumulative_net_days: number;
 }
 export interface EtfHoldingPoint {
   date: string; shares: number | null; reported_shares: number | null; held_funds: number;
@@ -53,9 +54,10 @@ export interface EtfHistory {
   series: EtfHistoryPoint[]; holdings_trend: EtfHoldingPoint[]; disclosures: EtfHolding[];
   universe: { code: string; name: string }[];
   summary: { net: number | null; inflow: number | null; outflow: number | null; amount: number | null;
-    days: number; net_days: number; loaded_days: number; funds: number; coverage_min: number; coverage_max: number };
+    days: number; net_days: number; amount_days: number; loaded_days: number; funds: number; coverage_min: number; coverage_max: number;
+    aggregation: 'available_observations'; missing_net_dates: string[]; missing_amount_dates: string[] };
   funds: { code: string; name: string; index: string; net: number | null; amount: number | null;
-    scale: number | null; as_of: string | null; days: number; expected_days: number }[];
+    scale: number | null; as_of: string | null; days: number; amount_days: number; expected_days: number }[];
   signals: { date: string; net: number; peak_ratio: number; hs300_change_percent: number }[];
   flow_attribution: 'all_etf_investors'; composition_mode: 'period_end_disclosed' | 'broad_market';
 }

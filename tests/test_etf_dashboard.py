@@ -200,8 +200,14 @@ def test_history_range_cumulative_and_missing_days(database, board):
     data = history.read_history('2026-11-11', '2026-11-13', catalog)
     assert [p['date'] for p in data['series']] == catalog[1:]
     assert [p['net'] for p in data['series']] == [4, None, -2]
-    assert [p['cumulative_net'] for p in data['series']] == [4, None, None]
-    assert data['summary']['net'] is None and data['summary']['net_days'] == 2
+    assert [p['cumulative_net'] for p in data['series']] == [4, None, 2]
+    assert data['summary']['net'] == 2 and data['summary']['net_days'] == 2
+    assert data['summary']['amount'] == 20 and data['summary']['amount_days'] == 2
+    assert data['summary']['missing_net_dates'] == ['2026-11-12']
+    assert data['summary']['missing_amount_dates'] == ['2026-11-12']
+    assert data['summary']['aggregation'] == 'available_observations'
+    assert data['funds'][0]['net'] == 2
+    assert data['funds'][0]['days'] == data['funds'][0]['amount_days'] == 2
     value = historical_board(board, '2026-11-12', 1)
     service.save_board(value, value)
     complete = history.read_history('2026-11-11', '2026-11-13', catalog)
@@ -297,3 +303,25 @@ def test_partial_historical_coverage_preserves_available_quotes_and_nulls(databa
     assert result['summary']['coverage_min'] == 1
     partial.update(covered=0, net=None, shares_published=False)
     assert sources.validate_board(partial)['net'] is None
+
+
+@pytest.mark.parametrize('national,code', [(False, None), (False, '510300'), (True, None)])
+def test_history_leading_trailing_gaps_zero_and_empty_observations(database, board, national, code):
+    from src.modules.market.etf import history
+    service.save_holdings([report('2025-12-31')])
+    value = historical_board(board, '2026-11-12', 0)
+    value['amount'] = 0
+    value['etfs'][0]['amount'] = 0
+    service.save_board(value, value)
+    days = ['2026-11-11', '2026-11-12', '2026-11-13']
+    result = history.read_history(days[0], days[-1], days, national=national, code=code)
+    assert [p['net'] for p in result['series']] == [None, 0, None]
+    assert [p['cumulative_net'] for p in result['series']] == [None, 0, None]
+    assert [p['cumulative_net_days'] for p in result['series']] == [0, 1, 1]
+    assert result['summary']['net'] == result['summary']['inflow'] == result['summary']['outflow'] == 0
+    assert result['summary']['amount'] == 0 and result['summary']['amount_days'] == 1
+    assert result['summary']['missing_net_dates'] == ['2026-11-11', '2026-11-13']
+    for catalog in [[], ['2026-11-11']]:
+        empty = history.read_history(days[0], days[0], catalog, national=national, code=code)
+        assert all(empty['summary'][key] is None for key in ['net', 'inflow', 'outflow', 'amount'])
+        assert empty['summary']['net_days'] == empty['summary']['amount_days'] == 0

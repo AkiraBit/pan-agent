@@ -94,6 +94,11 @@ def complete_sum(values):
     return sum(values) if values and all(value is not None for value in values) else None
 
 
+def observed_sum(values):
+    known = [value for value in values if value is not None]
+    return sum(known) if known else None
+
+
 def holding_history(reports, codes, institution, start, end):
     by_code = {}
     for snapshot in reports:
@@ -170,7 +175,7 @@ def read_history(start, end, catalog, *, national=False, code=None, institution=
             daily[payload['date']] = (payload, snapshot.id)
         days = sorted(day for day in set(catalog) if start <= day <= end)
         series, fund_values = [], {c: [] for c in target}
-        cumulative, cumulative_valid = 0, True
+        cumulative, cumulative_days = 0, 0
         for day in days:
             baseline = aggregate.get(day, {})
             payload, snapshot_id = daily.get(day, ({}, None))
@@ -182,30 +187,35 @@ def read_history(start, end, catalog, *, national=False, code=None, institution=
             net = baseline.get('net') if basket else complete_sum([r.get('net') for r in rows]) if full else None
             amount = payload.get('amount') if basket else complete_sum([r.get('amount') for r in rows]) if full else None
             scale = payload.get('scale') if basket else complete_sum([r.get('scale') for r in rows]) if full else None
-            if net is None:
-                cumulative_valid = False
-            else:
+            if net is not None:
                 cumulative += net
+                cumulative_days += 1
             ratio = max((r.get('peak_window', {}).get('ratio') or 0 for r in rows if r.get('peak_window')), default=0) if not basket else (baseline.get('peak_window') or {}).get('ratio')
             series.append({'date': day, 'net': net, 'amount': amount, 'scale': scale,
-                           'cumulative_net': cumulative if cumulative_valid else None,
+                           'cumulative_net': cumulative if net is not None else None,
+                           'cumulative_net_days': cumulative_days,
                            'hs300': baseline.get('hs300'), 'hs300_change_percent': baseline.get('hs300_change_percent'),
                            'peak_ratio': ratio, 'covered': baseline.get('covered', 0) if basket else sum(r.get('net') is not None for r in rows), 'expected': len(target),
                            'snapshot_ids': list({v for v in [baseline.get('snapshot_id'), snapshot_id] if v is not None})})
         funds = []
         for fund_code, values in fund_values.items():
             rows = [row for _, row in values]
-            full = len(rows) == len(days) and bool(days)
             funds.append({'code': fund_code, 'name': universe[fund_code]['name'], 'index': universe[fund_code]['index'],
-                          'net': complete_sum([r.get('net') for r in rows]) if full else None,
-                          'amount': complete_sum([r.get('amount') for r in rows]) if full else None,
+                          'net': observed_sum([r.get('net') for r in rows]),
+                          'amount': observed_sum([r.get('amount') for r in rows]),
                           'scale': rows[-1].get('scale') if rows else None,
-                          'as_of': values[-1][0] if values else None, 'days': sum(r.get('net') is not None for r in rows), 'expected_days': len(days)})
+                          'as_of': values[-1][0] if values else None, 'days': sum(r.get('net') is not None for r in rows),
+                          'amount_days': sum(r.get('amount') is not None for r in rows), 'expected_days': len(days)})
         valid = [p for p in series if p['net'] is not None]
-        summary = {'net': complete_sum([p['net'] for p in series]),
-                   'inflow': sum(max(p['net'], 0) for p in valid) if valid and len(valid) == len(series) else None,
-                   'outflow': sum(min(p['net'], 0) for p in valid) if valid and len(valid) == len(series) else None,
-                   'amount': complete_sum([p['amount'] for p in series]), 'days': len(days), 'net_days': len(valid),
+        # Totals cover observed trading days; missing observations remain explicit
+        # for both the UI and analysis clients, rather than invalidating the interval.
+        summary = {'aggregation': 'available_observations', 'net': observed_sum([p['net'] for p in series]),
+                   'inflow': sum(max(p['net'], 0) for p in valid) if valid else None,
+                   'outflow': sum(min(p['net'], 0) for p in valid) if valid else None,
+                   'amount': observed_sum([p['amount'] for p in series]), 'days': len(days), 'net_days': len(valid),
+                   'amount_days': sum(p['amount'] is not None for p in series),
+                   'missing_net_dates': [p['date'] for p in series if p['net'] is None],
+                   'missing_amount_dates': [p['date'] for p in series if p['amount'] is None],
                    'loaded_days': sum(day in daily for day in days), 'funds': len(target),
                    'coverage_min': min((p['covered'] for p in series), default=0),
                    'coverage_max': max((p['covered'] for p in series), default=0)}
