@@ -54,3 +54,24 @@ async def test_index_fetch_uses_explicit_shanghai_symbols(code):
 
     batch = await free_sources.prices(Client(), code, '2026-11-13', '2026-11-13')
     assert [(row['code'], row['close']) for row in batch.rows] == [(code, 1000)]
+
+
+def test_market_history_groups_only_observed_funds_by_index(database, board):
+    etf = board['etfs'][0]
+    board['etfs'] += [
+        {**etf, 'code': '510310', 'net': -1},
+        {**etf, 'code': '510330', 'net': None},
+        {**etf, 'code': '588000', 'index': '科创50', 'net': -4},
+    ]
+    board.update(net=-1, covered=3)
+    service.save_board(board, board)
+    result = history.read_history('2026-11-12', board['date'], [board['date'], '2026-11-12'])
+    previous, current = result['series']
+    assert previous['net_by_index']['沪深300'] == {'net': None, 'covered': 0, 'expected': 3}
+    assert current['net_by_index'] == {
+        '沪深300': {'net': 3, 'covered': 2, 'expected': 3},
+        '科创50': {'net': -4, 'covered': 1, 'expected': 1},
+    }
+    assert current['net'] == -1
+    filtered = history.read_history(board['date'], board['date'], [board['date']], code='588000')
+    assert filtered['series'][0]['net_by_index'] == {'科创50': {'net': -4, 'covered': 1, 'expected': 1}}

@@ -11,10 +11,23 @@
 .etf-minute-chart:focus-visible,.etf-flow-chart:focus-visible,.etf-trend-chart:focus-visible{outline:2px solid hsl(var(--ring));outline-offset:3px;border-radius:4px}
 .etf-comparison-chart{width:100%;height:560px;cursor:crosshair;touch-action:pan-y}
 .etf-comparison-chart:focus-visible{outline:2px solid hsl(var(--ring));outline-offset:3px;border-radius:4px}
-.etf-benchmark-legend i{width:14px;height:2px}
 .etf-comparison-readout{padding-top:7px;gap:6px 16px}
 .etf-comparison-readout>span{white-space:nowrap}
 .etf-comparison-quote{display:inline-flex;align-items:baseline;gap:5px}
 .etf-comparison-quote i{display:inline-block;align-self:center;width:8px;height:2px}
 .etf-comparison-quote small{font-size:11px}
 @media(max-width:767px){.etf-comparison-chart{height:490px}.etf-comparison-readout{gap:5px 9px}}
+.etf-comparison-legend{display:flex;align-items:center;gap:4px;overflow-x:auto;padding:2px 2px 5px;white-space:nowrap}
+.etf-comparison-legend button{flex-shrink:0;color:hsl(var(--muted-foreground))}
+.etf-comparison-legend button[aria-pressed=false]{opacity:.45}
+.etf-comparison-legend>span{color:hsl(var(--muted-foreground));font-size:11px}
+.etf-comparison-legend i{display:inline-block;width:13px;margin-right:2px}
+.etf-comparison-line-key{height:0;border-top:2px solid currentColor}
+.etf-comparison-legend .etf-comparison-dashed-key{border-top-style:dashed}
+.etf-comparison-total-key{color:hsl(var(--foreground))}
+.etf-comparison-bar-key{height:7px;border-radius:2px;background:currentColor}
+.etf-comparison-aggregate-key{color:hsl(var(--muted-foreground)/.6)}
+.etf-comparison-groups{padding-top:3px}
+.etf-comparison-groups b{font-size:12px}
+.etf-comparison-readout b.text-market-up{color:hsl(var(--market-up))}
+.etf-comparison-readout b.text-market-down{color:hsl(var(--market-down))}

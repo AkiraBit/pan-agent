@@ -166,6 +166,11 @@ def read_history(start, end, catalog, *, national=False, code=None, institution=
         selected = {c: r for c, r in universe.items() if not code or c == code}
         report_points, disclosures, watched, composition = holding_history(reports, selected, institution, start, end)
         target = watched if national else set(selected)
+        group_sizes = {}
+        if not national:
+            for item in selected.values():
+                group = item['index']
+                group_sizes[group] = group_sizes.get(group, 0) + 1
         # Prefer the newest board containing a day, independent of backfill arrival order.
         aggregate, daily = {}, {}
         supplements = turnover.observations(db, cutoff)
@@ -207,6 +212,14 @@ def read_history(start, end, catalog, *, national=False, code=None, institution=
             net = baseline.get('net') if basket else complete_sum([r.get('net') for r in rows]) if full else None
             amount = payload.get('amount') if basket else complete_sum([r.get('amount') for r in rows]) if full else None
             scale = payload.get('scale') if basket else complete_sum([r.get('scale') for r in rows]) if full else None
+            if not national:
+                grouped = {group: [] for group in group_sizes}
+                for row in rows:
+                    if row.get('net') is not None:
+                        grouped[selected[row['code']]['index']].append(row['net'])
+                net_by_index = {group: {'net': sum(values) if values else None,
+                                        'covered': len(values), 'expected': group_sizes[group]}
+                                for group, values in grouped.items()}
             if net is not None:
                 cumulative += net
                 cumulative_days += 1
@@ -217,10 +230,8 @@ def read_history(start, end, catalog, *, national=False, code=None, institution=
                            'hs300': baseline.get('hs300'), 'hs300_change_percent': baseline.get('hs300_change_percent'),
                            'peak_ratio': ratio, 'covered': baseline.get('covered', 0) if basket else sum(r.get('net') is not None for r in rows), 'expected': len(target),
                            'amount_snapshot_ids': payload.get('amount_snapshot_ids', []),
-                           'snapshot_ids': list({v for v in [baseline.get('snapshot_id'), snapshot_id, *payload.get('amount_snapshot_ids', []), *payload.get('supplement_snapshot_ids', [])] if v is not None})})
-        if not national:
-            for point in series:
-                point['benchmarks'] = index_points[point['date']]
+                           'snapshot_ids': list({v for v in [baseline.get('snapshot_id'), snapshot_id, *payload.get('amount_snapshot_ids', []), *payload.get('supplement_snapshot_ids', [])] if v is not None}),
+                           **({'benchmarks': index_points[day], 'net_by_index': net_by_index} if not national else {})})
         funds = []
         for fund_code, values in fund_values.items():
             rows = [row for _, row in values]

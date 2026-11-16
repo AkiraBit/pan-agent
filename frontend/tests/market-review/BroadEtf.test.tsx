@@ -90,7 +90,7 @@ describe('broad-market ETF dashboard', () => {
   it('defaults to three-month history and switches to a custom interval', async () => {
     const user = userEvent.setup()
     render(<MemoryRouter initialEntries={['/etf']}><BroadEtf /></MemoryRouter>)
-    await screen.findByRole('img', { name: '区间累计净申赎' })
+    await screen.findByRole('img', { name: '指数与ETF联动图' })
     expect(etfApi.history).toHaveBeenLastCalledWith(expect.objectContaining({ period: '3m', scope: 'market' }), expect.any(AbortSignal))
     expect(etfApi.board).not.toHaveBeenCalled()
     await user.click(screen.getByRole('button', { name: '近1月' }))
@@ -133,6 +133,8 @@ describe('broad-market ETF dashboard', () => {
       '000001': { close: 3150, return_percent: 5, snapshot_id: 10 },
       '000300': { close: 3860, return_percent: -3.5, snapshot_id: 20 },
     }
+    data.series[0].net_by_index = { '沪深300': { net: -2, covered: 1, expected: 1 } }
+    data.series[1].net_by_index = { '沪深300': { net: 4, covered: 1, expected: 1 } }
     vi.mocked(etfApi.history).mockResolvedValue(data)
     render(<MemoryRouter><BroadEtf /></MemoryRouter>)
     const chart = await screen.findByRole('img', { name: '指数与ETF联动图' })
@@ -144,10 +146,15 @@ describe('broad-market ETF dashboard', () => {
     expect(readout.getByText('—')).toBeTruthy()
     expect(readout.getByText('+4 亿')).toBeTruthy()
     expect(readout.getByText('10 亿')).toBeTruthy()
+    expect(readout.getByText('+2 亿')).toBeTruthy()
+    const group = screen.getByRole('button', { name: '沪深300 ETF' })
+    expect(group.getAttribute('aria-pressed')).toBe('true')
+    fireEvent.click(group)
+    expect(group.getAttribute('aria-pressed')).toBe('false')
     fireEvent.keyDown(chart, { key: 'ArrowLeft' })
     expect(readout.getByText('2026-11-12')).toBeTruthy()
     expect(readout.getAllByText('0%')).toHaveLength(3)
-    expect(readout.getByText('-2 亿')).toBeTruthy()
+    expect(readout.getAllByText('-2 亿')).toHaveLength(2)
   })
 
   it('keeps national history filters when drilling into daily holdings', async () => {
@@ -180,7 +187,7 @@ describe('broad-market ETF dashboard', () => {
     data.series.unshift({ ...data.series[0], date: '2026-11-11', net: null, amount: null, cumulative_net: null, cumulative_net_days: 0 })
     vi.mocked(etfApi.history).mockResolvedValue(data)
     render(<MemoryRouter initialEntries={[`/etf?period=${period}`]}><BroadEtf /></MemoryRouter>)
-    await screen.findByRole('heading', { name: '已知净申赎累计' })
+    await screen.findByRole('button', { name: '已知净申赎累计' })
     const totals = document.querySelector('.etf-history-stats')!
     expect(totals.textContent).toContain('+2亿')
     expect(totals.textContent).toContain('+4亿')

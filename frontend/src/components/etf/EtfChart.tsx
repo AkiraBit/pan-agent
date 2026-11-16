@@ -1,12 +1,12 @@
 import { useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { init, use, type ComposeOption, type EChartsType } from 'echarts/core'
 import { BarChart, LineChart, ScatterChart, type BarSeriesOption, type LineSeriesOption, type ScatterSeriesOption } from 'echarts/charts'
-import { AxisPointerComponent, GridComponent, type AxisPointerComponentOption, type GridComponentOption } from 'echarts/components'
+import { AxisPointerComponent, DataZoomSliderComponent, GridComponent, type AxisPointerComponentOption, type DataZoomComponentOption, type GridComponentOption } from 'echarts/components'
 import { CanvasRenderer } from 'echarts/renderers'
 
-use([CanvasRenderer, GridComponent, AxisPointerComponent, BarChart, LineChart, ScatterChart])
+use([CanvasRenderer, GridComponent, AxisPointerComponent, DataZoomSliderComponent, BarChart, LineChart, ScatterChart])
 
-export type EtfChartOption = ComposeOption<BarSeriesOption | LineSeriesOption | ScatterSeriesOption | GridComponentOption | AxisPointerComponentOption>
+export type EtfChartOption = ComposeOption<BarSeriesOption | LineSeriesOption | ScatterSeriesOption | GridComponentOption | AxisPointerComponentOption | DataZoomComponentOption>
 type AxisOption = Exclude<NonNullable<EtfChartOption['xAxis']>, unknown[]>
 export const GRID_TOP = 24
 
@@ -21,6 +21,7 @@ function chartColors(host: HTMLElement) {
     grid: color('--border'),
     primary: color('--primary'),
     index: color('--foreground', .65),
+    foreground: color('--foreground'),
     volume: color('--muted-foreground', .45),
     up: color('--market-up'),
     down: color('--market-down'),
@@ -81,12 +82,16 @@ export function dayTick(count: number, spansYears = false) {
   }
 }
 
+export type ChartWindow = readonly [first: number, last: number]
+
 interface Props {
   className: string
   label: string
   count: number
   gridCount?: number
-  option: (colors: EtfChartColors) => EtfChartOption
+  option: (colors: EtfChartColors, width: number) => EtfChartOption
+  visibleWindow?: ChartWindow
+  onWindowChange?: (window: ChartWindow) => void
   showLatest?: boolean
   guideOnLatest?: boolean
   onActivate?: (index: number) => void
@@ -104,23 +109,24 @@ function syncGuide(chart: EChartsType, index: number | null) {
   }
 }
 
-export function EtfChart({ className, label, count, gridCount = 1, option, showLatest, guideOnLatest, onActivate, children }: Props) {
+export function EtfChart({ className, label, count, gridCount = 1, option, visibleWindow, onWindowChange, showLatest, guideOnLatest, onActivate, children }: Props) {
   const hostRef = useRef<HTMLDivElement>(null)
   const chartRef = useRef<EChartsType | null>(null)
   const [selected, setSelected] = useState<number | null>(null)
-  const index = Math.min(count - 1, selected ?? count - 1)
+  const [first, last] = visibleWindow ?? [0, count - 1]
+  const index = Math.max(first, Math.min(last, selected ?? last))
   const guide = selected != null || guideOnLatest ? index : null
-  const current = useRef({ count, gridCount, option, guide, onActivate })
+  const current = useRef({ count, gridCount, option, guide, onActivate, onWindowChange })
 
   useLayoutEffect(() => {
     const previous = current.current
-    current.current = { count, gridCount, option, guide, onActivate }
+    current.current = { count, gridCount, option, guide, onActivate, onWindowChange }
     const chart = chartRef.current
     const host = hostRef.current
     if (!chart || !host) return
-    if (previous.option !== option) chart.setOption(option(chartColors(host)), { notMerge: true })
+    if (previous.option !== option) chart.setOption(option(chartColors(host), chart.getWidth()), { notMerge: true })
     if (previous.option !== option || previous.guide !== guide) syncGuide(chart, guide)
-  }, [count, gridCount, option, guide, onActivate])
+  }, [count, gridCount, option, guide, onActivate, onWindowChange])
 
   useLayoutEffect(() => {
     const host = hostRef.current
@@ -128,7 +134,7 @@ export function EtfChart({ className, label, count, gridCount = 1, option, showL
     function setOptions() {
       const chart = chartRef.current
       if (!chart || !host) return
-      chart.setOption(current.current.option(chartColors(host)), { notMerge: true })
+      chart.setOption(current.current.option(chartColors(host), chart.getWidth()), { notMerge: true })
       syncGuide(chart, current.current.guide)
     }
 
@@ -138,7 +144,7 @@ export function EtfChart({ className, label, count, gridCount = 1, option, showL
       if (existing) {
         if (existing.getWidth() !== host.clientWidth || existing.getHeight() !== host.clientHeight) {
           existing.resize()
-          syncGuide(existing, current.current.guide)
+          setOptions()
         }
         return
       }
@@ -160,6 +166,15 @@ export function EtfChart({ className, label, count, gridCount = 1, option, showL
         if (point == null) return
         setSelected(point)
         current.current.onActivate?.(point)
+      })
+      chart.on('datazoom', () => {
+        if (!current.current.onWindowChange) return
+        const zoom = (chart.getOption().dataZoom as { startValue?: number; endValue?: number }[] | undefined)?.[0]
+        if (zoom?.startValue == null || zoom.endValue == null || !Number.isInteger(zoom.startValue) || !Number.isInteger(zoom.endValue)) return
+        const start = Math.max(0, Math.min(current.current.count - 1, zoom.startValue))
+        const end = Math.max(start, Math.min(current.current.count - 1, zoom.endValue))
+        setSelected(null)
+        current.current.onWindowChange([start, end])
       })
       setOptions()
     }
@@ -190,7 +205,7 @@ export function EtfChart({ className, label, count, gridCount = 1, option, showL
       onKeyDown={event => {
         if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
           event.preventDefault()
-          setSelected(Math.max(0, Math.min(count - 1, index + (event.key === 'ArrowLeft' ? -1 : 1))))
+          setSelected(Math.max(first, Math.min(last, index + (event.key === 'ArrowLeft' ? -1 : 1))))
         } else if (event.key === 'Enter' && onActivate && (showLatest || selected != null)) {
           event.preventDefault()
           onActivate(index)
