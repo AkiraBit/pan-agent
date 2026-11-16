@@ -134,6 +134,7 @@ def test_backfill_versioning_primary_precedence_history_and_restart(database, bo
 
 
 def test_revision_reproducible_and_split_guard(database, board, monkeypatch):
+    monkeypatch.setattr(service, 'timestamp', lambda: '2026-11-15T00:00:00+00:00')
     board = missing(board); service.save_board(board, board); seed_inputs(); store.rebuild()
     old_time = service.timestamp()
     monkeypatch.setattr(service, 'timestamp', lambda: '2026-11-16T00:00:00+00:00')

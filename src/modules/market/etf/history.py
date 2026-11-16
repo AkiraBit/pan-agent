@@ -9,7 +9,7 @@ from datetime import date
 import httpx
 from sqlalchemy import func, select
 
-from . import free_collector, free_store, service, sources, turnover
+from . import benchmarks, free_collector, free_store, service, sources, turnover
 from .models import EtfSnapshot
 
 PROVIDER_ERRORS = (httpx.HTTPError, ValueError, KeyError, TypeError, IndexError)
@@ -193,6 +193,7 @@ def read_history(start, end, catalog, *, national=False, code=None, institution=
             elif payload.get('hs300') is not None:
                 aggregate[day].setdefault('hs300', payload['hs300'])
         days = sorted(day for day in set(catalog) | set(daily) if start <= day <= end)
+        benchmark_base, index_points = benchmarks.comparison(db, days, cutoff) if not national else (None, {})
         series, fund_values = [], {c: [] for c in target}
         cumulative, cumulative_days = 0, 0
         for day in days:
@@ -217,6 +218,9 @@ def read_history(start, end, catalog, *, national=False, code=None, institution=
                            'peak_ratio': ratio, 'covered': baseline.get('covered', 0) if basket else sum(r.get('net') is not None for r in rows), 'expected': len(target),
                            'amount_snapshot_ids': payload.get('amount_snapshot_ids', []),
                            'snapshot_ids': list({v for v in [baseline.get('snapshot_id'), snapshot_id, *payload.get('amount_snapshot_ids', []), *payload.get('supplement_snapshot_ids', [])] if v is not None})})
+        if not national:
+            for point in series:
+                point['benchmarks'] = index_points[point['date']]
         funds = []
         for fund_code, values in fund_values.items():
             rows = [row for _, row in values]
@@ -245,6 +249,7 @@ def read_history(start, end, catalog, *, national=False, code=None, institution=
                    if p['net'] is not None and p['net'] > 0 and (p['peak_ratio'] or 0) >= 2
                    and p['hs300_change_percent'] is not None and p['hs300_change_percent'] < 0]
         return {'range': {'start': start, 'end': end}, 'series': series, 'summary': summary,
+                **({'benchmark_base_date': benchmark_base} if not national else {}),
                 'funds': sorted(funds, key=lambda r: (r['net'] is None, -(r['net'] or 0), r['code'])),
                 'universe': [{'code': c, 'name': r['name']} for c, r in universe.items()],
                 'holdings_trend': report_points, 'disclosures': disclosures, 'signals': signals,

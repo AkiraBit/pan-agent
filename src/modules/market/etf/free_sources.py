@@ -21,6 +21,7 @@ SSE = 'https://query.sse.com.cn/commonQuery.do'
 SZSE = 'https://www.szse.cn/api/report/ShowReport/data'
 NAV = 'https://fund.eastmoney.com/pingzhongdata/{code}.js'
 PRICE = 'https://web.ifzq.gtimg.cn/appstock/app/fqkline/get'
+BENCHMARK_CODES = ('000001', '000300', '000688')
 PCF_SZ = 'https://reportdocs.static.szse.cn/files/text/ETFDown/pcf_{code}_{day}.xml'
 PCF_SH = 'https://query.sse.com.cn/etfDownload/downloadETF2Bulletin.do'
 SPECS = {
@@ -273,7 +274,7 @@ def parse_prices(payload, symbol, start, end):
 
 
 async def prices(client, requested_code, start, end):
-    if requested_code != '000300':
+    if requested_code not in BENCHMARK_CODES:
         code(requested_code)
     if (date.fromisoformat(end) - date.fromisoformat(start)).days > 500:
         raise InvalidData('unsupported_price_range')

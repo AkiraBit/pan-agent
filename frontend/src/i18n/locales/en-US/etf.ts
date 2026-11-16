@@ -30,6 +30,8 @@ export const etf = {
   applyRange: 'Apply',
   invalidRange: 'Choose a valid date range',
   allFunds: 'All ETFs',
+  benchmarkTrend: 'Cumulative index returns', benchmarkChart: 'Linked index and ETF charts', benchmarkBase: '{{date}} close = 0%',
+  shComposite: 'SSE Composite', star50: 'STAR 50', indexPoints: 'pts', benchmarkCollecting: 'Updating index history', benchmarkUnavailable: 'No common baseline in this range',
   netTrend: 'Net subscriptions & index',
   heldEtfTrend: 'Flows in ETFs held at period end',
   periodNet: 'Period net subscriptions',

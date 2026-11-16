@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -110,14 +110,44 @@ describe('broad-market ETF dashboard', () => {
   it('opens a historical day by keyboard and retains the chosen range on return', async () => {
     const user = userEvent.setup()
     render(<MemoryRouter initialEntries={['/etf?period=6m']}><BroadEtf /></MemoryRouter>)
-    const chart = await screen.findByRole('img', { name: '净申赎估算' })
+    const chart = await screen.findByRole('img', { name: '指数与ETF联动图' })
     fireEvent.keyDown(chart, { key: 'ArrowLeft' })
     fireEvent.keyDown(chart, { key: 'Enter' })
     await waitFor(() => expect(etfApi.board).toHaveBeenLastCalledWith('2026-11-12', expect.any(AbortSignal)))
     await screen.findByRole('img', { name: '分钟成交' })
     await user.click(screen.getByRole('tab', { name: '总览' }))
-    await screen.findByRole('img', { name: '净申赎估算' })
+    await screen.findByRole('img', { name: '指数与ETF联动图' })
     expect(screen.getByRole('button', { name: '近半年' }).getAttribute('aria-pressed')).toBe('true')
+  })
+
+
+  it('reads the three benchmark returns and both ETF measures for the same day', async () => {
+    const data = history()
+    data.benchmark_base_date = data.series[0].date
+    data.series[0].benchmarks = {
+      '000001': { close: 3000, return_percent: 0, snapshot_id: 10 },
+      '000300': { close: 4000, return_percent: 0, snapshot_id: 20 },
+      '000688': { close: 600, return_percent: 0, snapshot_id: 30 },
+    }
+    data.series[1].benchmarks = {
+      '000001': { close: 3150, return_percent: 5, snapshot_id: 10 },
+      '000300': { close: 3860, return_percent: -3.5, snapshot_id: 20 },
+    }
+    vi.mocked(etfApi.history).mockResolvedValue(data)
+    render(<MemoryRouter><BroadEtf /></MemoryRouter>)
+    const chart = await screen.findByRole('img', { name: '指数与ETF联动图' })
+    expect(screen.getByText('2026-11-12 收盘为 0%')).toBeTruthy()
+    const readout = within(chart.nextElementSibling as HTMLElement)
+    expect(readout.getByText('2026-11-13')).toBeTruthy()
+    expect(readout.getByText('+5%')).toBeTruthy()
+    expect(readout.getByText('-3.5%')).toBeTruthy()
+    expect(readout.getByText('—')).toBeTruthy()
+    expect(readout.getByText('+4 亿')).toBeTruthy()
+    expect(readout.getByText('10 亿')).toBeTruthy()
+    fireEvent.keyDown(chart, { key: 'ArrowLeft' })
+    expect(readout.getByText('2026-11-12')).toBeTruthy()
+    expect(readout.getAllByText('0%')).toHaveLength(3)
+    expect(readout.getByText('-2 亿')).toBeTruthy()
   })
 
   it('keeps national history filters when drilling into daily holdings', async () => {
@@ -140,7 +170,7 @@ describe('broad-market ETF dashboard', () => {
     render(<MemoryRouter><BroadEtf /></MemoryRouter>)
     await screen.findByRole('alert')
     await user.click(screen.getByRole('button', { name: '重试' }))
-    await screen.findByRole('img', { name: '净申赎估算' })
+    await screen.findByRole('img', { name: '指数与ETF联动图' })
   })
 
 

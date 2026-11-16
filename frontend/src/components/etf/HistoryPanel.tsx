@@ -9,6 +9,7 @@ import { etfApi, type EtfHistory, type EtfPeriod } from '@panwatch/api/etf'
 import { marketSignTextClass } from '@/lib/market-colors'
 import { numeric, signed } from './charts'
 import { TrendChart } from './TrendChart'
+import { MarketComparisonChart } from './MarketComparisonChart'
 import { useEtf } from './useEtf'
 
 const periods: EtfPeriod[] = ['1m', '3m', '6m', '1y', 'all', 'custom']
@@ -25,11 +26,13 @@ function HistoryPlots({ data, national, onDate }: { data: EtfHistory; national: 
       ['periodNet', data.summary.net, data.summary.net_days], ['periodIn', data.summary.inflow, data.summary.net_days],
       ['periodOut', data.summary.outflow, data.summary.net_days], ['periodAmount', data.summary.amount, data.summary.amount_days],
     ] as const).map(([key, value, count]) => <div className="etf-card" key={key}><span>{t(key)}</span><b className={key === 'periodAmount' ? '' : marketSignTextClass(value)}>{key === 'periodAmount' ? numeric(value, 0) : signed(value, 0)}<small>{money}</small></b>{count < data.summary.days && <span>{t('knownTotal', { count, total: data.summary.days })}</span>}</div>)}</div>
-    <section className="etf-card"><div className="etf-panel-heading"><h2>{t(national ? 'heldEtfTrend' : 'netTrend')}</h2><span>{t('historyCoverage', { count: data.summary.days })}</span></div>
-      {series.length ? <TrendChart points={series.map(p => ({ date: p.date, value: p.net, secondary: p.hs300, detail: t('pointCoverage', { count: p.covered, total: p.expected }) }))} label={t('net')} unit={money} secondaryLabel={t('hs300')} bars market onDate={onDate} /> : <p className="etf-empty">{t('noHistory')}</p>}
-    </section>
-    <div className="etf-history-grid"><section className="etf-card"><h2>{cumulativeLabel}</h2><TrendChart points={series.map((p, i) => ({ date: p.date, value: p.cumulative_net, detail: p.cumulative_net_days < i + 1 ? t('knownTotal', { count: p.cumulative_net_days, total: i + 1 }) : undefined }))} label={cumulativeLabel} unit={money} market onDate={onDate} /></section>
-      <section className="etf-card"><h2>{t('turnoverTrend')}</h2><TrendChart points={series.map(p => ({ date: p.date, value: p.amount }))} label={t('turnover')} unit={money} bars onDate={onDate} /></section></div>
+    {national ? <section className="etf-card"><div className="etf-panel-heading"><h2>{t('heldEtfTrend')}</h2><span>{t('historyCoverage', { count: data.summary.days })}</span></div>
+      <TrendChart points={series.map(p => ({ date: p.date, value: p.net, secondary: p.hs300, detail: t('pointCoverage', { count: p.covered, total: p.expected }) }))} label={t('net')} unit={money} secondaryLabel={t('hs300')} bars market onDate={onDate} />
+    </section> : <MarketComparisonChart data={data} onDate={onDate} />}
+    <div className={national ? 'etf-history-grid' : undefined}>
+      <section className="etf-card"><h2>{cumulativeLabel}</h2><TrendChart points={series.map((p, i) => ({ date: p.date, value: p.cumulative_net, detail: p.cumulative_net_days < i + 1 ? t('knownTotal', { count: p.cumulative_net_days, total: i + 1 }) : undefined }))} label={cumulativeLabel} unit={money} market onDate={onDate} /></section>
+      {national && <section className="etf-card"><h2>{t('turnoverTrend')}</h2><TrendChart points={series.map((p) => ({ date: p.date, value: p.amount }))} label={t('turnover')} unit={money} bars onDate={onDate} /></section>}
+    </div>
     {national && <section className="etf-card"><div className="etf-panel-heading"><h2>{t('holdingsTrend')}</h2><span>{t('reportPoints', { count: data.holdings_trend.length })}</span></div>
       {data.holdings_trend.length ? <><TrendChart points={data.holdings_trend.map(p => ({ date: p.date, value: p.shares }))} label={t('heldShares')} unit={t('sharesUnit')} />
         <div className="etf-report-periods">{data.holdings_trend.map(p => <div key={p.date}><b>{p.date}</b>{p.before_range && <span>{t('beforeRange')}</span>}<span>{t('reportCoverage', { count: p.reported_funds, total: p.expected_funds })}</span><span>{t('heldShares')} {numeric(p.reported_shares, 2)} {t('sharesUnit')}</span></div>)}</div></> : <p className="etf-empty">{t('noHoldings')}</p>}

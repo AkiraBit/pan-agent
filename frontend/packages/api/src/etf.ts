@@ -38,17 +38,21 @@ export const etfApi = {
 }
 
 export type EtfPeriod = '1m' | '3m' | '6m' | '1y' | 'all' | 'custom'
+export type EtfBenchmarkCode = '000001' | '000300' | '000688'
+export interface EtfBenchmarkPoint { close: number; return_percent: number | null; snapshot_id: number }
 export interface EtfHistoryPoint {
   date: string; net: number | null; amount: number | null; scale: number | null; cumulative_net: number | null;
   hs300: number | null; hs300_change_percent: number | null; peak_ratio: number | null;
   covered: number; expected: number; snapshot_ids: number[];
   cumulative_net_days: number;
+  benchmarks?: Partial<Record<EtfBenchmarkCode, EtfBenchmarkPoint>>;
 }
 export interface EtfHoldingPoint {
   date: string; shares: number | null; reported_shares: number | null; held_funds: number;
   reported_funds: number; expected_funds: number; before_range: boolean; snapshot_ids: number[];
 }
 export interface EtfHistory {
+  benchmark_base_date?: string | null;
   range: { start: string; end: string }; period: EtfPeriod; scope: 'market' | 'national';
   available_start: string | null; available_end: string | null; collecting: boolean; stale: boolean;
   series: EtfHistoryPoint[]; holdings_trend: EtfHoldingPoint[]; disclosures: EtfHolding[];

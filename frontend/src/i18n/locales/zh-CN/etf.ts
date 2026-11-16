@@ -28,6 +28,8 @@ export const etf = {
   applyRange: '应用',
   invalidRange: '请选择有效的起止日期',
   allFunds: '全部ETF',
+  benchmarkTrend: '指数累计涨跌幅', benchmarkChart: '指数与ETF联动图', benchmarkBase: '{{date}} 收盘为 0%',
+  shComposite: '上证指数', star50: '科创50', indexPoints: '点', benchmarkCollecting: '指数日线更新中', benchmarkUnavailable: '区间内暂无共同基准日',
   netTrend: '净申赎与指数走势',
   heldEtfTrend: '期末披露持仓ETF申赎',
   periodNet: '区间净申赎',

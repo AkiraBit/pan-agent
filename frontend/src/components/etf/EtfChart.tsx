@@ -7,8 +7,8 @@ import { CanvasRenderer } from 'echarts/renderers'
 use([CanvasRenderer, GridComponent, AxisPointerComponent, BarChart, LineChart, ScatterChart])
 
 export type EtfChartOption = ComposeOption<BarSeriesOption | LineSeriesOption | ScatterSeriesOption | GridComponentOption | AxisPointerComponentOption>
-type AxisOption = NonNullable<EtfChartOption['xAxis']>
-const GRID_TOP = 24
+type AxisOption = Exclude<NonNullable<EtfChartOption['xAxis']>, unknown[]>
+export const GRID_TOP = 24
 
 function chartColors(host: HTMLElement) {
   const style = getComputedStyle(host)
@@ -37,7 +37,7 @@ export function signedColor(colors: EtfChartColors, value: number | null) {
   return value == null || value === 0 ? colors.flat : value > 0 ? colors.up : colors.down
 }
 
-export function categoryAxis(labels: string[], tick: (value: string, index: number) => string, colors: EtfChartColors): AxisOption {
+export function categoryAxis(labels: string[], tick: (value: string, index: number) => string, colors: EtfChartColors) {
   return {
     type: 'category',
     data: labels,
@@ -51,7 +51,7 @@ export function categoryAxis(labels: string[], tick: (value: string, index: numb
       hideOverlap: true,
     },
     axisPointer: { show: true, snap: true, label: { show: false }, lineStyle: { color: colors.text, type: 'dashed' } },
-  }
+  } satisfies AxisOption
 }
 
 export function valueAxis(colors: EtfChartColors, formatter: (value: number) => string, position: 'left' | 'right' = 'left') {
@@ -85,6 +85,7 @@ interface Props {
   className: string
   label: string
   count: number
+  gridCount?: number
   option: (colors: EtfChartColors) => EtfChartOption
   showLatest?: boolean
   guideOnLatest?: boolean
@@ -103,23 +104,23 @@ function syncGuide(chart: EChartsType, index: number | null) {
   }
 }
 
-export function EtfChart({ className, label, count, option, showLatest, guideOnLatest, onActivate, children }: Props) {
+export function EtfChart({ className, label, count, gridCount = 1, option, showLatest, guideOnLatest, onActivate, children }: Props) {
   const hostRef = useRef<HTMLDivElement>(null)
   const chartRef = useRef<EChartsType | null>(null)
   const [selected, setSelected] = useState<number | null>(null)
   const index = Math.min(count - 1, selected ?? count - 1)
   const guide = selected != null || guideOnLatest ? index : null
-  const current = useRef({ count, option, guide, onActivate })
+  const current = useRef({ count, gridCount, option, guide, onActivate })
 
   useLayoutEffect(() => {
     const previous = current.current
-    current.current = { count, option, guide, onActivate }
+    current.current = { count, gridCount, option, guide, onActivate }
     const chart = chartRef.current
     const host = hostRef.current
     if (!chart || !host) return
     if (previous.option !== option) chart.setOption(option(chartColors(host)), { notMerge: true })
     if (previous.option !== option || previous.guide !== guide) syncGuide(chart, guide)
-  }, [count, option, guide, onActivate])
+  }, [count, gridCount, option, guide, onActivate])
 
   useLayoutEffect(() => {
     const host = hostRef.current
@@ -145,8 +146,10 @@ export function EtfChart({ className, label, count, option, showLatest, guideOnL
       const chart = init(host, undefined, { renderer: 'canvas' })
       chartRef.current = chart
       const pointerIndex = ({ offsetX, offsetY }: { offsetX: number; offsetY: number }) => {
-        if (!chart.containPixel({ gridIndex: 0 }, [offsetX, offsetY])) return null
-        const category = chart.convertFromPixel({ xAxisIndex: 0 }, offsetX)
+        const gridIndex = Array.from({ length: current.current.gridCount }, (_, i) => i)
+          .find(i => chart.containPixel({ gridIndex: i }, [offsetX, offsetY]))
+        if (gridIndex == null) return null
+        const category = chart.convertFromPixel({ xAxisIndex: gridIndex }, offsetX)
         if (typeof category !== 'number' || !Number.isFinite(category)) return null
         return Math.max(0, Math.min(current.current.count - 1, Math.round(category)))
       }

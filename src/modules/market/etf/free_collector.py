@@ -70,7 +70,7 @@ async def collect(start=None, *, max_jobs=MAX_JOBS):
                 service.log.warning('Public ETF source unavailable: %s/%s (%s)', kind, provider, type(exc).__name__)
 
         # Index prices supply actual trading dates; never fill weekends with zeros.
-        for c in ['000300', *codes]:
+        for c in (*adapters.BENCHMARK_CODES, *codes):
             for lo, hi in spans(baseline, end, 499):
                 await job('etf_history', 'tencent', f'price:tencent:{c}:{lo}:{hi}',
                           lambda client, c=c, lo=lo, hi=hi: adapters.prices(client, c, lo, hi))
