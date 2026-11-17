@@ -42,3 +42,20 @@ class EtfTushareUniverse(Base):
     key = Column(String, primary_key=True)
     updated_on = Column(String(10), nullable=False)
     payload = Column(JSON, nullable=False)
+
+
+class EtfMarketBreadthMinute(Base):
+    __tablename__ = "etf_tushare_breadth_minutes"
+
+    trade_date = Column(String(10), primary_key=True)
+    minute = Column(String(5), primary_key=True)
+    up = Column(Integer, nullable=False)
+    down = Column(Integer, nullable=False)
+    flat = Column(Integer, nullable=False)
+
+
+class EtfDailyShares(Base):
+    __tablename__ = "etf_tushare_daily_shares"
+
+    trade_date = Column(String(10), primary_key=True)
+    payload = Column(JSON, nullable=False)

@@ -65,6 +65,14 @@ def market_clock():
     }
 
 
+def latest_session(moment: datetime) -> date:
+    today = moment.date()
+    if not is_closed(today) and moment.time() >= OPEN:
+        return today
+    previous = adjacent(today, -1, today)
+    return date.fromisoformat(previous) if previous else today
+
+
 def number(raw, *, positive=False):
     if type(raw) not in {str, float, int}:
         raise TushareFailure("unavailable")
@@ -426,11 +434,10 @@ class IntradayStore:
     async def load(self, day: date | None, *, refresh=False):
         moment = now_cn()
         today = moment.date()
-        latest = today.isoformat() if not is_closed(today) and moment.time() >= OPEN else adjacent(today, -1, today)
-        latest = latest or today.isoformat()
-        day = day or date.fromisoformat(latest)
+        latest = latest_session(moment)
+        day = day or latest
         mode = "live" if day == today and moment.time() < ARCHIVE_READY else "archive"
-        base = {"date": day.isoformat(), "today": today.isoformat(), "latest": latest,
+        base = {"date": day.isoformat(), "today": today.isoformat(), "latest": latest.isoformat(),
                 "previous": adjacent(day, -1, today), "next": adjacent(day, 1, today),
                 "source": "tushare"}
         if is_closed(day) or (day == today and moment.time() < OPEN):

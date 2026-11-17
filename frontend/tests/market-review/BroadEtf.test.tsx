@@ -1,21 +1,24 @@
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { MemoryRouter, useLocation } from 'react-router-dom'
-import { etfApi, type EtfIntraday, type EtfPriceInstrument, type EtfTurnoverBaseline } from '@panwatch/api/etf'
+import { etfApi, type EtfIntraday, type EtfMarketStats, type EtfPriceInstrument, type EtfTurnoverBaseline } from '@panwatch/api/etf'
 import { marketPhase, nextEtfRefresh } from '@/components/etf/market-clock'
 import { etfIntradayMove } from '@/components/etf/session'
 import BroadEtf from '@/pages/BroadEtf'
 
 vi.mock('@panwatch/api/etf', () => ({ etfApi: {
-  intraday: vi.fn(), turnoverBaseline: vi.fn(), priceCatalog: vi.fn(), priceLine: vi.fn(),
+  intraday: vi.fn(), turnoverBaseline: vi.fn(), priceCatalog: vi.fn(), priceLine: vi.fn(), marketStats: vi.fn(),
 } }))
 vi.mock('@/components/etf/IntradayChart', () => ({
-  IntradayChart: ({ data, prices }: { data: EtfIntraday; prices: { instrument: EtfPriceInstrument }[] }) =>
-    <div role="img" aria-label={data.date} data-price={prices.length ? prices.map(price => price.instrument.symbol).join(',') : undefined} />,
+  IntradayChart: ({ data, prices, breadth }: {
+    data?: EtfIntraday; prices: { instrument: EtfPriceInstrument }[]; breadth?: EtfMarketStats['breadth']
+  }) => <div role="img" aria-label={data?.date ?? 'breadth'} data-breadth={breadth && JSON.stringify(breadth.points)}
+    data-price={prices.length ? prices.map(price => price.instrument.symbol).join(',') : undefined} />,
 }))
 
 const load = vi.mocked(etfApi.intraday)
 const reference = vi.mocked(etfApi.turnoverBaseline)
+const stats = vi.mocked(etfApi.marketStats)
 const latest = '2026-11-17'
 const previous = '2026-11-16'
 
@@ -45,11 +48,33 @@ beforeEach(() => {
   localStorage.clear()
   load.mockReset()
   reference.mockReset().mockResolvedValue(null)
+  stats.mockReset().mockImplementation(async date => ({
+    date, breadth: { through: '15:00', points: {} },
+    daily_flow: { total: 22, covered: 0, status: 'pending', net_cny: null },
+  }))
   load.mockImplementation(async date => session(date || latest))
 })
 afterEach(() => { cleanup(); vi.useRealTimers() })
 
 describe('Tushare broad-market ETFs', () => {
+  it('loads the selected date’s stored breadth and only shows a complete net flow', async () => {
+    stats.mockImplementation(async date => ({
+      date,
+      breadth: { through: '15:00', points: date === latest ? { '09:33': { up: 1200, down: 800, flat: 20 } } : {} },
+      daily_flow: date === latest
+        ? { status: 'partial', total: 22, covered: 21, net_cny: null }
+        : { status: 'ready', total: 22, covered: 22, net_cny: -250_000_000 },
+    }))
+    show()
+    expect(await screen.findByText('份额覆盖 21 / 22 只')).toBeTruthy()
+    expect(screen.getByText('22 只 ETF · 全天净申赎')).toBeTruthy()
+    expect(screen.getByRole('img', { name: latest }).getAttribute('data-breadth')).toContain('09:33')
+    fireEvent.click(screen.getByRole('button', { name: '前一日期' }))
+    expect(await screen.findByText('-2.5')).toBeTruthy()
+    expect(stats).toHaveBeenLastCalledWith(previous, expect.any(AbortSignal))
+    expect(screen.getByRole('img', { name: previous }).getAttribute('data-breadth')).toBe('{}')
+  })
+
   it('uses each ETF’s first available minute so different price levels do not change the displayed move', () => {
     const cheap = etfIntradayMove({ '09:30': 1, '09:32': 1.02 })
     const expensive = etfIntradayMove({ '09:31': 10, '09:32': 10.2 })
@@ -298,7 +323,8 @@ describe('Tushare broad-market ETFs', () => {
     show()
     expect((await screen.findByRole('alert')).textContent).toContain('请检查 Tushare Token 是否已配置且有效。')
     expect(screen.getByRole('link', { name: '打开 Tushare 配置' }).getAttribute('href')).toBe('/settings#sec-data-providers')
-    expect(screen.queryByRole('img')).toBeNull()
+    expect(screen.queryByRole('img', { name: latest })).toBeNull()
+    expect(screen.getByRole('img', { name: 'breadth' })).toBeTruthy()
     expect(screen.getByRole('button', { name: '重试' })).toBeTruthy()
   })
 })

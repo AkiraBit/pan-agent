@@ -4,7 +4,7 @@ from typing import Literal
 
 from fastapi import APIRouter, Query
 
-from src.modules.market.etf import intraday, prices
+from src.modules.market.etf import intraday, market_stats, prices
 from src.web.errors import api_error
 
 router = APIRouter()
@@ -27,6 +27,14 @@ async def intraday_session(date: Date | None = None, refresh: bool = False):
 async def turnover_baseline(date: Date):
     _check_date(date)
     return await intraday.store.turnover_baseline(date)
+
+
+@router.get("/market-stats")
+def session_market_stats(date: Date | None = None):
+    if date:
+        _check_date(date)
+    now = intraday.now_cn()
+    return market_stats.read_session(date or intraday.latest_session(now), now)
 
 
 @router.get("/price-catalog")

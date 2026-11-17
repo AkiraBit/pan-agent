@@ -37,6 +37,7 @@ from src.platform.ai.ai_failover import build_failover_client
 from src.platform.notifications.notifier import NotifierManager
 from src.modules.automation.agent_scheduler import AgentScheduler
 from src.modules.market.price_alert_scheduler import PriceAlertScheduler
+from src.modules.market.etf import market_stats as etf_market_stats
 from src.modules.paper_trading.paper_trading_scheduler import PaperTradingScheduler
 from src.modules.research.context_scheduler import ContextMaintenanceScheduler
 from src.modules.automation.agent_runs import record_agent_run
@@ -1540,6 +1541,11 @@ async def lifespan(app):
         logger.info("上下文维护调度器已启动")
     except Exception as e:
         logger.error(f"上下文维护调度器启动失败: {e}")
+    etf_stats_scheduler = None
+    try:
+        etf_stats_scheduler = etf_market_stats.start_scheduler()
+    except Exception:
+        logger.exception("ETF 市场统计调度器启动失败")
     # MCP 调用日志保留期清理:每日 04:00 清理超期审计记录
     try:
         register_mcp_log_cleanup(scheduler)
@@ -1551,6 +1557,8 @@ async def lifespan(app):
         async with application_lifespan(app):
             yield
     finally:
+        if etf_stats_scheduler:
+            etf_stats_scheduler.shutdown(wait=False)
         if scheduler:
             scheduler.shutdown()
             logger.info("Agent 调度器已关闭")

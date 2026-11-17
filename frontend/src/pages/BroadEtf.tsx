@@ -3,7 +3,7 @@ import { Activity, ArrowDownRight, ArrowUpRight, BarChart3, CalendarDays, Chevro
 import { Link, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { enUS, zhCN } from 'react-day-picker/locale'
-import { etfApi, type EtfIntraday, type EtfTurnoverBaseline } from '@panwatch/api/etf'
+import { etfApi, type EtfIntraday, type EtfMarketStats, type EtfTurnoverBaseline } from '@panwatch/api/etf'
 import { Button } from '@panwatch/base-ui/components/ui/button'
 import { Calendar } from '@panwatch/base-ui/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@panwatch/base-ui/components/ui/popover'
@@ -16,6 +16,7 @@ import {
   shanghaiDate, SHANGHAI_TIMEZONE, useMarketTime, type EtfRefreshSlot,
 } from '@/components/etf/market-clock'
 import { useLocalStorage } from '@/lib/utils'
+import { marketSignTextClass } from '@/lib/market-colors'
 
 const DEFAULT_WIDTH = 216
 const MIN_WIDTH = 164
@@ -146,6 +147,7 @@ export default function BroadEtf() {
     date: string; data?: EtfIntraday; busy: boolean; failed?: boolean; offset?: number; refreshedAt?: string
   }>({ date, busy: true })
   const [attempt, setAttempt] = useState(0)
+  const [marketStats, setMarketStats] = useState<{ date: string; result: EtfMarketStats | null }>()
   const [baselineAttempt, retryBaseline] = useState(0)
   const [lag, setLag] = useState<{ day: string; delay: number }>()
   const [reference, setReference] = useState<{ date: string; attempt: number; value: EtfTurnoverBaseline | null }>()
@@ -190,6 +192,17 @@ export default function BroadEtf() {
 
   const calendar = state.data
   const data = state.date === date && state.data?.date === (date || state.data?.latest) ? state.data : undefined
+  const statsDate = data?.date ?? (state.date === date && state.failed ? date : null)
+  useEffect(() => {
+    if (statsDate === null) return
+    const controller = new AbortController()
+    const apply = (result: EtfMarketStats | null) => {
+      if (!controller.signal.aborted) setMarketStats({ date: statsDate, result })
+    }
+    etfApi.marketStats(statsDate, controller.signal).then(apply, () => apply(null))
+    return () => controller.abort()
+  }, [statsDate, attempt])
+  const stats = statsDate !== null && marketStats?.date === statsDate ? marketStats.result : undefined
   const priceLines = useEtfPriceLines(data?.date, data?.status === 'live', attempt)
   const prices = useMemo(() => priceLines.rows.flatMap(({ instrument, colorIndex, quote }) =>
     quote && Object.keys(quote.closes).length ? [{ instrument, colorIndex, closes: quote.closes }] : []), [priceLines.rows])
@@ -260,13 +273,17 @@ export default function BroadEtf() {
   const mean = complete && lastTurnover ? baseline?.cumulative_cny[lastTurnover.minute] : undefined
   const change = mean != null && mean > 0 ? total / mean - 1 : null
   const format = new Intl.NumberFormat(i18n.language, { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+  const flow = stats?.daily_flow
+  const flowValue = flow?.net_cny
+  const flowFormat = new Intl.NumberFormat(i18n.language, { minimumFractionDigits: 1, maximumFractionDigits: 1, signDisplay: 'exceptZero' })
+  const flowTone = flowValue === 0 ? 'text-foreground' : marketSignTextClass(flowValue)
   const percent = new Intl.NumberFormat(i18n.language, { style: 'percent', maximumFractionDigits: 1 })
   const volume = change == null || mean == null ? null : total >= mean * (1 + VOLUME_THRESHOLD) ? 'elevated'
     : total <= mean * (1 - VOLUME_THRESHOLD) ? 'subdued' : 'typical'
   const flat = change != null && Math.abs(change) < .0005
   const Trend = flat || change == null ? Minus : change > 0 ? ArrowUpRight : ArrowDownRight
   const trendClass = flat || change == null ? 'bg-muted text-secondary-foreground' : change > 0
-    ? 'bg-rose-500/10 text-rose-700 dark:text-rose-300' : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+    ? 'bg-market-up/10 text-market-up' : 'bg-market-down/10 text-market-down'
   const sampleGroups = data ? [
     { label: 'verifiedBasket', symbols: data.symbols.filter(symbol => data.disclosures[symbol]) },
     { label: 'extendedBasket', symbols: data.symbols.filter(symbol => !data.disclosures[symbol]) },
@@ -312,17 +329,27 @@ export default function BroadEtf() {
                 && ` · ${t('through', { time: lastTurnover.minute })}`}</span>}
             </p>}
           </div>
-          {lastTurnover && <div className="flex w-full flex-wrap items-center justify-between gap-x-5 gap-y-2 border-t border-border/60 pt-3 sm:w-auto sm:justify-start sm:border-t-0 sm:pt-0">
-            <div className="space-y-1 text-xs text-secondary-foreground">
-              <p>{t(!complete ? 'observedTurnover' : data?.date === data?.today ? 'todayTurnover' : 'total')}</p>
-              {change != null ? <span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 font-medium tabular-nums ${trendClass}`}>
-                <Trend aria-hidden className="size-3.5" />
-                {flat ? t('flat') : t(change > 0 ? 'aboveAverage' : 'belowAverage', { change: percent.format(Math.abs(change)) })}
-              </span> : <p>{t('through', { time: lastTurnover.minute })}</p>}
-            </div>
-            <p className="flex items-baseline gap-1.5 text-3xl font-semibold leading-none tracking-tight tabular-nums text-foreground sm:text-4xl">
-              {format.format(total / CNY_PER_YI)} <span className="text-xs font-medium tracking-normal text-secondary-foreground">{t('amountUnit')}</span>
-            </p>
+          {(lastTurnover || flow) && <div className="flex w-full flex-wrap items-center gap-x-5 gap-y-3 border-t border-border/60 pt-3 sm:w-auto sm:border-t-0 sm:pt-0">
+            {lastTurnover && <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+              <div className="space-y-1 text-xs text-secondary-foreground">
+                <p>{t(!complete ? 'observedTurnover' : data?.date === data?.today ? 'todayTurnover' : 'total')}</p>
+                {change != null ? <span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 font-medium tabular-nums ${trendClass}`}>
+                  <Trend aria-hidden className="size-3.5" />
+                  {flat ? t('flat') : t(change > 0 ? 'aboveAverage' : 'belowAverage', { change: percent.format(Math.abs(change)) })}
+                </span> : <p>{t('through', { time: lastTurnover.minute })}</p>}
+              </div>
+              <p className="flex items-baseline gap-1.5 text-3xl font-semibold leading-none tracking-tight tabular-nums text-foreground sm:text-4xl">
+                {format.format(total / CNY_PER_YI)} <span className="text-xs font-medium tracking-normal text-secondary-foreground">{t('amountUnit')}</span>
+              </p>
+            </div>}
+            {flow && <div className={`space-y-1 ${lastTurnover ? 'border-l border-border/80 pl-5' : ''}`} title={t('methodFlow')} aria-live="polite">
+              <p className="text-xs text-secondary-foreground">{t('dailyFlow', { count: flow.total })}</p>
+              {flowValue != null ? <p className={`text-xl font-semibold leading-none tracking-tight tabular-nums ${flowTone}`}>
+                {flowFormat.format(flowValue / CNY_PER_YI)} <span className="text-xs font-medium tracking-normal text-secondary-foreground">{t('amountUnit')}</span>
+              </p> : <p className="text-xs font-medium text-secondary-foreground">
+                {flow.status === 'partial' ? t('flowCoverage', flow) : t(flow.status === 'pending' ? 'flowPending' : 'flowUnavailable')}
+              </p>}
+            </div>}
           </div>}
         </div>
         {hasData && data ? <div className="etf-intraday-chart">
@@ -361,7 +388,8 @@ export default function BroadEtf() {
             <span>{data.etf_count > 0 && t('turnoverAxis')}</span>
             <span>{(hasIndex || data.previous_close != null) && t('indexAxis')}</span>
           </div>
-          <div className="px-1.5 sm:px-4"><IntradayChart key={data.date} data={data} turnoverBaseline={baseline} prices={prices} /></div>
+          <div className="px-1.5 sm:px-4"><IntradayChart key={data.date} data={data} turnoverBaseline={baseline} prices={prices}
+            breadth={stats?.breadth} breadthFailed={stats === null} /></div>
           {(busy || state.failed || data.issues.length > 0) && <div className="space-y-1 px-4 pb-3 text-xs leading-relaxed text-secondary-foreground sm:px-6" aria-live="polite">
             {busy && <p>{t('refreshing')}</p>}
             {state.failed && <p>{t('unavailable')}</p>}
@@ -379,12 +407,17 @@ export default function BroadEtf() {
             {(state.failed || data?.issues.length || data?.status === 'live') ? <Button size="sm" variant="secondary" onClick={refresh}>{t('retry')}</Button> : null}
           </div>}
         </div>}
+        {!hasData && stats?.breadth.through && <div className="etf-intraday-chart px-1.5 sm:px-4">
+          <IntradayChart key={stats.date} breadth={stats.breadth} prices={[]} />
+        </div>}
         <details className="border-t border-border px-4 py-3 text-xs text-secondary-foreground sm:px-6">
           <summary className="w-fit cursor-pointer rounded-sm font-semibold text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring">{t('methodology')}</summary>
           <div className="mt-3 space-y-2 leading-relaxed">
             <p>{t('methodIntro')}</p>
             <p><strong className="font-semibold text-foreground">{t('methodAverageLabel')}</strong>{' '}{t('methodAverage')}</p>
             <p>{t('methodVolume', { threshold: percent.format(VOLUME_THRESHOLD) })}</p>
+            <p>{t('methodBreadth')}</p>
+            <p>{t('methodFlow')}</p>
             {priceLines.selection.items.length > 0 && <p>{t('methodPriceMove')}</p>}
             <p>{t('methodSelection')}</p>
             {!!data?.symbols.length && <>

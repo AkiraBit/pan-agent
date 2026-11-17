@@ -49,6 +49,20 @@ export type EtfTurnoverBaselineState =
   | { status: 'ready'; value: EtfTurnoverBaseline }
   | { status: 'needs_calculation' | 'unavailable' }
 
+export interface EtfMarketStats {
+  date: string
+  breadth: {
+    through: string | null
+    points: Record<string, { up: number; down: number; flat: number }>
+  }
+  daily_flow: {
+    status: 'ready' | 'partial' | 'pending' | 'unavailable'
+    total: number
+    covered: number
+    net_cny: number | null
+  }
+}
+
 export type PriceInstrumentKind = 'etf' | 'index'
 
 export interface EtfPriceInstrument {
@@ -84,5 +98,10 @@ export const etfApi = {
   turnoverBaseline(date: string, signal?: AbortSignal) {
     const query = new URLSearchParams({ date })
     return fetchAPI<EtfTurnoverBaseline | null>(`/etf/turnover-baseline?${query}`, { signal, timeoutMs: 90000 })
+  },
+  marketStats(date: string, signal?: AbortSignal) {
+    const query = new URLSearchParams()
+    if (date) query.set('date', date)
+    return fetchAPI<EtfMarketStats>(`/etf/market-stats?${query}`, { signal })
   },
 }

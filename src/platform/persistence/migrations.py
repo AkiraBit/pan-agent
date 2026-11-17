@@ -2449,6 +2449,17 @@ def _m155_tushare_index_price_sessions(conn: Connection) -> None:
     )"""))
 
 
+def _m156_tushare_etf_market_stats(conn: Connection) -> None:
+    conn.execute(text("""CREATE TABLE IF NOT EXISTS etf_tushare_breadth_minutes (
+        trade_date VARCHAR(10) NOT NULL, minute VARCHAR(5) NOT NULL,
+        up INTEGER NOT NULL, down INTEGER NOT NULL, flat INTEGER NOT NULL,
+        PRIMARY KEY (trade_date, minute)
+    )"""))
+    conn.execute(text("""CREATE TABLE IF NOT EXISTS etf_tushare_daily_shares (
+        trade_date VARCHAR(10) NOT NULL PRIMARY KEY, payload JSON NOT NULL
+    )"""))
+
+
 MIGRATIONS: tuple[Migration, ...] = (
     Migration(101, "agent_config_kind_and_visibility", _m101_agent_config_kind),
     Migration(102, "backfill_agent_kind_data", _m102_backfill_agent_kind),
@@ -2505,6 +2516,7 @@ MIGRATIONS: tuple[Migration, ...] = (
     Migration(153, "tushare_turnover_baselines", _m153_tushare_turnover_baselines),
     Migration(154, "tushare_etf_price_sessions", _m154_tushare_etf_price_sessions),
     Migration(155, "tushare_index_price_sessions", _m155_tushare_index_price_sessions),
+    Migration(156, "tushare_etf_market_stats", _m156_tushare_etf_market_stats),
 )
 
 
