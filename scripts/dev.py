@@ -16,14 +16,22 @@ BACKEND_URL = "http://127.0.0.1:8000/api/auth/status"
 
 
 def ensure_ports_available(ports=(8000, 5183)):
-    """Reject existing services before installing dependencies or starting children."""
+    """Reject existing listeners without treating recently closed sockets as busy."""
     for port in ports:
-        for family, host in ((socket.AF_INET, "0.0.0.0"), (socket.AF_INET6, "::")):
+        # BSD permits wildcard and loopback listeners to share a port with
+        # SO_REUSEADDR, so probe them separately to catch a live local service.
+        for family, host in (
+            (socket.AF_INET, "0.0.0.0"), (socket.AF_INET, "127.0.0.1"),
+            (socket.AF_INET6, "::"), (socket.AF_INET6, "::1"),
+        ):
             try:
                 with socket.socket(family, socket.SOCK_STREAM) as probe:
                     if family == socket.AF_INET6:
                         probe.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 1)
+                    if os.name != "nt":
+                        probe.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
                     probe.bind((host, port))
+                    probe.listen(1)
             except OSError as error:
                 if family == socket.AF_INET6 and error.errno in (
                     errno.EAFNOSUPPORT, errno.EADDRNOTAVAIL, errno.ENOPROTOOPT,

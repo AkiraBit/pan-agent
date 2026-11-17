@@ -1,4 +1,4 @@
-.PHONY: help setup-backend dev dev-api dev-web build test test-notify eval doctor install-hooks clean-venv
+.PHONY: help setup-backend ensure-dev-backend dev dev-api dev-web build test test-notify eval doctor install-hooks clean-venv
 
 # 端口约定：
 #   - 后端：:8000（Docker / 本地 dev 统一，避免存量用户升级困惑）
@@ -34,17 +34,17 @@ help:
 	@echo "  make install-hooks   安装 git pre-push hook"
 	@echo "  make clean-venv      删除本地 venv"
 
-setup-backend:
+setup-backend ensure-dev-backend:
 ifeq ($(WINDOWS),1)
 	@if not exist .venv ( echo [setup] 创建 venv & $(PYTHON) -m venv .venv )
-	@$(VENV_PYTHON) -m pip install -r requirements.txt
+	@$(VENV_PYTHON) scripts/setup_backend.py $(if $(filter setup-backend,$@),--force)
 	@if not exist .env if exist .env.example copy /Y .env.example .env >nul
 else
 	@if [ ! -d .venv ]; then \
 		echo ">>> 创建 venv"; \
 		python3 -m venv .venv; \
 	fi
-	@$(VENV_PYTHON) -m pip install -r requirements.txt
+	@$(VENV_PYTHON) scripts/setup_backend.py $(if $(filter setup-backend,$@),--force)
 	@if [ ! -f .env ] && [ -f .env.example ]; then cp .env.example .env; fi
 endif
 
@@ -52,8 +52,8 @@ endif
 dev:
 	@$(PYTHON) scripts/dev.py
 
-# server.py 内部已经用 uvicorn.run(host=0.0.0.0, port=8000, reload=True) 启动。
-dev-api: setup-backend
+# 日常启动复用满足清单的依赖；make setup-backend 可手动重新安装。
+dev-api: ensure-dev-backend
 ifeq ($(WINDOWS),1)
 	@set "DEV_RELOAD=1" && $(VENV_PYTHON) server.py
 else

@@ -20,6 +20,8 @@ from scripts import dev
 class BackendReadinessTests(unittest.TestCase):
     def test_existing_listener_is_rejected_without_stopping_it(self):
         with socket.socket() as listener:
+            if os.name != "nt":
+                listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             listener.bind(("127.0.0.1", 0))
             listener.listen()
             port = listener.getsockname()[1]
@@ -27,6 +29,22 @@ class BackendReadinessTests(unittest.TestCase):
                 dev.ensure_ports_available((port,))
             with socket.create_connection(("127.0.0.1", port), timeout=1):
                 pass
+
+    @unittest.skipIf(os.name == "nt", "Checks POSIX reuse of recently closed sockets")
+    def test_recently_closed_http_connection_allows_immediate_restart(self):
+        with socket.socket() as listener:
+            listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            listener.bind(("0.0.0.0", 0))
+            listener.listen()
+            port = listener.getsockname()[1]
+            with socket.create_connection(("127.0.0.1", port), timeout=1) as client:
+                with listener.accept()[0] as peer:
+                    peer.settimeout(1)
+                    peer.shutdown(socket.SHUT_WR)
+                    self.assertEqual(client.recv(1), b"")
+                    client.shutdown(socket.SHUT_WR)
+                    self.assertEqual(peer.recv(1), b"")
+        dev.ensure_ports_available((port,))
 
     def test_waits_for_valid_http_response_without_using_proxy(self):
         replies = [
