@@ -274,6 +274,21 @@ export const configuration = {
     keyHint: 'API Key 加密保存在服务端。',
     loadFailed: '无法读取 FTShare 配置。',
   },
+  tushare: {
+    provider: 'Tushare',
+    issueKey: '获取 API Key',
+    docs: '接口文档',
+    configured: '已保存',
+    notConfigured: '未保存',
+    keySaved: 'Tushare API Key 已保存。',
+    keyRemoved: 'Tushare API Key 已清除。',
+    clearConfirm: '清除已保存的 Tushare API Key？',
+    keyHint: '粘贴示例中引号内的 Token。Token 加密保存在服务端，请求时会通过 HTTP 发送到中转服务。',
+    loadFailed: '无法读取 Tushare 配置。',
+    requireAny: '{{names}} 至少填写一项。',
+    fields: '返回字段',
+    fieldsPlaceholder: '用逗号分隔，留空时返回默认字段',
+  },
   fuyao: {
     provider: '同花顺（扶摇）',
     configureKey: '配置同花顺 API Key',
@@ -559,7 +574,7 @@ export const configuration = {
   dataSources: {
     automatic: '自动采集 · 持久化',
     probeParams: {
-      symbols: '测试证券代码', etfSymbols: '测试 ETF 代码',
+      symbols: '测试证券代码',
       symbolsHelp: '{{markets}} · 最多 {{count}} 个，使用逗号分隔。留空使用默认标的。',
       defaultValue: ' 默认 {{value}}。', latestSession: ' 留空使用最近已收盘交易日（{{date}}）。',
       fields: {
@@ -599,7 +614,7 @@ export const configuration = {
     columns: { endpoint: '接口', test: '测试', enabled: '启用', actions: '操作' },
     testStatus: { untested: '未测试', testing: '测试中', passed: '通过', failed: '失败', notSupported: '不可测试' },
     providers: {
-      fuyao: '同花顺', ftshare: 'FTShare', cls: '财联社', eastmoney: '东方财富',
+      fuyao: '同花顺', ftshare: 'FTShare', tushare: 'Tushare', cls: '财联社', eastmoney: '东方财富',
       tencent: '腾讯财经', sina: '新浪财经',
     },
     callOrder: {
@@ -622,7 +637,6 @@ export const configuration = {
     },
     types: {
       etf_nav: 'ETF 净值',
-      etf_history: 'ETF 历史行情',
       etf_turnover: 'ETF 成交额',
       news: '新闻资讯',
       kline: 'K 线数据',

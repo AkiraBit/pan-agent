@@ -1,0 +1,1907 @@
+{
+  "source": "https://tushare.pro/document/2",
+  "operations": [
+    {
+      "id": "stock_basic",
+      "summary": "股票列表",
+      "group": "股票数据",
+      "subgroup": "基础数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=25",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": false, "example": "600519.SH"},
+        {"name": "name", "type": "string", "required": false},
+        {"name": "market", "type": "string", "required": false},
+        {"name": "list_status", "type": "string", "required": false},
+        {"name": "exchange", "type": "string", "required": false},
+        {"name": "is_hs", "type": "string", "required": false}
+      ]
+    },
+    {
+      "id": "stk_premarket",
+      "summary": "每日股本（盘前）",
+      "group": "股票数据",
+      "subgroup": "基础数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=329",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": false},
+        {"name": "trade_date", "type": "string", "required": false, "example": "20240603"},
+        {"name": "start_date", "type": "string", "required": false},
+        {"name": "end_date", "type": "string", "required": false}
+      ]
+    },
+    {
+      "id": "trade_cal",
+      "summary": "交易日历",
+      "group": "股票数据",
+      "subgroup": "基础数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=26",
+      "parameters": [
+        {"name": "exchange", "type": "string", "required": false, "example": "SSE"},
+        {"name": "start_date", "type": "string", "required": false, "example": "20251027"},
+        {"name": "end_date", "type": "string", "required": false, "example": "20251031"},
+        {"name": "is_open", "type": "string", "required": false}
+      ]
+    },
+    {
+      "id": "stock_st",
+      "summary": "ST股票列表",
+      "group": "股票数据",
+      "subgroup": "基础数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=397",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": false},
+        {"name": "trade_date", "type": "string", "required": false, "example": "20250813"},
+        {"name": "start_date", "type": "string", "required": false},
+        {"name": "end_date", "type": "string", "required": false}
+      ]
+    },
+    {
+      "id": "st",
+      "summary": "ST风险警示板股票",
+      "group": "股票数据",
+      "subgroup": "基础数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=423",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": false, "example": "000564.SZ"},
+        {"name": "pub_date", "type": "string", "required": false},
+        {"name": "imp_date", "type": "string", "required": false}
+      ]
+    },
+    {
+      "id": "stock_hsgt",
+      "summary": "沪深港通股票列表",
+      "group": "股票数据",
+      "subgroup": "基础数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=398",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": false},
+        {"name": "trade_date", "type": "string", "required": false, "example": "20250813"},
+        {"name": "type", "type": "string", "required": true, "example": "HK_SZ"},
+        {"name": "start_date", "type": "string", "required": false},
+        {"name": "end_date", "type": "string", "required": false}
+      ]
+    },
+    {
+      "id": "namechange",
+      "summary": "股票曾用名",
+      "group": "股票数据",
+      "subgroup": "基础数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=100",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": false, "example": "600848.SH"},
+        {"name": "start_date", "type": "string", "required": false},
+        {"name": "end_date", "type": "string", "required": false}
+      ]
+    },
+    {
+      "id": "stock_company",
+      "summary": "上市公司基本信息",
+      "group": "股票数据",
+      "subgroup": "基础数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=112",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": false},
+        {"name": "exchange", "type": "string", "required": false, "example": "SZSE"}
+      ]
+    },
+    {
+      "id": "stk_managers",
+      "summary": "上市公司管理层",
+      "group": "股票数据",
+      "subgroup": "基础数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=193",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": false, "example": "000001.SZ"},
+        {"name": "ann_date", "type": "string", "required": false},
+        {"name": "start_date", "type": "string", "required": false},
+        {"name": "end_date", "type": "string", "required": false}
+      ]
+    },
+    {
+      "id": "stk_rewards",
+      "summary": "管理层薪酬和持股",
+      "group": "股票数据",
+      "subgroup": "基础数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=194",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": true, "example": "000001.SZ"},
+        {"name": "end_date", "type": "string", "required": false}
+      ]
+    },
+    {
+      "id": "bse_mapping",
+      "summary": "北交所新旧代码对照",
+      "group": "股票数据",
+      "subgroup": "基础数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=375",
+      "parameters": [
+        {"name": "o_code", "type": "string", "required": false, "example": "838163.BJ"},
+        {"name": "n_code", "type": "string", "required": false}
+      ]
+    },
+    {
+      "id": "new_share",
+      "summary": "IPO新股上市",
+      "group": "股票数据",
+      "subgroup": "基础数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=123",
+      "parameters": [
+        {"name": "start_date", "type": "string", "required": false, "example": "20180901"},
+        {"name": "end_date", "type": "string", "required": false, "example": "20181018"}
+      ]
+    },
+    {
+      "id": "bak_basic",
+      "summary": "股票历史列表",
+      "group": "股票数据",
+      "subgroup": "基础数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=262",
+      "parameters": [
+        {"name": "trade_date", "type": "string", "required": false, "example": "20211012"},
+        {"name": "ts_code", "type": "string", "required": false}
+      ]
+    },
+    {
+      "id": "daily",
+      "summary": "历史日线",
+      "group": "股票数据",
+      "subgroup": "行情数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=27",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": false, "example": "600519.SH"},
+        {"name": "trade_date", "type": "string", "required": false, "example": "20251031"},
+        {"name": "start_date", "type": "string", "required": false},
+        {"name": "end_date", "type": "string", "required": false}
+      ]
+    },
+    {
+      "id": "rt_k",
+      "summary": "实时日线",
+      "group": "股票数据",
+      "subgroup": "行情数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=372",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": true, "example": "600519.SH"}
+      ]
+    },
+    {
+      "id": "stk_mins",
+      "summary": "历史分钟",
+      "group": "股票数据",
+      "subgroup": "行情数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=370",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": true, "example": "600000.SH"},
+        {"name": "freq", "type": "string", "required": true, "example": "1min"},
+        {"name": "start_date", "type": "string", "required": false, "example": "2023-08-25 09:00:00"},
+        {"name": "end_date", "type": "string", "required": false, "example": "2023-08-25 19:00:00"}
+      ]
+    },
+    {
+      "id": "rt_min",
+      "summary": "实时分钟",
+      "group": "股票数据",
+      "subgroup": "行情数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=374",
+      "parameters": [
+        {"name": "freq", "type": "string", "required": true, "enum": ["1MIN", "5MIN", "15MIN", "30MIN", "60MIN"], "example": "1MIN"},
+        {"name": "ts_code", "type": "string", "required": true, "example": "600000.SH"}
+      ]
+    },
+    {
+      "id": "rt_min_daily",
+      "summary": "A股实时分钟-日累计",
+      "group": "股票数据",
+      "subgroup": "行情数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=457",
+      "parameters": [
+        {"name": "freq", "type": "string", "required": true, "enum": ["1MIN", "5MIN", "15MIN", "30MIN", "60MIN"], "example": "1MIN"},
+        {"name": "ts_code", "type": "string", "required": true, "example": "600000.SH"}
+      ]
+    },
+    {
+      "id": "weekly",
+      "summary": "周线行情",
+      "group": "股票数据",
+      "subgroup": "行情数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=144",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": false, "example": "000001.SZ"},
+        {"name": "trade_date", "type": "string", "required": false},
+        {"name": "start_date", "type": "string", "required": false, "example": "20180101"},
+        {"name": "end_date", "type": "string", "required": false, "example": "20181101"}
+      ]
+    },
+    {
+      "id": "monthly",
+      "summary": "月线行情",
+      "group": "股票数据",
+      "subgroup": "行情数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=145",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": false, "example": "000001.SZ"},
+        {"name": "trade_date", "type": "string", "required": false},
+        {"name": "start_date", "type": "string", "required": false, "example": "20180101"},
+        {"name": "end_date", "type": "string", "required": false, "example": "20181101"}
+      ]
+    },
+    {
+      "id": "stk_weekly_monthly",
+      "summary": "周/月线行情(每日更新)",
+      "group": "股票数据",
+      "subgroup": "行情数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=336",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": false},
+        {"name": "trade_date", "type": "string", "required": false, "example": "20251024"},
+        {"name": "start_date", "type": "string", "required": false},
+        {"name": "end_date", "type": "string", "required": false},
+        {"name": "freq", "type": "string", "required": true, "enum": ["week", "month"], "example": "week"}
+      ]
+    },
+    {
+      "id": "stk_week_month_adj",
+      "summary": "周/月线复权行情(每日更新)",
+      "group": "股票数据",
+      "subgroup": "行情数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=365",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": false, "example": "000001.SZ"},
+        {"name": "trade_date", "type": "string", "required": false},
+        {"name": "start_date", "type": "string", "required": false},
+        {"name": "end_date", "type": "string", "required": false},
+        {"name": "freq", "type": "string", "required": true, "enum": ["week", "month"], "example": "week"}
+      ]
+    },
+    {
+      "id": "adj_factor",
+      "summary": "复权因子",
+      "group": "股票数据",
+      "subgroup": "行情数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=28",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": false, "example": "000001.SZ"},
+        {"name": "trade_date", "type": "string", "required": false},
+        {"name": "start_date", "type": "string", "required": false},
+        {"name": "end_date", "type": "string", "required": false}
+      ]
+    },
+    {
+      "id": "daily_basic",
+      "summary": "每日指标",
+      "group": "股票数据",
+      "subgroup": "行情数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=32",
+      "require_any": ["ts_code", "trade_date"],
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": false},
+        {"name": "trade_date", "type": "string", "required": false, "example": "20180726"},
+        {"name": "start_date", "type": "string", "required": false},
+        {"name": "end_date", "type": "string", "required": false}
+      ]
+    },
+    {
+      "id": "stk_limit",
+      "summary": "每日涨跌停价格",
+      "group": "股票数据",
+      "subgroup": "行情数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=183",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": false, "example": "002149.SZ"},
+        {"name": "trade_date", "type": "string", "required": false},
+        {"name": "start_date", "type": "string", "required": false, "example": "20190115"},
+        {"name": "end_date", "type": "string", "required": false, "example": "20190615"}
+      ]
+    },
+    {
+      "id": "suspend_d",
+      "summary": "每日停复牌信息",
+      "group": "股票数据",
+      "subgroup": "行情数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=214",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": false},
+        {"name": "trade_date", "type": "string", "required": false, "example": "20200312"},
+        {"name": "start_date", "type": "string", "required": false},
+        {"name": "end_date", "type": "string", "required": false},
+        {"name": "suspend_type", "type": "string", "required": false, "example": "S"}
+      ]
+    },
+    {
+      "id": "hsgt_top10",
+      "summary": "沪深股通十大成交股",
+      "group": "股票数据",
+      "subgroup": "行情数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=48",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": false},
+        {"name": "trade_date", "type": "string", "required": false, "example": "20180725"},
+        {"name": "start_date", "type": "string", "required": false},
+        {"name": "end_date", "type": "string", "required": false},
+        {"name": "market_type", "type": "string", "required": false, "example": "1"}
+      ]
+    },
+    {
+      "id": "bak_daily",
+      "summary": "备用行情",
+      "group": "股票数据",
+      "subgroup": "行情数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=255",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": false},
+        {"name": "trade_date", "type": "string", "required": false, "example": "20211012"},
+        {"name": "start_date", "type": "string", "required": false},
+        {"name": "end_date", "type": "string", "required": false},
+        {"name": "offset", "type": "string", "required": false},
+        {"name": "limit", "type": "string", "required": false}
+      ]
+    },
+    {
+      "id": "income",
+      "summary": "利润表",
+      "group": "股票数据",
+      "subgroup": "财务数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=33",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": true, "example": "600000.SH"},
+        {"name": "ann_date", "type": "string", "required": false},
+        {"name": "f_ann_date", "type": "string", "required": false},
+        {"name": "start_date", "type": "string", "required": false, "example": "20180101"},
+        {"name": "end_date", "type": "string", "required": false, "example": "20180730"},
+        {"name": "period", "type": "string", "required": false},
+        {"name": "report_type", "type": "string", "required": false},
+        {"name": "comp_type", "type": "string", "required": false}
+      ]
+    },
+    {
+      "id": "income_vip",
+      "summary": "利润表（全市场）",
+      "group": "股票数据",
+      "subgroup": "财务数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=33",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": false, "example": "600000.SH"},
+        {"name": "ann_date", "type": "string", "required": false},
+        {"name": "f_ann_date", "type": "string", "required": false},
+        {"name": "start_date", "type": "string", "required": false, "example": "20180101"},
+        {"name": "end_date", "type": "string", "required": false, "example": "20180730"},
+        {"name": "period", "type": "string", "required": false, "example": "20181231"},
+        {"name": "report_type", "type": "string", "required": false},
+        {"name": "comp_type", "type": "string", "required": false}
+      ]
+    },
+    {
+      "id": "balancesheet",
+      "summary": "资产负债表",
+      "group": "股票数据",
+      "subgroup": "财务数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=36",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": true, "example": "600000.SH"},
+        {"name": "ann_date", "type": "string", "required": false},
+        {"name": "start_date", "type": "string", "required": false, "example": "20180101"},
+        {"name": "end_date", "type": "string", "required": false, "example": "20180730"},
+        {"name": "period", "type": "string", "required": false},
+        {"name": "report_type", "type": "string", "required": false},
+        {"name": "comp_type", "type": "string", "required": false}
+      ]
+    },
+    {
+      "id": "balancesheet_vip",
+      "summary": "资产负债表（全市场）",
+      "group": "股票数据",
+      "subgroup": "财务数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=36",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": false, "example": "600000.SH"},
+        {"name": "ann_date", "type": "string", "required": false},
+        {"name": "start_date", "type": "string", "required": false, "example": "20180101"},
+        {"name": "end_date", "type": "string", "required": false, "example": "20180730"},
+        {"name": "period", "type": "string", "required": false, "example": "20181231"},
+        {"name": "report_type", "type": "string", "required": false},
+        {"name": "comp_type", "type": "string", "required": false}
+      ]
+    },
+    {
+      "id": "cashflow",
+      "summary": "现金流量表",
+      "group": "股票数据",
+      "subgroup": "财务数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=44",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": true, "example": "600000.SH"},
+        {"name": "ann_date", "type": "string", "required": false},
+        {"name": "f_ann_date", "type": "string", "required": false},
+        {"name": "start_date", "type": "string", "required": false, "example": "20180101"},
+        {"name": "end_date", "type": "string", "required": false, "example": "20180730"},
+        {"name": "period", "type": "string", "required": false},
+        {"name": "report_type", "type": "string", "required": false},
+        {"name": "comp_type", "type": "string", "required": false},
+        {"name": "is_calc", "type": "integer", "required": false}
+      ]
+    },
+    {
+      "id": "cashflow_vip",
+      "summary": "现金流量表（全市场）",
+      "group": "股票数据",
+      "subgroup": "财务数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=44",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": false, "example": "600000.SH"},
+        {"name": "ann_date", "type": "string", "required": false},
+        {"name": "f_ann_date", "type": "string", "required": false},
+        {"name": "start_date", "type": "string", "required": false, "example": "20180101"},
+        {"name": "end_date", "type": "string", "required": false, "example": "20180730"},
+        {"name": "period", "type": "string", "required": false, "example": "20181231"},
+        {"name": "report_type", "type": "string", "required": false},
+        {"name": "comp_type", "type": "string", "required": false},
+        {"name": "is_calc", "type": "integer", "required": false}
+      ]
+    },
+    {
+      "id": "forecast",
+      "summary": "业绩预告",
+      "group": "股票数据",
+      "subgroup": "财务数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=45",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": false},
+        {"name": "ann_date", "type": "string", "required": false, "example": "20190131"},
+        {"name": "start_date", "type": "string", "required": false},
+        {"name": "end_date", "type": "string", "required": false},
+        {"name": "period", "type": "string", "required": false},
+        {"name": "type", "type": "string", "required": false}
+      ]
+    },
+    {
+      "id": "forecast_vip",
+      "summary": "业绩预告（全市场）",
+      "group": "股票数据",
+      "subgroup": "财务数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=45",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": false},
+        {"name": "ann_date", "type": "string", "required": false, "example": "20190131"},
+        {"name": "start_date", "type": "string", "required": false},
+        {"name": "end_date", "type": "string", "required": false},
+        {"name": "period", "type": "string", "required": false, "example": "20181231"},
+        {"name": "type", "type": "string", "required": false}
+      ]
+    },
+    {
+      "id": "express",
+      "summary": "业绩快报",
+      "group": "股票数据",
+      "subgroup": "财务数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=46",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": true, "example": "600000.SH"},
+        {"name": "ann_date", "type": "string", "required": false},
+        {"name": "start_date", "type": "string", "required": false, "example": "20180101"},
+        {"name": "end_date", "type": "string", "required": false, "example": "20180701"},
+        {"name": "period", "type": "string", "required": false}
+      ]
+    },
+    {
+      "id": "express_vip",
+      "summary": "业绩快报（全市场）",
+      "group": "股票数据",
+      "subgroup": "财务数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=46",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": false, "example": "600000.SH"},
+        {"name": "ann_date", "type": "string", "required": false},
+        {"name": "start_date", "type": "string", "required": false, "example": "20180101"},
+        {"name": "end_date", "type": "string", "required": false, "example": "20180701"},
+        {"name": "period", "type": "string", "required": false, "example": "20181231"}
+      ]
+    },
+    {
+      "id": "dividend",
+      "summary": "分红送股数据",
+      "group": "股票数据",
+      "subgroup": "财务数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=103",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": false, "example": "600848.SH"},
+        {"name": "ann_date", "type": "string", "required": false},
+        {"name": "record_date", "type": "string", "required": false},
+        {"name": "ex_date", "type": "string", "required": false},
+        {"name": "imp_ann_date", "type": "string", "required": false}
+      ]
+    },
+    {
+      "id": "fina_indicator",
+      "summary": "财务指标数据",
+      "group": "股票数据",
+      "subgroup": "财务数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=79",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": true, "example": "600000.SH"},
+        {"name": "ann_date", "type": "string", "required": false},
+        {"name": "start_date", "type": "string", "required": false},
+        {"name": "end_date", "type": "string", "required": false},
+        {"name": "period", "type": "string", "required": false}
+      ]
+    },
+    {
+      "id": "fina_audit",
+      "summary": "财务审计意见",
+      "group": "股票数据",
+      "subgroup": "财务数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=80",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": true, "example": "600000.SH"},
+        {"name": "ann_date", "type": "string", "required": false},
+        {"name": "start_date", "type": "string", "required": false, "example": "20100101"},
+        {"name": "end_date", "type": "string", "required": false, "example": "20180808"},
+        {"name": "period", "type": "string", "required": false}
+      ]
+    },
+    {
+      "id": "fina_mainbz",
+      "summary": "主营业务构成",
+      "group": "股票数据",
+      "subgroup": "财务数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=81",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": true, "example": "000627.SZ"},
+        {"name": "period", "type": "string", "required": false},
+        {"name": "type", "type": "string", "required": false, "example": "P"},
+        {"name": "start_date", "type": "string", "required": false},
+        {"name": "end_date", "type": "string", "required": false}
+      ]
+    },
+    {
+      "id": "fina_mainbz_vip",
+      "summary": "主营业务构成（全市场）",
+      "group": "股票数据",
+      "subgroup": "财务数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=81",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": false, "example": "000627.SZ"},
+        {"name": "period", "type": "string", "required": false, "example": "20181231"},
+        {"name": "type", "type": "string", "required": false, "example": "P"},
+        {"name": "start_date", "type": "string", "required": false},
+        {"name": "end_date", "type": "string", "required": false}
+      ]
+    },
+    {
+      "id": "disclosure_date",
+      "summary": "财报披露日期表",
+      "group": "股票数据",
+      "subgroup": "财务数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=162",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": false},
+        {"name": "end_date", "type": "string", "required": false, "example": "20181231"},
+        {"name": "pre_date", "type": "string", "required": false},
+        {"name": "ann_date", "type": "string", "required": false},
+        {"name": "actual_date", "type": "string", "required": false}
+      ]
+    },
+    {
+      "id": "stk_shock",
+      "summary": "个股异常波动",
+      "group": "股票数据",
+      "subgroup": "参考数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=451",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": false, "example": "002015.SZ"},
+        {"name": "trade_date", "type": "string", "required": false},
+        {"name": "start_date", "type": "string", "required": false, "example": "20250101"},
+        {"name": "end_date", "type": "string", "required": false, "example": "20261231"}
+      ]
+    },
+    {
+      "id": "stk_high_shock",
+      "summary": "个股严重异常波动",
+      "group": "股票数据",
+      "subgroup": "参考数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=452",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": false, "example": "002015.SZ"},
+        {"name": "trade_date", "type": "string", "required": false},
+        {"name": "start_date", "type": "string", "required": false, "example": "20250101"},
+        {"name": "end_date", "type": "string", "required": false, "example": "20251231"}
+      ]
+    },
+    {
+      "id": "stk_alert",
+      "summary": "交易所重点提示证券",
+      "group": "股票数据",
+      "subgroup": "参考数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=453",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": false, "example": "001896.SZ"},
+        {"name": "trade_date", "type": "string", "required": false},
+        {"name": "start_date", "type": "string", "required": false, "example": "20250101"},
+        {"name": "end_date", "type": "string", "required": false, "example": "20251231"}
+      ]
+    },
+    {
+      "id": "top10_holders",
+      "summary": "前十大股东",
+      "group": "股票数据",
+      "subgroup": "参考数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=61",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": true, "example": "600000.SH"},
+        {"name": "period", "type": "string", "required": false},
+        {"name": "ann_date", "type": "string", "required": false},
+        {"name": "start_date", "type": "string", "required": false, "example": "20170101"},
+        {"name": "end_date", "type": "string", "required": false, "example": "20171231"}
+      ]
+    },
+    {
+      "id": "top10_floatholders",
+      "summary": "前十大流通股东",
+      "group": "股票数据",
+      "subgroup": "参考数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=62",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": true, "example": "600000.SH"},
+        {"name": "period", "type": "string", "required": false},
+        {"name": "ann_date", "type": "string", "required": false},
+        {"name": "start_date", "type": "string", "required": false, "example": "20170101"},
+        {"name": "end_date", "type": "string", "required": false, "example": "20171231"}
+      ]
+    },
+    {
+      "id": "pledge_stat",
+      "summary": "股权质押统计数据",
+      "group": "股票数据",
+      "subgroup": "参考数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=110",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": false, "example": "000014.SZ"},
+        {"name": "end_date", "type": "string", "required": false}
+      ]
+    },
+    {
+      "id": "pledge_detail",
+      "summary": "股权质押明细数据",
+      "group": "股票数据",
+      "subgroup": "参考数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=111",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": false, "example": "000014.SZ"},
+        {"name": "ann_date", "type": "string", "required": false},
+        {"name": "start_date", "type": "string", "required": false},
+        {"name": "end_date", "type": "string", "required": false}
+      ]
+    },
+    {
+      "id": "repurchase",
+      "summary": "股票回购",
+      "group": "股票数据",
+      "subgroup": "参考数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=124",
+      "parameters": [
+        {"name": "ann_date", "type": "string", "required": false},
+        {"name": "start_date", "type": "string", "required": false, "example": "20180101"},
+        {"name": "end_date", "type": "string", "required": false, "example": "20180510"}
+      ]
+    },
+    {
+      "id": "share_float",
+      "summary": "限售股解禁",
+      "group": "股票数据",
+      "subgroup": "参考数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=160",
+      "require_any": ["ts_code", "ann_date"],
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": false},
+        {"name": "ann_date", "type": "string", "required": false, "example": "20181220"},
+        {"name": "float_date", "type": "string", "required": false},
+        {"name": "start_date", "type": "string", "required": false},
+        {"name": "end_date", "type": "string", "required": false}
+      ]
+    },
+    {
+      "id": "block_trade",
+      "summary": "大宗交易",
+      "group": "股票数据",
+      "subgroup": "参考数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=161",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": false},
+        {"name": "trade_date", "type": "string", "required": false, "example": "20181227"},
+        {"name": "start_date", "type": "string", "required": false},
+        {"name": "end_date", "type": "string", "required": false}
+      ]
+    },
+    {
+      "id": "stk_account",
+      "summary": "股票开户数据（停）",
+      "group": "股票数据",
+      "subgroup": "参考数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=164",
+      "parameters": [
+        {"name": "date", "type": "string", "required": false},
+        {"name": "start_date", "type": "string", "required": false, "example": "20180101"},
+        {"name": "end_date", "type": "string", "required": false, "example": "20181231"}
+      ]
+    },
+    {
+      "id": "stk_account_old",
+      "summary": "股票开户数据（旧）",
+      "group": "股票数据",
+      "subgroup": "参考数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=165",
+      "parameters": [
+        {"name": "start_date", "type": "string", "required": false, "example": "20140101"},
+        {"name": "end_date", "type": "string", "required": false, "example": "20141231"}
+      ]
+    },
+    {
+      "id": "stk_holdernumber",
+      "summary": "股东人数",
+      "group": "股票数据",
+      "subgroup": "参考数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=166",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": false, "example": "300199.SZ"},
+        {"name": "ann_date", "type": "string", "required": false},
+        {"name": "enddate", "type": "string", "required": false},
+        {"name": "start_date", "type": "string", "required": false, "example": "20160101"},
+        {"name": "end_date", "type": "string", "required": false, "example": "20181231"}
+      ]
+    },
+    {
+      "id": "stk_holdertrade",
+      "summary": "股东增减持",
+      "group": "股票数据",
+      "subgroup": "参考数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=175",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": false, "example": "002149.SZ"},
+        {"name": "ann_date", "type": "string", "required": false},
+        {"name": "start_date", "type": "string", "required": false},
+        {"name": "end_date", "type": "string", "required": false},
+        {"name": "trade_type", "type": "string", "required": false},
+        {"name": "holder_type", "type": "string", "required": false}
+      ]
+    },
+    {
+      "id": "stk_seasoned",
+      "summary": "股票增发",
+      "group": "股票数据",
+      "subgroup": "参考数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=494",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": false, "example": "000001.SZ"},
+        {"name": "ann_date", "type": "string", "required": false},
+        {"name": "start_date", "type": "string", "required": false},
+        {"name": "end_date", "type": "string", "required": false}
+      ]
+    },
+    {
+      "id": "report_rc",
+      "summary": "券商盈利预测数据",
+      "group": "股票数据",
+      "subgroup": "特色数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=292",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": false},
+        {"name": "report_date", "type": "string", "required": false, "example": "20220429"},
+        {"name": "start_date", "type": "string", "required": false},
+        {"name": "end_date", "type": "string", "required": false}
+      ]
+    },
+    {
+      "id": "cyq_perf",
+      "summary": "每日筹码及胜率",
+      "group": "股票数据",
+      "subgroup": "特色数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=293",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": true, "example": "600000.SH"},
+        {"name": "trade_date", "type": "string", "required": false},
+        {"name": "start_date", "type": "string", "required": false, "example": "20220101"},
+        {"name": "end_date", "type": "string", "required": false, "example": "20220429"}
+      ]
+    },
+    {
+      "id": "cyq_chips",
+      "summary": "每日筹码分布",
+      "group": "股票数据",
+      "subgroup": "特色数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=294",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": true, "example": "600000.SH"},
+        {"name": "trade_date", "type": "string", "required": false},
+        {"name": "start_date", "type": "string", "required": false, "example": "20220101"},
+        {"name": "end_date", "type": "string", "required": false, "example": "20220429"}
+      ]
+    },
+    {
+      "id": "stk_factor",
+      "summary": "股票技术面因子",
+      "group": "股票数据",
+      "subgroup": "特色数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=296",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": false, "example": "600000.SH"},
+        {"name": "trade_date", "type": "string", "required": false},
+        {"name": "start_date", "type": "string", "required": false, "example": "20220501"},
+        {"name": "end_date", "type": "string", "required": false, "example": "20220520"}
+      ]
+    },
+    {
+      "id": "stk_factor_pro",
+      "summary": "股票技术面因子(专业版）",
+      "group": "股票数据",
+      "subgroup": "特色数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=328",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": false, "example": "600000.SH"},
+        {"name": "trade_date", "type": "string", "required": false},
+        {"name": "start_date", "type": "string", "required": false, "example": "20220501"},
+        {"name": "end_date", "type": "string", "required": false, "example": "20220520"}
+      ]
+    },
+    {
+      "id": "stk_auction_o",
+      "summary": "股票开盘集合竞价数据",
+      "group": "股票数据",
+      "subgroup": "特色数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=353",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": false},
+        {"name": "trade_date", "type": "string", "required": false, "example": "20241122"},
+        {"name": "start_date", "type": "string", "required": false},
+        {"name": "end_date", "type": "string", "required": false}
+      ]
+    },
+    {
+      "id": "stk_auction_c",
+      "summary": "股票收盘集合竞价数据",
+      "group": "股票数据",
+      "subgroup": "特色数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=354",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": false},
+        {"name": "trade_date", "type": "string", "required": false, "example": "20241122"},
+        {"name": "start_date", "type": "string", "required": false},
+        {"name": "end_date", "type": "string", "required": false}
+      ]
+    },
+    {
+      "id": "stk_nineturn",
+      "summary": "神奇九转指标",
+      "group": "股票数据",
+      "subgroup": "特色数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=364",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": false, "example": "000001.SZ"},
+        {"name": "trade_date", "type": "string", "required": false},
+        {"name": "freq", "type": "string", "required": false, "example": "daily"},
+        {"name": "start_date", "type": "string", "required": false},
+        {"name": "end_date", "type": "string", "required": false}
+      ]
+    },
+    {
+      "id": "stk_ah_comparison",
+      "summary": "AH股比价",
+      "group": "股票数据",
+      "subgroup": "特色数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=399",
+      "parameters": [
+        {"name": "hk_code", "type": "string", "required": false},
+        {"name": "ts_code", "type": "string", "required": false},
+        {"name": "trade_date", "type": "string", "required": false, "example": "20250812"},
+        {"name": "start_date", "type": "string", "required": false},
+        {"name": "end_date", "type": "string", "required": false}
+      ]
+    },
+    {
+      "id": "stk_surv",
+      "summary": "机构调研数据",
+      "group": "股票数据",
+      "subgroup": "特色数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=275",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": false, "example": "002223.SZ"},
+        {"name": "trade_date", "type": "string", "required": false, "example": "20211024"},
+        {"name": "start_date", "type": "string", "required": false},
+        {"name": "end_date", "type": "string", "required": false}
+      ]
+    },
+    {
+      "id": "broker_recommend",
+      "summary": "券商月度金股",
+      "group": "股票数据",
+      "subgroup": "特色数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=267",
+      "parameters": [
+        {"name": "month", "type": "string", "required": true, "example": "202510"}
+      ]
+    },
+    {
+      "id": "margin",
+      "summary": "融资融券交易汇总",
+      "group": "股票数据",
+      "subgroup": "两融及转融通",
+      "docs_url": "https://tushare.pro/document/2?doc_id=58",
+      "parameters": [
+        {"name": "trade_date", "type": "string", "required": false, "example": "20180802"},
+        {"name": "start_date", "type": "string", "required": false},
+        {"name": "end_date", "type": "string", "required": false},
+        {"name": "exchange_id", "type": "string", "required": false}
+      ]
+    },
+    {
+      "id": "margin_detail",
+      "summary": "融资融券交易明细",
+      "group": "股票数据",
+      "subgroup": "两融及转融通",
+      "docs_url": "https://tushare.pro/document/2?doc_id=59",
+      "parameters": [
+        {"name": "trade_date", "type": "string", "required": false, "example": "20180802"},
+        {"name": "ts_code", "type": "string", "required": false},
+        {"name": "start_date", "type": "string", "required": false},
+        {"name": "end_date", "type": "string", "required": false}
+      ]
+    },
+    {
+      "id": "margin_secs",
+      "summary": "融资融券标的（盘前）",
+      "group": "股票数据",
+      "subgroup": "两融及转融通",
+      "docs_url": "https://tushare.pro/document/2?doc_id=326",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": false},
+        {"name": "trade_date", "type": "string", "required": false, "example": "20240417"},
+        {"name": "exchange", "type": "string", "required": false, "example": "SSE"},
+        {"name": "start_date", "type": "string", "required": false},
+        {"name": "end_date", "type": "string", "required": false}
+      ]
+    },
+    {
+      "id": "slb_sec",
+      "summary": "转融券交易汇总(停）",
+      "group": "股票数据",
+      "subgroup": "两融及转融通",
+      "docs_url": "https://tushare.pro/document/2?doc_id=332",
+      "parameters": [
+        {"name": "trade_date", "type": "string", "required": false, "example": "20240620"},
+        {"name": "ts_code", "type": "string", "required": false},
+        {"name": "start_date", "type": "string", "required": false},
+        {"name": "end_date", "type": "string", "required": false}
+      ]
+    },
+    {
+      "id": "slb_len",
+      "summary": "转融资交易汇总",
+      "group": "股票数据",
+      "subgroup": "两融及转融通",
+      "docs_url": "https://tushare.pro/document/2?doc_id=331",
+      "parameters": [
+        {"name": "trade_date", "type": "string", "required": false},
+        {"name": "start_date", "type": "string", "required": false, "example": "20240601"},
+        {"name": "end_date", "type": "string", "required": false, "example": "20240620"}
+      ]
+    },
+    {
+      "id": "slb_sec_detail",
+      "summary": "转融券交易明细(停）",
+      "group": "股票数据",
+      "subgroup": "两融及转融通",
+      "docs_url": "https://tushare.pro/document/2?doc_id=333",
+      "parameters": [
+        {"name": "trade_date", "type": "string", "required": false, "example": "20240620"},
+        {"name": "ts_code", "type": "string", "required": false},
+        {"name": "start_date", "type": "string", "required": false},
+        {"name": "end_date", "type": "string", "required": false}
+      ]
+    },
+    {
+      "id": "slb_len_mm",
+      "summary": "做市借券交易汇总(停）",
+      "group": "股票数据",
+      "subgroup": "两融及转融通",
+      "docs_url": "https://tushare.pro/document/2?doc_id=334",
+      "parameters": [
+        {"name": "trade_date", "type": "string", "required": false, "example": "20240620"},
+        {"name": "ts_code", "type": "string", "required": false},
+        {"name": "start_date", "type": "string", "required": false},
+        {"name": "end_date", "type": "string", "required": false}
+      ]
+    },
+    {
+      "id": "moneyflow",
+      "summary": "个股资金流向",
+      "group": "股票数据",
+      "subgroup": "资金流向数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=170",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": false, "example": "002149.SZ"},
+        {"name": "trade_date", "type": "string", "required": false},
+        {"name": "start_date", "type": "string", "required": false, "example": "20190115"},
+        {"name": "end_date", "type": "string", "required": false, "example": "20190315"}
+      ]
+    },
+    {
+      "id": "moneyflow_ths",
+      "summary": "个股资金流向（THS）",
+      "group": "股票数据",
+      "subgroup": "资金流向数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=348",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": false, "example": "002149.SZ"},
+        {"name": "trade_date", "type": "string", "required": false},
+        {"name": "start_date", "type": "string", "required": false, "example": "20241001"},
+        {"name": "end_date", "type": "string", "required": false, "example": "20241011"}
+      ]
+    },
+    {
+      "id": "moneyflow_dc",
+      "summary": "个股资金流向（DC）",
+      "group": "股票数据",
+      "subgroup": "资金流向数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=349",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": false, "example": "002149.SZ"},
+        {"name": "trade_date", "type": "string", "required": false},
+        {"name": "start_date", "type": "string", "required": false, "example": "20240901"},
+        {"name": "end_date", "type": "string", "required": false, "example": "20240913"}
+      ]
+    },
+    {
+      "id": "moneyflow_cnt_ths",
+      "summary": "板块资金流向（THS)",
+      "group": "股票数据",
+      "subgroup": "资金流向数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=371",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": false},
+        {"name": "trade_date", "type": "string", "required": false, "example": "20250320"},
+        {"name": "start_date", "type": "string", "required": false},
+        {"name": "end_date", "type": "string", "required": false}
+      ]
+    },
+    {
+      "id": "moneyflow_ind_ths",
+      "summary": "行业资金流向（THS）",
+      "group": "股票数据",
+      "subgroup": "资金流向数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=343",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": false},
+        {"name": "trade_date", "type": "string", "required": false, "example": "20240927"},
+        {"name": "start_date", "type": "string", "required": false},
+        {"name": "end_date", "type": "string", "required": false}
+      ]
+    },
+    {
+      "id": "moneyflow_ind_dc",
+      "summary": "板块资金流向（DC）",
+      "group": "股票数据",
+      "subgroup": "资金流向数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=344",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": false},
+        {"name": "trade_date", "type": "string", "required": false, "example": "20240927"},
+        {"name": "start_date", "type": "string", "required": false},
+        {"name": "end_date", "type": "string", "required": false},
+        {"name": "content_type", "type": "string", "required": false}
+      ]
+    },
+    {
+      "id": "moneyflow_mkt_dc",
+      "summary": "大盘资金流向（DC）",
+      "group": "股票数据",
+      "subgroup": "资金流向数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=345",
+      "parameters": [
+        {"name": "trade_date", "type": "string", "required": false},
+        {"name": "start_date", "type": "string", "required": false, "example": "20240901"},
+        {"name": "end_date", "type": "string", "required": false, "example": "20240930"}
+      ]
+    },
+    {
+      "id": "top_list",
+      "summary": "龙虎榜每日统计单",
+      "group": "股票数据",
+      "subgroup": "打板专题数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=106",
+      "parameters": [
+        {"name": "trade_date", "type": "string", "required": true, "example": "20180928"},
+        {"name": "ts_code", "type": "string", "required": false}
+      ]
+    },
+    {
+      "id": "top_inst",
+      "summary": "龙虎榜机构交易单",
+      "group": "股票数据",
+      "subgroup": "打板专题数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=107",
+      "parameters": [
+        {"name": "trade_date", "type": "string", "required": true, "example": "20210525"},
+        {"name": "ts_code", "type": "string", "required": false}
+      ]
+    },
+    {
+      "id": "limit_list_ths",
+      "summary": "THS涨跌停榜单",
+      "group": "股票数据",
+      "subgroup": "打板专题数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=355",
+      "parameters": [
+        {"name": "trade_date", "type": "string", "required": false, "example": "20241125"},
+        {"name": "ts_code", "type": "string", "required": false},
+        {"name": "limit_type", "type": "string", "required": false, "example": "涨停池"},
+        {"name": "market", "type": "string", "required": false},
+        {"name": "start_date", "type": "string", "required": false},
+        {"name": "end_date", "type": "string", "required": false}
+      ]
+    },
+    {
+      "id": "limit_list_d",
+      "summary": "涨跌停和炸板数据",
+      "group": "股票数据",
+      "subgroup": "打板专题数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=298",
+      "parameters": [
+        {"name": "trade_date", "type": "string", "required": false, "example": "20220615"},
+        {"name": "ts_code", "type": "string", "required": false},
+        {"name": "limit_type", "type": "string", "required": false, "example": "U"},
+        {"name": "exchange", "type": "string", "required": false},
+        {"name": "start_date", "type": "string", "required": false},
+        {"name": "end_date", "type": "string", "required": false}
+      ]
+    },
+    {
+      "id": "limit_step",
+      "summary": "涨停股票连板天梯",
+      "group": "股票数据",
+      "subgroup": "打板专题数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=356",
+      "parameters": [
+        {"name": "trade_date", "type": "string", "required": false, "example": "20241125"},
+        {"name": "ts_code", "type": "string", "required": false},
+        {"name": "start_date", "type": "string", "required": false},
+        {"name": "end_date", "type": "string", "required": false},
+        {"name": "nums", "type": "string", "required": false}
+      ]
+    },
+    {
+      "id": "limit_cpt_list",
+      "summary": "涨停最强板块统计",
+      "group": "股票数据",
+      "subgroup": "打板专题数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=357",
+      "parameters": [
+        {"name": "trade_date", "type": "string", "required": false, "example": "20241127"},
+        {"name": "ts_code", "type": "string", "required": false},
+        {"name": "start_date", "type": "string", "required": false},
+        {"name": "end_date", "type": "string", "required": false}
+      ]
+    },
+    {
+      "id": "ths_index",
+      "summary": "THS概念板块分类",
+      "group": "股票数据",
+      "subgroup": "打板专题数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=259",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": false},
+        {"name": "exchange", "type": "string", "required": false, "example": "A"},
+        {"name": "type", "type": "string", "required": false, "example": "N"}
+      ]
+    },
+    {
+      "id": "ths_daily",
+      "summary": "THS概念板块行情",
+      "group": "股票数据",
+      "subgroup": "打板专题数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=260",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": false, "example": "865001.TI"},
+        {"name": "trade_date", "type": "string", "required": false},
+        {"name": "start_date", "type": "string", "required": false, "example": "20200101"},
+        {"name": "end_date", "type": "string", "required": false, "example": "20210101"}
+      ]
+    },
+    {
+      "id": "ths_member",
+      "summary": "THS概念板块成分",
+      "group": "股票数据",
+      "subgroup": "打板专题数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=261",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": false, "example": "885800.TI"},
+        {"name": "con_code", "type": "string", "required": false}
+      ]
+    },
+    {
+      "id": "dc_index",
+      "summary": "DC概念板块分类",
+      "group": "股票数据",
+      "subgroup": "打板专题数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=362",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": false},
+        {"name": "name", "type": "string", "required": false},
+        {"name": "trade_date", "type": "string", "required": false, "example": "20250103"},
+        {"name": "start_date", "type": "string", "required": false},
+        {"name": "end_date", "type": "string", "required": false},
+        {"name": "idx_type", "type": "string", "required": true, "example": "概念板块"}
+      ]
+    },
+    {
+      "id": "dc_member",
+      "summary": "DC概念板块成分",
+      "group": "股票数据",
+      "subgroup": "打板专题数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=363",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": false, "example": "BK1184.DC"},
+        {"name": "con_code", "type": "string", "required": false},
+        {"name": "trade_date", "type": "string", "required": false, "example": "20250102"},
+        {"name": "start_date", "type": "string", "required": false},
+        {"name": "end_date", "type": "string", "required": false}
+      ]
+    },
+    {
+      "id": "dc_daily",
+      "summary": "DC概念板块行情",
+      "group": "股票数据",
+      "subgroup": "打板专题数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=382",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": false},
+        {"name": "trade_date", "type": "string", "required": false, "example": "20250513"},
+        {"name": "start_date", "type": "string", "required": false},
+        {"name": "end_date", "type": "string", "required": false},
+        {"name": "idx_type", "type": "string", "required": false}
+      ]
+    },
+    {
+      "id": "stk_auction",
+      "summary": "开盘竞价成交（当日）",
+      "group": "股票数据",
+      "subgroup": "打板专题数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=369",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": false},
+        {"name": "trade_date", "type": "string", "required": false, "example": "20250218"},
+        {"name": "start_date", "type": "string", "required": false},
+        {"name": "end_date", "type": "string", "required": false}
+      ]
+    },
+    {
+      "id": "hm_list",
+      "summary": "市场游资最全名录",
+      "group": "股票数据",
+      "subgroup": "打板专题数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=311",
+      "parameters": [
+        {"name": "name", "type": "string", "required": false}
+      ]
+    },
+    {
+      "id": "hm_detail",
+      "summary": "游资交易每日明细",
+      "group": "股票数据",
+      "subgroup": "打板专题数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=312",
+      "parameters": [
+        {"name": "trade_date", "type": "string", "required": false, "example": "20230815"},
+        {"name": "ts_code", "type": "string", "required": false},
+        {"name": "hm_name", "type": "string", "required": false},
+        {"name": "start_date", "type": "string", "required": false},
+        {"name": "end_date", "type": "string", "required": false}
+      ]
+    },
+    {
+      "id": "ths_hot",
+      "summary": "THS热榜",
+      "group": "股票数据",
+      "subgroup": "打板专题数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=320",
+      "parameters": [
+        {"name": "trade_date", "type": "string", "required": false, "example": "20240315"},
+        {"name": "ts_code", "type": "string", "required": false},
+        {"name": "market", "type": "string", "required": false, "example": "热股"},
+        {"name": "is_new", "type": "string", "required": false, "example": "N"}
+      ]
+    },
+    {
+      "id": "dc_hot",
+      "summary": "DC热榜",
+      "group": "股票数据",
+      "subgroup": "打板专题数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=321",
+      "parameters": [
+        {"name": "trade_date", "type": "string", "required": false, "example": "20240415"},
+        {"name": "ts_code", "type": "string", "required": false},
+        {"name": "market", "type": "string", "required": false, "example": "A股市场"},
+        {"name": "hot_type", "type": "string", "required": false, "example": "人气榜"},
+        {"name": "is_new", "type": "string", "required": false}
+      ]
+    },
+    {
+      "id": "tdx_index",
+      "summary": "TDX概念板块分类",
+      "group": "股票数据",
+      "subgroup": "打板专题数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=376",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": false},
+        {"name": "trade_date", "type": "string", "required": false, "example": "20250513"},
+        {"name": "idx_type", "type": "string", "required": false}
+      ]
+    },
+    {
+      "id": "tdx_member",
+      "summary": "TDX概念板块成分",
+      "group": "股票数据",
+      "subgroup": "打板专题数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=377",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": false, "example": "880728.TDX"},
+        {"name": "con_code", "type": "string", "required": false},
+        {"name": "trade_date", "type": "string", "required": false, "example": "20250513"},
+        {"name": "start_date", "type": "string", "required": false},
+        {"name": "end_date", "type": "string", "required": false}
+      ]
+    },
+    {
+      "id": "tdx_daily",
+      "summary": "TDX概念板块行情",
+      "group": "股票数据",
+      "subgroup": "打板专题数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=378",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": false},
+        {"name": "trade_date", "type": "string", "required": false, "example": "20250513"},
+        {"name": "start_date", "type": "string", "required": false},
+        {"name": "end_date", "type": "string", "required": false}
+      ]
+    },
+    {
+      "id": "kpl_list",
+      "summary": "榜单数据（KP）",
+      "group": "股票数据",
+      "subgroup": "打板专题数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=347",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": false},
+        {"name": "trade_date", "type": "string", "required": false, "example": "20240927"},
+        {"name": "tag", "type": "string", "required": false, "example": "涨停"},
+        {"name": "start_date", "type": "string", "required": false},
+        {"name": "end_date", "type": "string", "required": false}
+      ]
+    },
+    {
+      "id": "kpl_concept_cons",
+      "summary": "题材成分（KP）",
+      "group": "股票数据",
+      "subgroup": "打板专题数据",
+      "docs_url": "https://tushare.pro/document/2?doc_id=351",
+      "parameters": [
+        {"name": "trade_date", "type": "string", "required": false, "example": "20241014"},
+        {"name": "ts_code", "type": "string", "required": false},
+        {"name": "con_code", "type": "string", "required": false}
+      ]
+    },
+    {
+      "id": "etf_basic",
+      "summary": "ETF基本信息",
+      "group": "ETF专题",
+      "docs_url": "https://tushare.pro/document/2?doc_id=385",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": false, "example": "510300.SH"},
+        {"name": "index_code", "type": "string", "required": false},
+        {"name": "list_date", "type": "string", "required": false},
+        {"name": "list_status", "type": "string", "required": false},
+        {"name": "exchange", "type": "string", "required": false},
+        {"name": "mgr", "type": "string", "required": false}
+      ]
+    },
+    {
+      "id": "etf_index",
+      "summary": "ETF跟踪指数",
+      "group": "ETF专题",
+      "docs_url": "https://tushare.pro/document/2?doc_id=386",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": false, "example": "000300.SH"},
+        {"name": "pub_date", "type": "string", "required": false},
+        {"name": "base_date", "type": "string", "required": false}
+      ]
+    },
+    {
+      "id": "mkt_idx_bmk",
+      "summary": "公募基金业绩基准库",
+      "group": "ETF专题",
+      "docs_url": "https://tushare.pro/document/2?doc_id=462",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": false},
+        {"name": "bmk_type", "type": "string", "required": false, "example": "宽基"},
+        {"name": "bmk_level", "type": "string", "required": false}
+      ]
+    },
+    {
+      "id": "rt_etf_min",
+      "summary": "ETF实时分钟",
+      "group": "ETF专题",
+      "docs_url": "https://tushare.pro/document/2?doc_id=416",
+      "parameters": [
+        {"name": "freq", "type": "string", "required": true, "enum": ["1MIN", "5MIN", "15MIN", "30MIN", "60MIN"], "example": "1MIN"},
+        {"name": "ts_code", "type": "string", "required": true, "example": "589960.SH"}
+      ]
+    },
+    {
+      "id": "rt_etf_min_daily",
+      "summary": "ETF实时分钟-日累计",
+      "group": "ETF专题",
+      "docs_url": "https://tushare.pro/document/2?doc_id=470",
+      "parameters": [
+        {"name": "freq", "type": "string", "required": true, "enum": ["1MIN", "5MIN", "15MIN", "30MIN", "60MIN"], "example": "1MIN"},
+        {"name": "ts_code", "type": "string", "required": true, "example": "588780.SH"}
+      ]
+    },
+    {
+      "id": "etf_mins",
+      "summary": "ETF历史分钟",
+      "group": "ETF专题",
+      "docs_url": "https://tushare.pro/document/2?doc_id=387",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": true, "example": "510330.SH"},
+        {"name": "freq", "type": "string", "required": true, "example": "1min"},
+        {"name": "start_date", "type": "string", "required": false, "example": "2025-06-20 09:00:00"},
+        {"name": "end_date", "type": "string", "required": false, "example": "2025-06-20 19:00:00"}
+      ]
+    },
+    {
+      "id": "rt_etf_k",
+      "summary": "ETF实时日线",
+      "group": "ETF专题",
+      "docs_url": "https://tushare.pro/document/2?doc_id=400",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": true, "example": "510300.SH"},
+        {"name": "topic", "type": "string", "required": false, "example": "HQ_FND_TICK"}
+      ]
+    },
+    {
+      "id": "fund_daily",
+      "summary": "ETF日线行情",
+      "group": "ETF专题",
+      "docs_url": "https://tushare.pro/document/2?doc_id=127",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": false, "example": "510300.SH"},
+        {"name": "trade_date", "type": "string", "required": false, "example": "20251031"},
+        {"name": "start_date", "type": "string", "required": false},
+        {"name": "end_date", "type": "string", "required": false}
+      ]
+    },
+    {
+      "id": "etf_auction",
+      "summary": "ETF当日集合竞价",
+      "group": "ETF专题",
+      "docs_url": "https://tushare.pro/document/2?doc_id=493",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": false, "example": "180607.SZ"},
+        {"name": "trade_date", "type": "string", "required": false},
+        {"name": "start_date", "type": "string", "required": false},
+        {"name": "end_date", "type": "string", "required": false}
+      ]
+    },
+    {
+      "id": "fund_adj",
+      "summary": "ETF复权因子",
+      "group": "ETF专题",
+      "docs_url": "https://tushare.pro/document/2?doc_id=199",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": false, "example": "513100.SH"},
+        {"name": "trade_date", "type": "string", "required": false},
+        {"name": "start_date", "type": "string", "required": false, "example": "20190101"},
+        {"name": "end_date", "type": "string", "required": false, "example": "20190926"},
+        {"name": "offset", "type": "string", "required": false},
+        {"name": "limit", "type": "string", "required": false}
+      ]
+    },
+    {
+      "id": "etf_limit",
+      "summary": "ETF每日涨跌停价格",
+      "group": "ETF专题",
+      "docs_url": "https://tushare.pro/document/2?doc_id=491",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": false, "example": "159001.SZ"},
+        {"name": "trade_date", "type": "string", "required": false},
+        {"name": "start_date", "type": "string", "required": false},
+        {"name": "end_date", "type": "string", "required": false}
+      ]
+    },
+    {
+      "id": "fund_factor_pro",
+      "summary": "技术面因子(专业版)",
+      "group": "ETF专题",
+      "docs_url": "https://tushare.pro/document/2?doc_id=359",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": false, "example": "510300.SH"},
+        {"name": "start_date", "type": "string", "required": false},
+        {"name": "end_date", "type": "string", "required": false},
+        {"name": "trade_date", "type": "string", "required": false, "example": "20251031"}
+      ]
+    },
+    {
+      "id": "etf_share_size",
+      "summary": "ETF份额规模",
+      "group": "ETF专题",
+      "docs_url": "https://tushare.pro/document/2?doc_id=408",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": false, "example": "510330.SH"},
+        {"name": "trade_date", "type": "string", "required": false},
+        {"name": "start_date", "type": "string", "required": false, "example": "20250101"},
+        {"name": "end_date", "type": "string", "required": false, "example": "20251224"},
+        {"name": "exchange", "type": "string", "required": false}
+      ]
+    },
+    {
+      "id": "etf_sh_cons",
+      "summary": "每日篮子组合(沪市PCF）",
+      "group": "ETF专题",
+      "docs_url": "https://tushare.pro/document/2?doc_id=471",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": false, "example": "517030.SH"},
+        {"name": "trade_date", "type": "string", "required": false, "example": "20260615"},
+        {"name": "con_code", "type": "string", "required": false},
+        {"name": "start_date", "type": "string", "required": false},
+        {"name": "end_date", "type": "string", "required": false}
+      ]
+    },
+    {
+      "id": "etf_sz_cons",
+      "summary": "每日篮子组合(深市PCF）",
+      "group": "ETF专题",
+      "docs_url": "https://tushare.pro/document/2?doc_id=472",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": false, "example": "159051.SZ"},
+        {"name": "trade_date", "type": "string", "required": false, "example": "20260625"},
+        {"name": "con_code", "type": "string", "required": false},
+        {"name": "start_date", "type": "string", "required": false},
+        {"name": "end_date", "type": "string", "required": false}
+      ]
+    },
+    {
+      "id": "rt_etf_sz_iopv",
+      "summary": "ETF实时参考",
+      "group": "ETF专题",
+      "docs_url": "https://tushare.pro/document/2?doc_id=454",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": false, "example": "159103.SZ"}
+      ]
+    },
+    {
+      "id": "etf_bs_sh_detail",
+      "summary": "ETF公告申购赎回清单明细(沪市)",
+      "group": "ETF专题",
+      "docs_url": "https://tushare.pro/document/2?doc_id=535",
+      "parameters": [
+        {"name": "trade_date", "type": "string", "required": false},
+        {"name": "ts_code", "type": "string", "required": false, "example": "510130.SH"},
+        {"name": "start_date", "type": "string", "required": false, "example": "20260101"},
+        {"name": "end_date", "type": "string", "required": false, "example": "20261113"}
+      ]
+    },
+    {
+      "id": "etf_bs_sz_detail",
+      "summary": "ETF公告申购赎回清单明细(深市)",
+      "group": "ETF专题",
+      "docs_url": "https://tushare.pro/document/2?doc_id=536",
+      "parameters": [
+        {"name": "trade_date", "type": "string", "required": false},
+        {"name": "ts_code", "type": "string", "required": false, "example": "159977.SZ"},
+        {"name": "start_date", "type": "string", "required": false, "example": "20261113"},
+        {"name": "end_date", "type": "string", "required": false, "example": "20261113"}
+      ]
+    },
+    {
+      "id": "index_basic",
+      "summary": "指数基本信息",
+      "group": "指数专题",
+      "docs_url": "https://tushare.pro/document/2?doc_id=94",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": false, "example": "000300.SH"},
+        {"name": "symbol", "type": "string", "required": false},
+        {"name": "name", "type": "string", "required": false},
+        {"name": "market", "type": "string", "required": false, "example": "SSE"},
+        {"name": "publisher", "type": "string", "required": false},
+        {"name": "category", "type": "string", "required": false}
+      ]
+    },
+    {
+      "id": "index_daily",
+      "summary": "指数日线行情",
+      "group": "指数专题",
+      "docs_url": "https://tushare.pro/document/2?doc_id=95",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": true, "example": "000300.SH"},
+        {"name": "trade_date", "type": "string", "required": false, "example": "20251031"},
+        {"name": "start_date", "type": "string", "required": false},
+        {"name": "end_date", "type": "string", "required": false}
+      ]
+    },
+    {
+      "id": "rt_idx_k",
+      "summary": "指数实时日线",
+      "group": "指数专题",
+      "docs_url": "https://tushare.pro/document/2?doc_id=403",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": true, "example": "000001.SH"}
+      ]
+    },
+    {
+      "id": "rt_idx_min",
+      "summary": "指数实时分钟",
+      "group": "指数专题",
+      "docs_url": "https://tushare.pro/document/2?doc_id=420",
+      "parameters": [
+        {"name": "freq", "type": "string", "required": true, "enum": ["1MIN", "5MIN", "15MIN", "30MIN", "60MIN"], "example": "1MIN"},
+        {"name": "ts_code", "type": "string", "required": true, "example": "000001.SH"}
+      ]
+    },
+    {
+      "id": "rt_idx_min_daily",
+      "summary": "指数实时分钟（日累计）",
+      "group": "指数专题",
+      "docs_url": "https://tushare.pro/document/2?doc_id=420",
+      "parameters": [
+        {"name": "freq", "type": "string", "required": true, "enum": ["1MIN", "5MIN", "15MIN", "30MIN", "60MIN"], "example": "1MIN"},
+        {"name": "ts_code", "type": "string", "required": true, "example": "399300.SZ"}
+      ]
+    },
+    {
+      "id": "index_weekly",
+      "summary": "指数周线行情",
+      "group": "指数专题",
+      "docs_url": "https://tushare.pro/document/2?doc_id=171",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": false, "example": "000001.SH"},
+        {"name": "trade_date", "type": "string", "required": false},
+        {"name": "start_date", "type": "string", "required": false, "example": "20180101"},
+        {"name": "end_date", "type": "string", "required": false, "example": "20190329"}
+      ]
+    },
+    {
+      "id": "idx_mins",
+      "summary": "指数历史分钟",
+      "group": "指数专题",
+      "docs_url": "https://tushare.pro/document/2?doc_id=419",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": true, "example": "000001.SH"},
+        {"name": "freq", "type": "string", "required": true, "example": "1min"},
+        {"name": "start_date", "type": "string", "required": false, "example": "2023-08-25 09:00:00"},
+        {"name": "end_date", "type": "string", "required": false, "example": "2023-08-25 19:00:00"}
+      ]
+    },
+    {
+      "id": "index_monthly",
+      "summary": "指数月线行情",
+      "group": "指数专题",
+      "docs_url": "https://tushare.pro/document/2?doc_id=172",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": false, "example": "000001.SH"},
+        {"name": "trade_date", "type": "string", "required": false},
+        {"name": "start_date", "type": "string", "required": false, "example": "20180101"},
+        {"name": "end_date", "type": "string", "required": false, "example": "20190330"}
+      ]
+    },
+    {
+      "id": "index_weight",
+      "summary": "指数成分和权重",
+      "group": "指数专题",
+      "docs_url": "https://tushare.pro/document/2?doc_id=96",
+      "parameters": [
+        {"name": "index_code", "type": "string", "required": true, "example": "000300.SH"},
+        {"name": "trade_date", "type": "string", "required": false},
+        {"name": "start_date", "type": "string", "required": false, "example": "20251001"},
+        {"name": "end_date", "type": "string", "required": false, "example": "20251031"}
+      ]
+    },
+    {
+      "id": "index_dailybasic",
+      "summary": "大盘指数每日指标",
+      "group": "指数专题",
+      "docs_url": "https://tushare.pro/document/2?doc_id=128",
+      "parameters": [
+        {"name": "trade_date", "type": "string", "required": false, "example": "20181018"},
+        {"name": "ts_code", "type": "string", "required": false},
+        {"name": "start_date", "type": "string", "required": false},
+        {"name": "end_date", "type": "string", "required": false}
+      ]
+    },
+    {
+      "id": "index_classify",
+      "summary": "申万行业分类",
+      "group": "指数专题",
+      "docs_url": "https://tushare.pro/document/2?doc_id=181",
+      "parameters": [
+        {"name": "index_code", "type": "string", "required": false},
+        {"name": "level", "type": "string", "required": false, "example": "L1"},
+        {"name": "parent_code", "type": "string", "required": false},
+        {"name": "src", "type": "string", "required": false, "example": "SW2021"}
+      ]
+    },
+    {
+      "id": "index_member_all",
+      "summary": "申万行业成分（分级）",
+      "group": "指数专题",
+      "docs_url": "https://tushare.pro/document/2?doc_id=335",
+      "parameters": [
+        {"name": "l1_code", "type": "string", "required": false},
+        {"name": "l2_code", "type": "string", "required": false},
+        {"name": "l3_code", "type": "string", "required": false},
+        {"name": "ts_code", "type": "string", "required": false, "example": "000001.SZ"},
+        {"name": "is_new", "type": "string", "required": false}
+      ]
+    },
+    {
+      "id": "sw_daily",
+      "summary": "申万日线行情",
+      "group": "指数专题",
+      "docs_url": "https://tushare.pro/document/2?doc_id=327",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": false},
+        {"name": "trade_date", "type": "string", "required": false, "example": "20230705"},
+        {"name": "start_date", "type": "string", "required": false},
+        {"name": "end_date", "type": "string", "required": false}
+      ]
+    },
+    {
+      "id": "rt_sw_k",
+      "summary": "申万实时行情",
+      "group": "指数专题",
+      "docs_url": "https://tushare.pro/document/2?doc_id=417",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": false, "example": "801053.SI"}
+      ]
+    },
+    {
+      "id": "sw_mins",
+      "summary": "SW历史分钟",
+      "group": "指数专题",
+      "docs_url": "https://tushare.pro/document/2?doc_id=469",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": true, "example": "801003.SI"},
+        {"name": "freq", "type": "string", "required": true, "example": "1min"},
+        {"name": "start_date", "type": "string", "required": false, "example": "2026-06-03 09:00:00"},
+        {"name": "end_date", "type": "string", "required": false, "example": "2026-06-03 19:00:00"}
+      ]
+    },
+    {
+      "id": "ci_index_member",
+      "summary": "中信行业成分",
+      "group": "指数专题",
+      "docs_url": "https://tushare.pro/document/2?doc_id=373",
+      "parameters": [
+        {"name": "l1_code", "type": "string", "required": false},
+        {"name": "l2_code", "type": "string", "required": false},
+        {"name": "l3_code", "type": "string", "required": false},
+        {"name": "ts_code", "type": "string", "required": false, "example": "000001.SZ"},
+        {"name": "is_new", "type": "string", "required": false}
+      ]
+    },
+    {
+      "id": "ci_daily",
+      "summary": "中信行业指数日行情",
+      "group": "指数专题",
+      "docs_url": "https://tushare.pro/document/2?doc_id=308",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": false},
+        {"name": "trade_date", "type": "string", "required": false, "example": "20230705"},
+        {"name": "start_date", "type": "string", "required": false},
+        {"name": "end_date", "type": "string", "required": false}
+      ]
+    },
+    {
+      "id": "ci_index_weight_d",
+      "summary": "中信指数日度成分权重",
+      "group": "指数专题",
+      "docs_url": "https://tushare.pro/document/2?doc_id=518",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": false, "example": "CI005001.CI"},
+        {"name": "con_code", "type": "string", "required": false},
+        {"name": "index_type", "type": "string", "required": false},
+        {"name": "trade_date", "type": "string", "required": false, "example": "20261109"},
+        {"name": "start_date", "type": "string", "required": false},
+        {"name": "end_date", "type": "string", "required": false}
+      ]
+    },
+    {
+      "id": "index_global",
+      "summary": "国际主要指数",
+      "group": "指数专题",
+      "docs_url": "https://tushare.pro/document/2?doc_id=211",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": false, "example": "XIN9"},
+        {"name": "trade_date", "type": "string", "required": false},
+        {"name": "start_date", "type": "string", "required": false, "example": "20200201"},
+        {"name": "end_date", "type": "string", "required": false, "example": "20200220"}
+      ]
+    },
+    {
+      "id": "idx_factor_pro",
+      "summary": "指数技术面因子(专业版)",
+      "group": "指数专题",
+      "docs_url": "https://tushare.pro/document/2?doc_id=358",
+      "parameters": [
+        {"name": "ts_code", "type": "string", "required": false, "example": "000300.SH"},
+        {"name": "start_date", "type": "string", "required": false},
+        {"name": "end_date", "type": "string", "required": false},
+        {"name": "trade_date", "type": "string", "required": false, "example": "20251031"}
+      ]
+    },
+    {
+      "id": "daily_info",
+      "summary": "沪深市场每日交易统计",
+      "group": "指数专题",
+      "docs_url": "https://tushare.pro/document/2?doc_id=215",
+      "parameters": [
+        {"name": "trade_date", "type": "string", "required": false, "example": "20200320"},
+        {"name": "ts_code", "type": "string", "required": false},
+        {"name": "exchange", "type": "string", "required": false, "example": "SZ"},
+        {"name": "start_date", "type": "string", "required": false},
+        {"name": "end_date", "type": "string", "required": false}
+      ]
+    },
+    {
+      "id": "sz_daily_info",
+      "summary": "深圳市场每日交易情况",
+      "group": "指数专题",
+      "docs_url": "https://tushare.pro/document/2?doc_id=268",
+      "parameters": [
+        {"name": "trade_date", "type": "string", "required": false, "example": "20200320"},
+        {"name": "ts_code", "type": "string", "required": false, "example": "股票"},
+        {"name": "start_date", "type": "string", "required": false},
+        {"name": "end_date", "type": "string", "required": false}
+      ]
+    },
+    {
+      "id": "vix_index",
+      "summary": "美股恐慌指数行情",
+      "group": "指数专题",
+      "docs_url": "https://tushare.pro/document/2?doc_id=498",
+      "parameters": [
+        {"name": "trade_date", "type": "string", "required": false},
+        {"name": "start_date", "type": "string", "required": false, "example": "20260901"},
+        {"name": "end_date", "type": "string", "required": false}
+      ]
+    },
+    {
+      "id": "idx_anns",
+      "summary": "指数公司公告",
+      "group": "指数专题",
+      "docs_url": "https://tushare.pro/document/2?doc_id=460",
+      "parameters": [
+        {"name": "ann_date", "type": "string", "required": false},
+        {"name": "start_date", "type": "string", "required": false, "example": "20260101"},
+        {"name": "end_date", "type": "string", "required": false},
+        {"name": "src", "type": "string", "required": false, "example": "国证指数"}
+      ]
+    }
+  ]
+}

@@ -107,13 +107,6 @@ class TestKlineSourceTestPath(unittest.IsolatedAsyncioTestCase):
                 from src.platform.marketdata import fuyao_rest
                 operation = fuyao_rest.operation_for(seed["type"])
                 fuyao_rest.saved_params(operation, seed["config"])
-            elif seed["type"].startswith('etf_'):
-                from src.modules.market.etf.free_sources import code
-                self.assertTrue(seed['test_symbols'])
-                for symbol in seed['test_symbols']:
-                    self.assertEqual(code(symbol), symbol)
-                    if seed['provider'] in {'sse', 'szse'}:
-                        self.assertTrue(symbol.startswith('5' if seed['provider'] == 'sse' else '15'))
             elif seed["test_symbols"]:
                 self.assertEqual(seed["test_symbols"], list(DEFAULT_TEST_SYMBOLS), seed["name"])
 

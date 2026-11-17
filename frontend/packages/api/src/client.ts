@@ -24,6 +24,7 @@ const API_ERROR_TEXT_EN: Record<string, string> = {
   mcp_connection_failed: 'Could not connect to Longbridge. Try again later.',
   provider_key_required: 'Save a Fuyao API key in Settings → Data providers first.',
   provider_key_invalid: 'Enter a valid Fuyao API key.',
+  tushare_key_format_invalid: 'Paste the Tushare token from inside the quotes in the example, without spaces or the relay address.',
   provider_storage_unavailable: 'The Fuyao API key could not be saved.',
   fuyao_mcp_authorization_required: 'The Fuyao API key is invalid or lacks access to this service.',
   fuyao_mcp_connection_failed: 'Could not connect to Fuyao MCP. Try again later.',

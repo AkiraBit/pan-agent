@@ -50,6 +50,7 @@ export interface DataSource {
   workspace_path?: string | null
   source_probe?: boolean
   ftshare_operation?: import('./ftshare-rest').FtshareOperation | null
+  tushare_operation?: import('./tushare-rest').TushareOperation | null
   fuyao_operation?: import('./fuyao-rest').FuyaoOperation | null
   routing?: { key: string; mode: 'fallback' | 'aggregate' | 'direct'; label: string; category: string; markets?: string[] }
   health?: SourceHealth | null
@@ -60,7 +61,7 @@ export interface DataSource {
 export type DataSourceTestValue = string | number | boolean
 
 export interface DataSourceTestSettings {
-  symbols: { markets: string[]; maximum: number; examples: string[]; etf: boolean } | null
+  symbols: { markets: string[]; maximum: number; examples: string[] } | null
   fields: { key: string; type: 'integer' | 'date'; default: DataSourceTestValue | null;
     wire?: string | null; minimum?: number; maximum?: number }[]
   values: Record<string, DataSourceTestValue>

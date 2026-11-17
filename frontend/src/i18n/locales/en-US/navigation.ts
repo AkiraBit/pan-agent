@@ -2,6 +2,7 @@ import type { TranslationShape } from '../../resource-types'
 import { navigation as zhNavigation } from '../zh-CN/navigation'
 
 export const navigation = {
+  primaryLabel: 'Main navigation',
   items: {
     workspace: 'Workspace',
     gettingStarted: 'Guide center',

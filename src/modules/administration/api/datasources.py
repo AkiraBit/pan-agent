@@ -1,15 +1,15 @@
 """数据源管理 API"""
 
 import logging
+from time import perf_counter
 from typing import Literal
-from fastapi import APIRouter, Depends, Query
-from datetime import datetime
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, StrictBool
 
 from src.modules.market import source_test_settings
 from src.platform.marketdata import (call_order, ftshare_rest, fuyao_business, fuyao_credentials, fuyao_rest,
-                                     provider_credentials, source_activation)
+                                     provider_credentials, source_activation, tushare_rest)
 from src.platform.persistence.database import get_db
 from src.platform.persistence.models import DataSource
 from src.web.errors import api_error
@@ -22,7 +22,7 @@ router = APIRouter()
 # 数据源类型说明
 TYPE_LABELS = {
     "etf_turnover": "ETF 成交额",
-    "etf_nav": "ETF 净值", "etf_history": "ETF 历史行情",
+    "etf_nav": "ETF 净值",
     "news": "新闻资讯",
     "kline": "K线数据",
     "capital_flow": "资金流向",
@@ -114,6 +114,8 @@ def _is_orphan(type_: str, provider: str) -> bool:
 
     与 server.reconcile_data_sources 的孤儿判定保持一致(legal = 包内集合 | seed 集合)。
     """
+    if provider == tushare_rest.PROVIDER:
+        return tushare_rest.operation_for(type_) is None
     from marketdata import PACKAGE_VENDORS_BY_TYPE
     from server import _seed_providers_by_type
 
@@ -122,18 +124,23 @@ def _is_orphan(type_: str, provider: str) -> bool:
 
 
 def _to_response(source: DataSource, health_map: dict | None = None,
-                 fuyao_configured: bool | None = None, ftshare_configured: bool | None = None) -> dict:
+                 fuyao_configured: bool | None = None, ftshare_configured: bool | None = None,
+                 tushare_configured: bool | None = None) -> dict:
     """转换为响应格式。health_map: {provider: 指标快照};缺失则 health=None。"""
     health = (health_map or {}).get(source.provider)
     fuyao_operation = fuyao_rest.operation_for(source.type) if source.provider == "fuyao" else None
     business = fuyao_business.BY_OPERATION[fuyao_operation["id"]] if fuyao_operation else source.type
     ftshare_operation = ftshare_rest.operation_for(source.type) if source.provider == ftshare_rest.PROVIDER else None
+    tushare_operation = tushare_rest.operation_for(source.type) if source.provider == tushare_rest.PROVIDER else None
+    catalog_operation = ftshare_operation or tushare_operation
+    configured = (ftshare_configured if ftshare_operation else tushare_configured if tushare_operation else
+                  fuyao_configured if source.provider == fuyao_credentials.PROVIDER else None)
     routing = call_order.metadata(source, TYPE_LABELS)
     return {
         "id": source.id,
         "name": source.name,
         "type": source.type,
-        "type_label": ftshare_operation["group"] if ftshare_operation else TYPE_LABELS.get(business, business),
+        "type_label": catalog_operation["group"] if catalog_operation else TYPE_LABELS.get(business, business),
         "provider": source.provider,
         "provider_group": source_activation.provider_group(source.provider),
         "config": source.config or {},
@@ -145,18 +152,22 @@ def _to_response(source: DataSource, health_map: dict | None = None,
         "engine_attached": business in _ENGINE_ATTACHED_TYPES or business in fuyao_business.NATIVE,
         "ftshare_operation": ftshare_rest.describe(ftshare_operation) if ftshare_operation else None,
         "fuyao_operation": fuyao_operation,
+        "tushare_operation": tushare_rest.describe(tushare_operation) if tushare_operation else None,
         "business_type": business if fuyao_operation else None,
         "routing": routing,
         "workspace_path": f"/market-data/{business}" if business in fuyao_business.WORKSPACE_CAPABILITIES else None,
         "source_probe": source.type not in fuyao_business.DEFAULT_COMPETITORS or source.provider == "fuyao",
         "health": health,
         "is_orphan": _is_orphan(source.type, source.provider),
-        "connection_status": (
-            ("ready" if ftshare_configured else "authorization_required")
-            if ftshare_operation and ftshare_configured is not None else
-            ("ready" if fuyao_configured else "authorization_required")
-            if source.provider == fuyao_credentials.PROVIDER and fuyao_configured is not None else None
-        ),
+        "connection_status": None if configured is None else ("ready" if configured else "authorization_required"),
+    }
+
+
+def _provider_credentials(db: Session) -> dict:
+    return {
+        "fuyao_configured": fuyao_credentials.configured(fuyao_credentials.read(db)),
+        **{f"{provider}_configured": provider_credentials.configured(provider_credentials.read(db, provider))
+           for provider in (ftshare_rest.PROVIDER, tushare_rest.PROVIDER)},
     }
 
 
@@ -172,9 +183,8 @@ def list_datasources(type: str | None = None, db: Session = Depends(get_db)):
     sources = query.order_by(DataSource.type, DataSource.id).all()
     from src.platform.marketdata.marketdata_client import get_market_data
     health_map = get_market_data().health()
-    fuyao_configured = fuyao_credentials.configured(fuyao_credentials.read(db))
-    ftshare_configured = provider_credentials.configured(provider_credentials.read(db, ftshare_rest.PROVIDER))
-    return [_to_response(s, health_map, fuyao_configured, ftshare_configured) for s in sources]
+    credentials = _provider_credentials(db)
+    return [_to_response(s, health_map, **credentials) for s in sources]
 
 
 def _require_fuyao_key(db: Session, provider: str, enabled: bool) -> None:
@@ -183,39 +193,6 @@ def _require_fuyao_key(db: Session, provider: str, enabled: bool) -> None:
             fuyao_credentials.decrypt(fuyao_credentials.read(db))
         except fuyao_credentials.CredentialUnavailable as exc:
             raise api_error(409, "provider_key_required", str(exc)) from None
-
-
-@router.get('/{source_id}/collection')
-def collection_state(source_id: int, limit: int = Query(50, ge=1, le=200), db: Session = Depends(get_db)):
-    from src.modules.market.etf.free_sources import SPECS
-    from src.modules.market.etf.models import EtfFetchState, EtfMeasurement
-    source = db.get(DataSource, source_id)
-    spec = SPECS.get((source.type, source.provider)) if source else None
-    if not spec:
-        raise api_error(404, 'datasource_not_found', '免费 ETF 数据源不存在')
-    states = db.query(EtfFetchState).filter(EtfFetchState.resource == spec[0], EtfFetchState.source == source.provider)
-    rows = states.order_by(EtfFetchState.checked_at.desc()).limit(limit).all()
-    count = db.query(EtfMeasurement).filter(EtfMeasurement.resource == spec[0], EtfMeasurement.source == source.provider).count()
-    enabled = bool(source.enabled and source_activation.provider_group(source.provider) not in source_activation.paused_providers(db))
-    return {'enabled': enabled, 'observations': count, 'pending_retries': states.filter(EtfFetchState.status == 'error').count(),
-            'items': [{key: getattr(row, key) for key in ('key', 'status', 'checked_at', 'retry_after', 'failures', 'error', 'record_count')} for row in rows]}
-
-
-@router.get('/{source_id}/observations')
-def source_observations(source_id: int, before_id: int | None = Query(None, ge=1),
-                        limit: int = Query(20, ge=1, le=100), known_at: datetime | None = None,
-                        db: Session = Depends(get_db)):
-    from src.modules.market.etf.free_sources import SPECS
-    from src.modules.market.etf.observations import read_observations
-
-    source = db.get(DataSource, source_id)
-    spec = SPECS.get((source.type, source.provider)) if source else None
-    if not spec:
-        raise api_error(404, 'datasource_not_found', '数据源不存在')
-    if known_at and known_at.tzinfo is None:
-        raise api_error(422, 'invalid_known_at', 'known_at 必须包含时区')
-    return read_observations(db, resource=spec[0], source=source.provider,
-                             before_id=before_id, limit=limit, known_at=known_at)
 
 
 @router.get("/types")
@@ -284,8 +261,7 @@ def get_datasource(source_id: int, db: Session = Depends(get_db)):
     source = db.query(DataSource).filter(DataSource.id == source_id).first()
     if not source or not source_activation.supported_provider(source.provider):
         raise api_error(404, "datasource_not_found", "数据源不存在")
-    return _to_response(source, fuyao_configured=fuyao_credentials.configured(fuyao_credentials.read(db)),
-                        ftshare_configured=provider_credentials.configured(provider_credentials.read(db, ftshare_rest.PROVIDER)))
+    return _to_response(source, **_provider_credentials(db))
 
 
 @router.post("")
@@ -293,8 +269,8 @@ def create_datasource(data: DataSourceCreate, db: Session = Depends(get_db)):
     """创建数据源"""
     if not source_activation.supported_provider(data.provider) or data.type in source_activation.RETIRED_TYPES:
         raise api_error(422, "datasource_provider_not_found", "数据来源不存在。")
-    if data.provider in {ftshare_rest.PROVIDER, fuyao_credentials.PROVIDER} or data.type.startswith(
-        (ftshare_rest.TYPE_PREFIX, fuyao_rest.TYPE_PREFIX)
+    if data.provider in {ftshare_rest.PROVIDER, fuyao_credentials.PROVIDER, tushare_rest.PROVIDER} or data.type.startswith(
+        (ftshare_rest.TYPE_PREFIX, fuyao_rest.TYPE_PREFIX, tushare_rest.TYPE_PREFIX)
     ):
         raise api_error(422, "datasource_managed_operation", "此供应商的接口由官方目录维护。")
     source = DataSource(
@@ -347,6 +323,15 @@ def update_datasource(
                 changes["config"] = {"params": fuyao_rest.saved_params(operation, changes["config"])}
             except fuyao_rest.InvalidQuery as exc:
                 raise api_error(422, "fuyao_rest_invalid_params", str(exc)) from None
+    if tushare_rest.PROVIDER in (source.provider, provider) or (changes.get("type") or "").startswith(tushare_rest.TYPE_PREFIX):
+        operation = tushare_rest.operation_for(source.type) if source.provider == tushare_rest.PROVIDER else None
+        if not operation or changes.keys() - {"enabled", "config"}:
+            raise api_error(422, "datasource_managed_operation", "Tushare 接口由官方目录维护。")
+        if "config" in changes:
+            try:
+                changes["config"] = tushare_rest.validate(operation, changes["config"])
+            except tushare_rest.InvalidQuery as exc:
+                raise api_error(422, "tushare_invalid_params", str(exc)) from None
     if data.enabled or (provider != source.provider and changes.get("enabled", source.enabled)):
         _require_fuyao_key(db, provider, True)
     if "test_params" in changes:
@@ -369,8 +354,7 @@ def update_datasource(
     if call_order.metadata(source, TYPE_LABELS)["key"] == "kline" and "enabled" in changes:
         from src.platform.marketdata.collectors.kline_collector import clear_kline_cache
         clear_kline_cache()
-    return _to_response(source, fuyao_configured=fuyao_credentials.configured(fuyao_credentials.read(db)),
-                        ftshare_configured=provider_credentials.configured(provider_credentials.read(db, ftshare_rest.PROVIDER)))
+    return _to_response(source, **_provider_credentials(db))
 
 
 @router.delete("/{source_id}")
@@ -379,7 +363,7 @@ def delete_datasource(source_id: int, db: Session = Depends(get_db)):
     source = db.query(DataSource).filter(DataSource.id == source_id).first()
     if not source or not source_activation.supported_provider(source.provider):
         raise api_error(404, "datasource_not_found", "数据源不存在")
-    if source.provider in {ftshare_rest.PROVIDER, fuyao_credentials.PROVIDER}:
+    if source.provider in {ftshare_rest.PROVIDER, fuyao_credentials.PROVIDER, tushare_rest.PROVIDER}:
         raise api_error(409, "datasource_managed_operation", "此接口可停用，目录由服务商维护。")
 
     db.delete(source)
@@ -411,7 +395,6 @@ async def test_datasource(source_id: int, db: Session = Depends(get_db)):
         raise api_error(409, "datasource_provider_paused", "请先打开该来源的总开关。")
 
     if source.provider == ftshare_rest.PROVIDER:
-        from time import perf_counter
         from . import ftshare_rest as ftshare_api
 
         started = perf_counter()
@@ -428,7 +411,6 @@ async def test_datasource(source_id: int, db: Session = Depends(get_db)):
                 "business_code": response["business_code"], "error": None if passed else response["message"]}
 
     if source.provider == fuyao_credentials.PROVIDER:
-        from time import perf_counter
         from . import fuyao_rest as fuyao_api
 
         operation = fuyao_rest.operation_for(source.type)
@@ -447,6 +429,23 @@ async def test_datasource(source_id: int, db: Session = Depends(get_db)):
                 "supports_batch": False, "test_symbols": [], "duration_ms": round((perf_counter() - started) * 1000),
                 "count": 0, "raw_response": response["response_json"], "http_status": response["http_status"],
                 "business_code": response["business_code"], "error": None if passed else "同花顺接口返回错误。"}
+
+    if source.provider == tushare_rest.PROVIDER:
+        from . import tushare_rest as tushare_api
+
+        operation = tushare_rest.operation_for(source.type)
+        if operation is None:
+            raise api_error(404, "tushare_unknown_operation", "该接口不在 Tushare 目录中。")
+        started = perf_counter()
+        name, kind = source.name, source.type
+        response = await tushare_api.execute(db, operation["id"], source.config or {})
+        passed = tushare_rest.successful(response)
+        return {"test_passed": passed, "source_name": name, "source_type": kind,
+                "type_label": operation["group"], "provider": tushare_rest.PROVIDER, "supports_batch": False,
+                "test_symbols": [], "count": response["row_count"], "duration_ms": round((perf_counter() - started) * 1000),
+                "raw_response": response["response_json"], "http_status": response["http_status"],
+                "business_code": response["business_code"],
+                "error": None if passed else response["message"] or "Tushare 接口返回错误。"}
 
     from src.modules.market.data_collector import get_collector_manager
 

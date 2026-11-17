@@ -20,6 +20,10 @@ const PROVIDER_LINKS = {
     { href: 'https://ftai.chat/me/profile', label: 'configuration:ftshare.issueKey', external: true },
     { href: 'https://market.ft.tech/gateway/doc/p/pb8eizu3', label: 'configuration:ftshare.docs', external: true },
   ],
+  tushare: [
+    { href: 'https://tushare.pro/user/token', label: 'configuration:tushare.issueKey', external: true },
+    { href: 'https://tushare.pro/document/2', label: 'configuration:tushare.docs', external: true },
+  ],
 } as const
 
 type CredentialStatus = { configured: boolean; masked_key: string | null }
@@ -33,6 +37,7 @@ function ProviderCard({ provider }: { provider: keyof typeof PROVIDER_LINKS }) {
   const [credential, setCredential] = useState<CredentialStatus | null>(null)
   const [editing, setEditing] = useState(false)
   const [key, setKey] = useState('')
+  const [saveError, setSaveError] = useState('')
   const [busy, setBusy] = useState(false)
   const [loadFailed, setLoadFailed] = useState(false)
   const [revision, setRevision] = useState(0)
@@ -50,6 +55,7 @@ function ProviderCard({ provider }: { provider: keyof typeof PROVIDER_LINKS }) {
 
   async function update(method: 'PUT' | 'DELETE') {
     setBusy(true)
+    setSaveError('')
     try {
       const result = await fetchAPI<CredentialStatus>(path, {
         method, ...(method === 'PUT' ? { body: JSON.stringify({ api_key: key.trim() }) } : {}),
@@ -59,7 +65,7 @@ function ProviderCard({ provider }: { provider: keyof typeof PROVIDER_LINKS }) {
       setEditing(false)
       toast(t(`configuration:${provider}.${method === 'PUT' ? 'keySaved' : 'keyRemoved'}`), 'success')
     } catch (error) {
-      toast(error instanceof Error ? error.message : t(`configuration:${provider}.loadFailed`), 'error')
+      setSaveError(error instanceof Error ? error.message : t(`configuration:${provider}.loadFailed`))
     } finally { setBusy(false) }
   }
 
@@ -71,7 +77,10 @@ function ProviderCard({ provider }: { provider: keyof typeof PROVIDER_LINKS }) {
   function changeEditing(open: boolean) {
     if (busy) return
     setEditing(open)
-    if (!open) setKey('')
+    if (!open) {
+      setKey('')
+      setSaveError('')
+    }
   }
 
   return (
@@ -110,8 +119,10 @@ function ProviderCard({ provider }: { provider: keyof typeof PROVIDER_LINKS }) {
           <form onSubmit={save} aria-busy={busy}>
             <Label htmlFor={inputId} className="mb-0">{t('configuration:dataProviders.keyLabel')}</Label>
             <Input id={inputId} type="password" autoComplete="new-password" maxLength={512} value={key}
-              onChange={event => setKey(event.target.value)} disabled={busy} className="mt-2"
+              aria-invalid={Boolean(saveError)} aria-describedby={saveError ? inputId + '-error' : undefined}
+              onChange={event => { setKey(event.target.value); setSaveError('') }} disabled={busy} className="mt-2"
               placeholder={t(configured ? 'configuration:dataProviders.replacePlaceholder' : 'configuration:dataProviders.keyPlaceholder')} />
+            {saveError && <p id={inputId + '-error'} role="alert" className="mt-2 text-sm text-destructive">{saveError}</p>}
             <div className="mt-5 flex flex-wrap items-center justify-end gap-2">
               {configured && <Button type="button" variant="ghost" size="sm" className="mr-auto hover:text-destructive" disabled={busy} onClick={async () => {
                 if (await confirmAction(t(`configuration:${provider}.clearConfirm`), { destructive: true })) await update('DELETE')
@@ -145,6 +156,7 @@ export default function DataProvidersSettings() {
       <div className="mt-4 grid min-w-0 grid-cols-1 gap-3 md:grid-cols-2">
         <ProviderCard provider="fuyao" />
         <ProviderCard provider="ftshare" />
+        <ProviderCard provider="tushare" />
       </div>
     </section>
   )

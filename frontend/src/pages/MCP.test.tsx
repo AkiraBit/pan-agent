@@ -57,6 +57,22 @@ describe('Fuyao connection', () => {
 })
 
 describe('data provider settings', () => {
+  it('keeps a Tushare format error next to the token field and clears it on edit', async () => {
+    request.mockResolvedValue({ configured: false, masked_key: null })
+    render(<DataProvidersSettings />)
+    const card = within(screen.getByRole('region', { name: 'Tushare' }))
+    fireEvent.click(await card.findByRole('button', { name: '添加 Tushare API Key' }))
+    const dialog = within(screen.getByRole('dialog'))
+    const input = dialog.getByLabelText('API Key', { exact: true })
+    request.mockRejectedValueOnce(new Error('请粘贴 Tushare Token'))
+    fireEvent.change(input, { target: { value: 'two separate words' } })
+    fireEvent.click(dialog.getByRole('button', { name: '保存' }))
+    expect((await dialog.findByRole('alert')).textContent).toBe('请粘贴 Tushare Token')
+    expect(input.getAttribute('aria-invalid')).toBe('true')
+    fireEvent.change(input, { target: { value: 'test-token' } })
+    expect(dialog.queryByRole('alert')).toBeNull()
+  })
+
   it('adds a key, displays its masked value, and clears it from the edit dialog', async () => {
     request.mockResolvedValue({ configured: false, masked_key: null })
     render(<ConfirmProvider labels={{ title: '确认', confirm: '确定', cancel: '取消' }}><DataProvidersSettings /></ConfirmProvider>)

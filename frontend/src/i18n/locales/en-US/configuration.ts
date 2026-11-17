@@ -277,6 +277,21 @@ export const configuration = {
     keyHint: 'The API key is encrypted on the server.',
     loadFailed: 'Could not load FTShare settings.',
   },
+  tushare: {
+    provider: 'Tushare',
+    issueKey: 'Get API key',
+    docs: 'API docs',
+    configured: 'Key saved',
+    notConfigured: 'No key saved',
+    keySaved: 'Tushare API key saved.',
+    keyRemoved: 'Tushare API key removed.',
+    clearConfirm: 'Remove the saved Tushare API key?',
+    keyHint: 'Paste the token from inside the quotes in the example. The server stores it encrypted and sends it to the relay over HTTP.',
+    loadFailed: 'Could not load Tushare settings.',
+    requireAny: 'Provide at least one of {{names}}.',
+    fields: 'Return fields',
+    fieldsPlaceholder: 'Comma-separated; leave blank for the default fields',
+  },
   fuyao: {
     provider: 'Tonghuashun (Fuyao)',
     configureKey: 'Configure Fuyao API key',
@@ -562,7 +577,7 @@ export const configuration = {
   dataSources: {
     automatic: 'Automatic collection · Persisted',
     probeParams: {
-      symbols: 'Test symbols', etfSymbols: 'Test ETF symbols',
+      symbols: 'Test symbols',
       symbolsHelp: '{{markets}} · Up to {{count}}, separated by commas. Leave blank to use the default symbols.',
       defaultValue: ' Default: {{value}}.', latestSession: ' Leave blank to use the latest completed session ({{date}}).',
       fields: {
@@ -602,7 +617,7 @@ export const configuration = {
     columns: { endpoint: 'Endpoint', test: 'Test', enabled: 'Enabled', actions: 'Actions' },
     testStatus: { untested: 'Not tested', testing: 'Testing', passed: 'Passed', failed: 'Failed', notSupported: 'Not testable' },
     providers: {
-      fuyao: 'Tonghuashun', ftshare: 'FTShare', cls: 'Cailian Press', eastmoney: 'East Money',
+      fuyao: 'Tonghuashun', ftshare: 'FTShare', tushare: 'Tushare', cls: 'Cailian Press', eastmoney: 'East Money',
       tencent: 'Tencent Finance', sina: 'Sina Finance',
     },
     callOrder: {
@@ -625,7 +640,6 @@ export const configuration = {
     },
     types: {
       etf_nav: 'ETF NAV',
-      etf_history: 'ETF historical prices',
       etf_turnover: 'ETF turnover',
       news: 'News',
       kline: 'Candlesticks',

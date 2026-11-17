@@ -1,7 +1,7 @@
 import { useConfirm } from '@panwatch/base-ui/components/ui/confirm-dialog'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Pencil, Database, Newspaper, LineChart, TrendingUp, DollarSign, Image, Layers, Zap, Check, X, Clock, Trash2, RotateCcw, AlertTriangle, BarChart3, Trophy, Landmark, Users, Gift, ArrowLeftRight, ListOrdered, KeyRound, BookOpen, ChevronDown, Power, PowerOff } from 'lucide-react'
-import { fetchAPI, resetDataSourcesToSeed, type DataSource, type DataSourceTestSettings, type DataSourceTestValue, type FtshareOperation, type FtshareSettings, type FtshareTier, type FuyaoOperation } from '@panwatch/api'
+import { fetchAPI, resetDataSourcesToSeed, type DataSource, type DataSourceTestSettings, type DataSourceTestValue, type FtshareOperation, type FtshareSettings, type FtshareTier, type FuyaoOperation, type TushareOperation } from '@panwatch/api'
 import { Input } from '@panwatch/base-ui/components/ui/input'
 import { Label } from '@panwatch/base-ui/components/ui/label'
 import { Button } from '@panwatch/base-ui/components/ui/button'
@@ -85,12 +85,12 @@ interface DataSourceForm {
   config: Record<string, unknown>
   ftshareOperation?: FtshareOperation | null
   fuyaoOperation?: FuyaoOperation | null
+  tushareOperation?: TushareOperation | null
   testSettings?: DataSourceTestSettings | null
 }
 
 const DATASOURCE_TYPES = {
   etf_nav: { icon: DollarSign, color: 'text-indigo-500' },
-  etf_history: { icon: LineChart, color: 'text-indigo-500' },
   etf_turnover: { icon: BarChart3, color: 'text-indigo-500' },
   news: { icon: Newspaper, color: 'text-blue-500' },
   kline: { icon: LineChart, color: 'text-orange-500' },
@@ -124,7 +124,7 @@ const DATASOURCE_TYPES = {
 // 数据源分类分组:仅用于页面展示时的二级归组,不影响数据结构与后端
 const DATASOURCE_CATEGORIES: { key: string; types: string[] }[] = [
   { key: 'quote_kline', types: ['quote', 'kline', 'index_quote', 'index_kline', 'index_constituents', 'stock_search', 'trading_calendar'] },
-  { key: 'etf', types: ['etf_nav', 'etf_history', 'etf_adjusted_history', 'etf_turnover'] },
+  { key: 'etf', types: ['etf_nav', 'etf_adjusted_history', 'etf_turnover'] },
   { key: 'news', types: ['news', 'flash_news', 'events'] },
   { key: 'fundamentals', types: ['fundamentals'] },
   { key: 'capital', types: ['capital_flow', 'dragon_tiger', 'market_sentiment', 'auction', 'margin', 'shareholders', 'northbound', 'dividend', 'ipo'] },
@@ -134,12 +134,12 @@ const DATASOURCE_CATEGORIES: { key: string; types: string[] }[] = [
 
 const CATEGORY_BY_TYPE = new Map(DATASOURCE_CATEGORIES.flatMap(category => category.types.map(type => [type, category.key] as const)))
 const categoryOf = (type: string) => CATEGORY_BY_TYPE.get(type) ?? 'other'
-const PROVIDERS = ['fuyao', 'ftshare', 'cls', 'eastmoney', 'tencent', 'sina'] as const
+const PROVIDERS = ['fuyao', 'ftshare', 'tushare', 'cls', 'eastmoney', 'tencent', 'sina'] as const
 type ProviderId = typeof PROVIDERS[number]
 const isProvider = (id: string): id is ProviderId => (PROVIDERS as readonly string[]).includes(id)
 const providerOf = (source: DataSource) => source.provider_group ?? source.provider
 const needsProviderConnection = (source: DataSource) =>
-  (source.provider === 'fuyao' || source.provider === 'ftshare') && source.connection_status !== 'ready'
+  (source.provider === 'fuyao' || source.provider === 'ftshare' || source.provider === 'tushare') && source.connection_status !== 'ready'
 const TYPE_ORDER = [...CATEGORY_BY_TYPE.keys()]
 const typeOrder = (type: string) => {
   const index = TYPE_ORDER.indexOf(type)
@@ -206,7 +206,9 @@ export default function DataSourcesPage() {
   const [locatedSource, setLocatedSource] = useState<{ id: number } | null>(null)
   const endpointList = useRef<HTMLDivElement>(null)
   const [ftshareSettings, setFtshareSettings] = useState<FtshareSettings>({ variant: 0, params: {} })
-  const [fuyaoParams, setFuyaoParams] = useState<Record<string, string>>({})
+  const [catalogParams, setCatalogParams] = useState<Record<string, string>>({})
+  const catalogOperation = form.fuyaoOperation ?? form.tushareOperation
+  const [tushareFields, setTushareFields] = useState('')
   const [orderOpen, setOrderOpen] = useState(false)
   const [orderType, setOrderType] = useState('quote')
   const [orderSearch, setOrderSearch] = useState('')
@@ -252,15 +254,18 @@ export default function DataSourcesPage() {
     const provider = configT(`dataSources.providers.${providerId}`, { defaultValue: providerId })
     const operation = source.ftshare_operation
     const fuyao = source.fuyao_operation
-    const detail = operation ? [operation.group, operation.subgroup].filter(Boolean).join(' · ')
+    const tushare = source.tushare_operation
+    const category = operation ?? tushare
+    const detail = category ? [category.group, category.subgroup].filter(Boolean).join(' · ')
       : configT(`dataSources.types.${source.business_type ?? source.type}`, { defaultValue: source.type_label || source.type })
     const labels = [
       source.name, provider, providerId, source.provider, source.type, detail,
       ...(operation ? [...ftshareSearchFields(operation), operation.tier, configT(`ftshare.tiers.${operation.tier}`)] : []),
       ...(fuyao ? [fuyao.group, fuyao.path, fuyao.description, ...fuyao.parameters.map(param => param.name)] : []),
+      ...(tushare ? [tushare.id, ...tushare.parameters.map(param => param.name)] : []),
     ]
     return [{ id: source.id, name: source.name, provider, detail,
-      tier: operation?.tier, path: operation?.variants[0]?.path ?? fuyao?.path, operationId: operation?.id ?? fuyao?.id,
+      tier: operation?.tier, path: operation?.variants[0]?.path ?? fuyao?.path, operationId: operation?.id ?? fuyao?.id ?? tushare?.id,
       index: labels.map(normalizeEndpointTerm) }]
   }), [sources, configT])
   const searchById = useMemo(() => new Map(searchEntries.map(entry => [entry.id, entry.index])), [searchEntries])
@@ -285,21 +290,24 @@ export default function DataSourcesPage() {
   }
   const activeProvider = selectedProvider ?? PROVIDERS.find(id => byProvider.has(id)) ?? 'fuyao'
   const providerSources = byProvider.get(activeProvider) ?? []
+  const sortEndpoints = (a: DataSource, b: DataSource) => activeProvider === 'tushare'
+    ? (a.tushare_operation?.order ?? Infinity) - (b.tushare_operation?.order ?? Infinity) || a.id - b.id
+    : typeOrder(a.business_type ?? a.type) - typeOrder(b.business_type ?? b.type) || a.id - b.id
   const providerPaused = pausedProviders.has(activeProvider)
   const countedEndpoints = activeProvider === 'fuyao' ? providerSources.filter(source => source.fuyao_operation) : providerSources
   const bulkEndpoints = countedEndpoints.filter(source => !source.is_orphan)
   const showBulkControls = bulkEndpoints.length > 1
   const allEndpointsOn = bulkEndpoints.every(source => source.enabled)
   const allEndpointsOff = bulkEndpoints.every(source => !source.enabled)
-  const restProvider = activeProvider === 'ftshare' || activeProvider === 'fuyao'
-  const restCategory = (source: DataSource) => source.ftshare_operation ?? (source.fuyao_operation
+  const restProvider = activeProvider === 'ftshare' || activeProvider === 'fuyao' || activeProvider === 'tushare'
+  const restCategory = (source: DataSource) => source.ftshare_operation ?? source.tushare_operation ?? (source.fuyao_operation
     ? { group: source.fuyao_operation.group, subgroup: source.business_type ?? undefined }
     : { group: 'other' })
   const presentCategories = new Set(providerSources.map(source => categoryOf(source.type)))
   const categories = ['all', ...DATASOURCE_CATEGORIES.map(group => group.key), 'other']
     .filter(key => key === 'all' || presentCategories.has(key))
   const activeCategory = categories.includes(category) ? category : 'all'
-  const restOperations = restProvider ? providerSources.map(restCategory) : []
+  const restOperations = restProvider ? [...providerSources].sort(sortEndpoints).map(restCategory) : []
   const hasSourceSearch = providerSources.length > 1
   const showCategoryBar = restProvider ? hasSourceSearch : categories.length > 2
   const scopedTokens = endpointSearchTokens(scopedSearch)
@@ -309,7 +317,7 @@ export default function DataSourcesPage() {
         && (activeProvider !== 'ftshare' || ftshareTier === 'all' || source.ftshare_operation?.tier === ftshareTier)
       : activeCategory === 'all' || categoryOf(source.type) === activeCategory)
     .filter(source => !scopedTokens.length || matchesEndpointSearch(searchById.get(source.id) ?? [], scopedTokens))
-    .sort((a, b) => typeOrder(a.business_type ?? a.type) - typeOrder(b.business_type ?? b.type) || a.id - b.id)
+    .sort(sortEndpoints)
   const orderTokens = endpointSearchTokens(orderSearch)
   const orderTypes = [...byRouting.keys()].filter(key => {
     if (!orderTokens.length) return true
@@ -338,8 +346,8 @@ export default function DataSourcesPage() {
 
   const credentialConfigured = activeProvider === 'ftshare'
     ? ftshareConfigured ?? (providerSources.length ? providerSources.some(source => source.connection_status === 'ready') : null)
-    : activeProvider === 'fuyao' && providerSources.some(source => source.provider === 'fuyao')
-      ? providerSources.some(source => source.provider === 'fuyao' && source.connection_status === 'ready') : null
+    : restProvider && providerSources.some(source => source.provider === activeProvider)
+      ? providerSources.some(source => source.provider === activeProvider && source.connection_status === 'ready') : null
 
   function selectProvider(id: ProviderId) {
     setSelectedProvider(id)
@@ -376,9 +384,13 @@ export default function DataSourcesPage() {
   const openDialog = (source: DataSource) => {
     setForm({ name: source.name, type: source.type, provider: source.provider,
       providerGroup: providerOf(source), config: source.config || {}, ftshareOperation: source.ftshare_operation,
-      fuyaoOperation: source.fuyao_operation, testSettings: source.test_settings })
+      fuyaoOperation: source.fuyao_operation, tushareOperation: source.tushare_operation, testSettings: source.test_settings })
     if (source.ftshare_operation) setFtshareSettings(initialFtshareSettings(source.ftshare_operation, source.config))
-    if (source.fuyao_operation) setFuyaoParams(initialFuyaoParams(source.fuyao_operation, source.config))
+    const operation = source.fuyao_operation ?? source.tushare_operation
+    if (operation) setCatalogParams(initialFuyaoParams(operation, source.config))
+    if (source.tushare_operation) {
+      setTushareFields(typeof source.config?.fields === 'string' ? source.config.fields : '')
+    }
     setTestSymbolsInput((source.test_settings?.test_symbols ?? source.test_symbols ?? []).join(', '))
     setProbeParams(source.test_settings?.values ?? {})
     setEditId(source.id)
@@ -391,7 +403,9 @@ export default function DataSourcesPage() {
     try {
       await fetchAPI(`/datasources/${editId}`, { method: 'PUT',
         body: JSON.stringify(form.ftshareOperation ? { config: ftshareQueryValues(ftshareSettings) }
-          : form.fuyaoOperation ? { config: { params: fuyaoQueryValues(fuyaoParams) } }
+          : catalogOperation ? { config: {
+            params: fuyaoQueryValues(catalogParams), ...(form.tushareOperation && { fields: tushareFields }),
+          } }
             : form.testSettings ? { test_params: probeParams, ...(form.testSettings.symbols && { test_symbols: testSymbols }) }
               : { test_symbols: testSymbols, config: form.config }) })
       setTestStatuses(({ [editId]: _previous, ...rest }) => rest)
@@ -527,9 +541,11 @@ export default function DataSourcesPage() {
             <div className="min-w-0">
               <div className="break-words text-[13px] font-semibold">{source.name}</div>
               <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-muted-foreground">
-                <span>{source.ftshare_operation?.group ?? typeName(kind)}</span>
-                {source.ftshare_operation?.subgroup && <span>{source.ftshare_operation.subgroup}</span>}
+                <span>{source.ftshare_operation?.group ?? source.tushare_operation?.group ?? typeName(kind)}</span>
+                {(source.ftshare_operation?.subgroup || source.tushare_operation?.subgroup) &&
+                  <span>{source.ftshare_operation?.subgroup ?? source.tushare_operation?.subgroup}</span>}
                 {source.fuyao_operation && <code className="break-all">{source.fuyao_operation.path}</code>}
+                {source.tushare_operation && <code className="break-all">{source.tushare_operation.id}</code>}
                 {source.ftshare_operation && <FtshareTierBadge tier={source.ftshare_operation.tier} />}
                 {source.supports_batch && <span>{t('configuration:dataSources.batch')}</span>}
                 {source.type.startsWith('etf_') && <span>{t('configuration:dataSources.automatic')}</span>}
@@ -640,7 +656,7 @@ export default function DataSourcesPage() {
                 {credentialConfigured !== null && <Badge variant={credentialConfigured ? 'success' : 'secondary'}>
                   {t(credentialConfigured ? 'configuration:dataSources.keyConfigured' : 'configuration:dataSources.keyRequired')}
                 </Badge>}
-                {(activeProvider === 'fuyao' || activeProvider === 'ftshare') && <>
+                {restProvider && <>
                   <Button variant="ghost" size="sm" className="px-2" asChild>
                     <a href="/settings#sec-data-providers">
                       <KeyRound className="size-3.5" aria-hidden="true" />
@@ -653,12 +669,18 @@ export default function DataSourcesPage() {
                   {activeProvider === 'ftshare' && <Button variant="outline" size="sm" asChild>
                     <a href="/datasources/ftshare"><BookOpen className="size-3.5" aria-hidden="true" />{t('configuration:fuyao.rest.open')}</a>
                   </Button>}
+                  {activeProvider === 'tushare' && <Button variant="outline" size="sm" asChild>
+                    <a href="https://tushare.pro/document/2" target="_blank" rel="noopener noreferrer">
+                      <BookOpen className="size-3.5" aria-hidden="true" />{t('configuration:tushare.docs')}
+                    </a>
+                  </Button>}
                 </>}
               </div>
             </header>
 
             {showCategoryBar && <div className="space-y-1.5 border-t border-border/50 bg-muted/20 px-3 py-2 md:px-4">
               {restProvider && <FtshareCategoryFilters operations={restOperations} value={ftshareCategory}
+                documentOrder={activeProvider === 'tushare'}
                 groupName={activeProvider === 'fuyao' ? group => group === 'other' ? categoryName(group)
                   : configT(`fuyao.services.${group}`) : undefined}
                 subgroupName={activeProvider === 'fuyao' ? typeName : undefined}
@@ -775,10 +797,10 @@ export default function DataSourcesPage() {
       {/* Source settings */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent data-tour="source-config-dialog"
-          className={form.ftshareOperation || form.fuyaoOperation ? 'scrollbar max-h-[85dvh] max-w-2xl overflow-y-auto' : undefined}><div data-tour-instructions />
+          className={form.ftshareOperation || catalogOperation ? 'scrollbar max-h-[85dvh] max-w-2xl overflow-y-auto' : undefined}><div data-tour-instructions />
           <DialogHeader>
             <DialogTitle>{t('configuration:dataSources.form.title', { name: form.name })}</DialogTitle>
-            <DialogDescription>{providerName(form.providerGroup ?? form.provider)} · {form.ftshareOperation?.group ?? form.fuyaoOperation?.path ?? typeName(form.type)}</DialogDescription>
+            <DialogDescription>{providerName(form.providerGroup ?? form.provider)} · {form.ftshareOperation?.group ?? form.fuyaoOperation?.path ?? form.tushareOperation?.id ?? typeName(form.type)}</DialogDescription>
           </DialogHeader>
           {form.ftshareOperation ? <form className="space-y-4" onSubmit={event => { event.preventDefault(); void saveSource() }}>
             <div className="flex flex-wrap items-center justify-between gap-2">
@@ -792,11 +814,19 @@ export default function DataSourcesPage() {
               <Button type="button" variant="ghost" onClick={() => setDialogOpen(false)}>{t('common:actions.cancel')}</Button>
               <Button type="submit">{t('common:actions.save')}</Button>
             </div>
-          </form> : form.fuyaoOperation ? <form className="space-y-4" onSubmit={event => { event.preventDefault(); void saveSource() }}>
-            <a href={form.fuyaoOperation.docs_url} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline">
+          </form> : catalogOperation ? <form className="space-y-4" onSubmit={event => { event.preventDefault(); void saveSource() }}>
+            <a href={catalogOperation.docs_url} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline">
               {t('configuration:fuyao.rest.officialDocs')}
             </a>
-            <FuyaoParameters operation={form.fuyaoOperation} value={fuyaoParams} onChange={setFuyaoParams} />
+            <FuyaoParameters operation={catalogOperation} value={catalogParams} onChange={setCatalogParams} />
+            {form.tushareOperation && <div className="space-y-2">
+              {form.tushareOperation.require_any && <p className="text-xs text-muted-foreground">
+                {t('configuration:tushare.requireAny', { names: form.tushareOperation.require_any.join(', ') })}
+              </p>}
+              <Label htmlFor="tushare-return-fields">{t('configuration:tushare.fields')}</Label>
+              <Input id="tushare-return-fields" value={tushareFields} maxLength={16_384}
+                placeholder={t('configuration:tushare.fieldsPlaceholder')} onChange={event => setTushareFields(event.target.value)} />
+            </div>}
             <div className="flex justify-end gap-2">
               <Button type="button" variant="ghost" onClick={() => setDialogOpen(false)}>{t('common:actions.cancel')}</Button>
               <Button type="submit">{t('common:actions.save')}</Button>
@@ -879,7 +909,7 @@ export default function DataSourcesPage() {
                   {testResult?.test_passed ? t('configuration:dataSources.result.success') : t('configuration:dataSources.result.failed')}
                 </div>
               </div>
-              {testResult?.http_status === undefined && <div className="flex-1">
+              {(testResult?.http_status === undefined || testResult?.provider === 'tushare') && <div className="flex-1">
                 <div className="text-[11px] text-muted-foreground">{t('configuration:dataSources.result.count')}</div>
                 <div className="text-[13px] font-medium">{t('configuration:dataSources.result.rows', { count: testResult?.count ?? 0 })}</div>
               </div>}
@@ -899,7 +929,7 @@ export default function DataSourcesPage() {
 
             {testResult?.errors && <TestErrorList errors={testResult.errors} />}
             {testResult?.http_status !== undefined && <FtshareResponse
-              name={testResult.source_type.replace(/^(ftshare|fuyao):/, '')} successful={testResult.test_passed}
+              name={testResult.source_type.replace(/^(ftshare|fuyao|tushare):/, '')} successful={testResult.test_passed}
               result={{ http_status: testResult.http_status, business_code: testResult.business_code ?? null,
                 response_json: testResult.raw_response ?? null, message: testResult.error ?? null }} />}
 

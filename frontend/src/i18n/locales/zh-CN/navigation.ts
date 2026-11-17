@@ -1,4 +1,5 @@
 export const navigation = {
+  primaryLabel: '主导航',
   items: {
     workspace: '工作台',
     gettingStarted: '引导中心',

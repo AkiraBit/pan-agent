@@ -5,7 +5,7 @@ export type FuyaoGroup = 'a-share' | 'a-share-index' | 'fund' | 'futures' | 'opt
 export interface FuyaoParameter {
   name: string
   type: 'string' | 'integer' | 'number' | 'boolean'
-  description: string
+  description?: string
   required: boolean
   example?: string | number | boolean
   default?: string | number | boolean

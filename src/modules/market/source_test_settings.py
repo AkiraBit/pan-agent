@@ -10,9 +10,7 @@ from marketdata.symbol import Symbol
 DEFAULT_TEST_SYMBOLS_BY_MARKET = {
     "CN": ("600519", "601127"), "HK": ("00700", "00386"), "US": ("AAPL", "NVDA"),
 }
-ETF_TYPES = {"etf_history", "etf_nav"}
 MARKET_WIDE = {"flash_news", "dragon_tiger", "northbound"}
-ETF_SYMBOLS = {("etf_history", "tencent"): ("510300", "159915"), ("etf_nav", "eastmoney"): ("510300", "159915")}
 
 
 def completed_trade_date(now=None):
@@ -32,18 +30,17 @@ def spec(provider, kind):
     if provider not in {"eastmoney", "eastmoney_news", "tencent", "sina", "cls"}:
         return None
     adapter = VENDOR_CLASSES_BY_TYPE.get(kind, {}).get(provider)
-    if adapter is None and (kind, provider) not in ETF_SYMBOLS and (kind, provider) != ("chart", "eastmoney"):
+    if adapter is None and (kind, provider) != ("chart", "eastmoney"):
         return None
     markets = set(getattr(adapter, "supports_markets", ()) or ("CN",))
     if kind == "capital_flow":
         markets = {"CN"}
     symbol_config = None
     if kind not in MARKET_WIDE:
-        defaults = ETF_SYMBOLS.get((kind, provider)) or tuple(code for m, codes in DEFAULT_TEST_SYMBOLS_BY_MARKET.items()
-                                                              if m in markets for code in codes)
-        maximum = 1 if kind == "chart" else 4 if (kind, provider) in ETF_SYMBOLS else (
+        defaults = tuple(code for m, codes in DEFAULT_TEST_SYMBOLS_BY_MARKET.items() if m in markets for code in codes)
+        maximum = 1 if kind == "chart" else (
             5 if kind in {"fundamentals", "margin", "shareholders", "dividend"} else 10)
-        symbol_config = dict(markets=sorted(markets), maximum=maximum, examples=list(defaults[:maximum]), etf=kind in ETF_TYPES)
+        symbol_config = dict(markets=sorted(markets), maximum=maximum, examples=list(defaults[:maximum]))
 
     fields = []
     if kind == "flash_news":
@@ -60,8 +57,6 @@ def spec(provider, kind):
             fields.append(number("page_size", 100, 1, 100, wire="page_size"))
     elif kind == "dragon_tiger":
         fields.append(dict(key="test_date", type="date", default=completed_trade_date(), wire=None))
-    elif kind in ETF_TYPES:
-        fields.append(number("lookback_days", 14, 1, 89))
     elif kind == "chart":
         fields.append(number("extra_wait_ms", 2000, 0, 10000))
     return {"symbols": symbol_config, "fields": fields}
@@ -73,8 +68,6 @@ def _normalize_code(raw, symbol_config):
     patterns = {"CN": r"[0-9]{6}", "HK": r"[0-9]{5}", "US": r"[A-Z][A-Z0-9.-]{0,14}"}
     if market not in symbol_config["markets"] or not re.fullmatch(patterns[market], value):
         raise ValueError(f"此测试不支持该证券代码：{raw}")
-    if symbol_config["etf"] and not value.startswith(("15", "5")):
-        raise ValueError(f"请输入沪深 ETF 的六位代码：{raw}")
     return value
 
 

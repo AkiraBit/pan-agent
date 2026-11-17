@@ -1,5 +1,5 @@
 """Routing identity is independent of the provider's REST catalog category."""
-from . import ftshare_rest, fuyao_business, fuyao_rest
+from . import ftshare_rest, fuyao_business, fuyao_rest, tushare_rest
 
 # The values here are consumed by working runtime adapters, never inferred from a title.
 FTSHARE_ROUTES = {
@@ -16,7 +16,7 @@ CATEGORIES = {
     "quote": "quote_kline", "kline": "quote_kline", "index_quote": "quote_kline",
     "index_kline": "quote_kline", "index_constituents": "quote_kline",
     "trading_calendar": "quote_kline", "stock_search": "quote_kline",
-    "etf_turnover": "etf", "etf_nav": "etf", "etf_history": "etf", "etf_adjusted_history": "etf",
+    "etf_turnover": "etf", "etf_nav": "etf", "etf_adjusted_history": "etf",
     "news": "news", "events": "news", "flash_news": "news",
     "fundamentals": "fundamentals", "dividend": "fundamentals", "shareholders": "fundamentals",
     "market_sentiment": "capital", "auction": "capital", "dragon_tiger": "capital",
@@ -71,4 +71,8 @@ def metadata(source, labels):
     if op:
         label = " · ".join(filter(None, (op["group"], op.get("subgroup"))))
         return dict(key="rest:" + label, mode="direct", label=label, category="ftshare_rest")
+    tushare = tushare_rest.operation_for(kind) if source.provider == "tushare" else None
+    if tushare:
+        label = " · ".join(filter(None, (tushare["group"], tushare.get("subgroup"))))
+        return dict(key="rest:tushare:" + label, mode="direct", label=label, category="tushare_rest")
     return dict(key=kind, mode="direct", label=labels.get(kind, kind), category=CATEGORIES.get(kind, "other"))

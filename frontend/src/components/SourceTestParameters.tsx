@@ -15,7 +15,7 @@ export function SourceTestParameters({ settings, symbols, onSymbolsChange, value
   const spec = settings.symbols
   return <div className="space-y-4">
     {spec && <div className="space-y-1.5">
-      <Label htmlFor="source-test-symbols">{t(spec.etf ? 'dataSources.probeParams.etfSymbols' : 'dataSources.probeParams.symbols')}</Label>
+      <Label htmlFor="source-test-symbols">{t('dataSources.probeParams.symbols')}</Label>
       <Input id="source-test-symbols" className="font-mono" value={symbols} onChange={e => onSymbolsChange(e.target.value)}
         aria-describedby="probe-symbols-help" placeholder={spec.examples.join(', ')} />
       <p id="probe-symbols-help" className="text-xs text-muted-foreground">

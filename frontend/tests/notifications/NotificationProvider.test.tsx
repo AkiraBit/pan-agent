@@ -13,8 +13,12 @@ vi.mock('@panwatch/api', () => ({
 }))
 const summary = { unread_count: 0, pending_action_count: 0, observed_id: 0 }
 const notice = (id: number, source: NotificationItem['source'] = 'assistant'): NotificationItem => ({ id, source, event_type: source === 'assistant' ? 'assistant_completed' : source === 'agent' ? 'agent_completed' : 'price_alert_hit', severity: 'info', attention: 'informational', title: '后台研究', template_key: source === 'assistant' ? 'assistant_completed' : source === 'agent' ? 'agent_completed' : 'price_alert_hit', template_params: {}, group_key: '', toast_eligible: true, occurred_at: '2026-09-30T00:00:00Z', read_at: null, resolved_at: null, expires_at: null, archived_at: null, action_required: false, available: true, actions: source === 'assistant' ? [{ kind: 'assistant_conversation', conversation_id: 1 }] : [{ kind: 'agent_run', run_id: 1 }] })
-function Page({ mobile = false }: { mobile?: boolean }) { const location = useLocation(); return <><NotificationBell mobile={mobile} /><p data-testid="path">{location.pathname}</p></> }
-function show(path = '/portfolio', mobile = false) { return render(<MemoryRouter initialEntries={[path]}><NotificationProvider><Page mobile={mobile} /></NotificationProvider></MemoryRouter>) }
+function Page() { const location = useLocation(); return <><NotificationBell /><p data-testid="path">{location.pathname}</p></> }
+function show(path = '/portfolio') { return render(<MemoryRouter initialEntries={[path]}><NotificationProvider><Page /></NotificationProvider></MemoryRouter>) }
+function pointer(target: Element, type: 'pointerover' | 'pointerout', pointerType = 'mouse') {
+  // jsdom's MouseEvent fallback does not populate pointerType from event options.
+  fireEvent(target, Object.assign(new MouseEvent(type, { bubbles: true }), { pointerType }))
+}
 beforeEach(() => {
   vi.resetAllMocks(); localStorage.clear()
   Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'visible' })
@@ -32,16 +36,16 @@ describe('global notifications', () => {
     show()
     const bell = await screen.findByTestId('notification-bell')
     const previousFocus = document.activeElement
-    fireEvent.mouseEnter(bell)
+    pointer(bell, 'pointerover')
     const preview = await screen.findByTestId('notification-preview')
     await screen.findByText('暂无新通知')
     expect(document.activeElement).toBe(previousFocus)
-    fireEvent.mouseLeave(bell)
-    fireEvent.mouseEnter(preview)
+    pointer(bell, 'pointerout')
+    pointer(preview, 'pointerover')
     await act(async () => { await new Promise(resolve => setTimeout(resolve, 220)) })
     expect(screen.getByTestId('notification-preview')).toBeTruthy()
     expect(notificationsApi.read).not.toHaveBeenCalled()
-    fireEvent.mouseLeave(preview)
+    pointer(preview, 'pointerout')
     await waitFor(() => expect(screen.queryByTestId('notification-preview')).toBeNull())
     expect(document.activeElement).toBe(previousFocus)
   })
@@ -49,22 +53,34 @@ describe('global notifications', () => {
   it('closes after leaving the desktop bell without entering the preview', async () => {
     show()
     const bell = await screen.findByTestId('notification-bell')
-    fireEvent.mouseEnter(bell)
+    pointer(bell, 'pointerover')
     await screen.findByTestId('notification-preview')
-    fireEvent.mouseLeave(bell)
+    pointer(bell, 'pointerout')
     await waitFor(() => expect(screen.queryByTestId('notification-preview')).toBeNull())
   })
 
-  it('uses click instead of hover on mobile', async () => {
-    show('/portfolio', true)
+  it('uses click instead of hover for touch pointers', async () => {
+    show()
     const bell = await screen.findByTestId('notification-bell')
-    fireEvent.mouseEnter(bell)
+    pointer(bell, 'pointerover', 'touch')
     expect(screen.queryByTestId('notification-preview')).toBeNull()
     fireEvent.click(bell)
     expect(await screen.findByText('暂无新通知')).toBeTruthy()
-    fireEvent.mouseLeave(bell)
+    pointer(bell, 'pointerout', 'touch')
+    expect(screen.getByTestId('notification-preview')).toBeTruthy()
+  })
+
+  it('keeps a hover preview open when the bell is clicked, then closes on a second click', async () => {
+    show()
+    const bell = await screen.findByTestId('notification-bell')
+    pointer(bell, 'pointerover')
+    await screen.findByText('暂无新通知')
+    fireEvent.click(bell)
+    pointer(bell, 'pointerout')
     await act(async () => { await new Promise(resolve => setTimeout(resolve, 220)) })
     expect(screen.getByTestId('notification-preview')).toBeTruthy()
+    fireEvent.click(bell)
+    await waitFor(() => expect(screen.queryByTestId('notification-preview')).toBeNull())
   })
 
   it('retains keyboard access and closes a focused preview with Escape', async () => {

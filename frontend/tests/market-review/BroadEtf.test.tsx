@@ -1,201 +1,304 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
-import { MemoryRouter } from 'react-router-dom'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { MemoryRouter, useLocation } from 'react-router-dom'
+import { etfApi, type EtfIntraday, type EtfPriceInstrument, type EtfTurnoverBaseline } from '@panwatch/api/etf'
+import { marketPhase, nextEtfRefresh } from '@/components/etf/market-clock'
+import { etfIntradayMove } from '@/components/etf/session'
 import BroadEtf from '@/pages/BroadEtf'
-import { etfApi, type EtfBoard, type EtfNationalTeam, type EtfHistory } from '@panwatch/api/etf'
-import i18n from '@/i18n'
 
-vi.mock('@panwatch/api/etf', () => ({ etfApi: { board: vi.fn(), dates: vi.fn(), national: vi.fn(), history: vi.fn() } }))
+vi.mock('@panwatch/api/etf', () => ({ etfApi: {
+  intraday: vi.fn(), turnoverBaseline: vi.fn(), priceCatalog: vi.fn(), priceLine: vi.fn(),
+} }))
+vi.mock('@/components/etf/IntradayChart', () => ({
+  IntradayChart: ({ data, prices }: { data: EtfIntraday; prices: { instrument: EtfPriceInstrument }[] }) =>
+    <div role="img" aria-label={data.date} data-price={prices.length ? prices.map(price => price.instrument.symbol).join(',') : undefined} />,
+}))
 
-function board(date = '2026-11-13'): EtfBoard {
-  return { date, status: '收盘', amount: 10, net: 4, net20: 30, covered: 1, shares_published: true, shares_final: true,
-    updated_at: '2026-11-14T08:00:00+08:00', hs300_change_percent: -1, signal: { kind: 'quiet', title: '', detail: '' },
-    etfs: [{ code: '510300', name: '沪深300ETF华泰柏瑞', index: '沪深300', manager: '华泰柏瑞', change_percent: -1,
-      amount: 10, close: 4, net: 4, net20: 30, shares_delta: 1, scale: 400, peak_window: null }],
-    minutes: [['09:31', 1], ['09:32', 3]], profile: [['09:31', 2], ['09:32', 4]], cumulative: [['09:32', 4, 6, .67]],
-    windows: [], series: [{ date, net: 4, hs300: 4000, hs300_change_percent: -1, covered: 1, peak_window: null }], surges: [] }
+const load = vi.mocked(etfApi.intraday)
+const reference = vi.mocked(etfApi.turnoverBaseline)
+const latest = '2026-11-17'
+const previous = '2026-11-16'
+
+function session(date = latest): EtfIntraday {
+  return {
+    date, latest, today: latest, source: 'tushare', broad_count: 293, disclosures: {}, previous: date === latest ? previous : '2026-11-13',
+    market: { at: `${latest}T19:00:00+08:00`, date: latest, timezone: 'Asia/Shanghai', trading_day: true, next_trading_day: '2026-11-18' },
+    next: date === latest ? null : latest, status: date === latest ? 'live' : 'archive', archived: date !== latest,
+    cached: true, issues: [], previous_close: 3560, previous_close_date: previous, etf_count: 1,
+    symbols: ['510300.SH', '159915.SZ'],
+    names: { '510300.SH': '华泰柏瑞沪深300ETF', '159915.SZ': '易方达创业板ETF' },
+    turnover_baseline: { status: 'unavailable' },
+    points: [
+      { minute: '09:30', turnover_cny: 100_000_000, index_close: 3572, etf_count: 1 },
+      { minute: '14:59', turnover_cny: 150_000_000, index_close: 3599, etf_count: 1 },
+    ],
+  }
+}
+function Location() {
+  return <p data-testid="search">{useLocation().search}</p>
+}
+function show(path = '/etf') {
+  return render(<MemoryRouter initialEntries={[path]}><BroadEtf /><Location /></MemoryRouter>)
 }
 
-const national: EtfNationalTeam = { date: '2026-11-13', holdings: [{ holder_name: '中央汇金投资有限责任公司', institution: 'huijin',
-  code: '510300', name: '沪深300ETF华泰柏瑞', index: '沪深300', report_date: '2025-12-31', previous_report_date: null,
-  shares: 100000000, ratio_percent: 25, shares_change: null, known_from: '2026-11-15T00:00:00Z', announced_at: null,
-  source_url: 'https://example.com/report', snapshot_id: 1 }], institutions: ['huijin'], holding_etf_count: 1,
-  watchlist: [{ ...board().etfs[0], disclosed_ratio: 25 }], watchlist_net_estimate_cny: 400000000, signals: [],
-  coverage: [{ code: '510300', report_date: '2025-12-31' }], stale: false }
-
-function history(): EtfHistory {
-  return { range: { start: '2026-08-13', end: '2026-11-13' }, period: '3m', scope: 'market',
-    available_start: '2026-03-02', available_end: '2026-11-13', collecting: false, stale: false,
-    series: ['2026-11-12', '2026-11-13'].map((date, i) => ({ date, net: i ? 4 : -2, amount: 10, scale: 400,
-      cumulative_net: i ? 2 : -2, cumulative_net_days: i + 1, hs300: 4000, hs300_change_percent: -1, peak_ratio: 1, covered: 1, expected: 1, snapshot_ids: [1] })),
-    summary: { net: 2, inflow: 4, outflow: -2, amount: 20, days: 2, net_days: 2, amount_days: 2, aggregation: 'available_observations', missing_net_dates: [], missing_amount_dates: [], loaded_days: 2, funds: 1, coverage_min: 1, coverage_max: 1 },
-    universe: [{ code: '510300', name: '沪深300ETF华泰柏瑞' }],
-    funds: [{ code: '510300', name: '沪深300ETF华泰柏瑞', index: '沪深300', net: 2, amount: 20, scale: 400, as_of: '2026-11-13', days: 2, amount_days: 2, expected_days: 2 }],
-    holdings_trend: [{ date: '2025-12-31', shares: 1, reported_shares: 1, held_funds: 1, reported_funds: 1, expected_funds: 1, before_range: true, snapshot_ids: [2] }],
-    disclosures: national.holdings, signals: [], flow_attribution: 'all_etf_investors', composition_mode: 'broad_market' }
-}
-
-beforeEach(async () => {
-  await i18n.loadNamespaces('etf')
-  vi.clearAllMocks()
-  vi.mocked(etfApi.board).mockImplementation(async date => ({ payload: board(date || undefined), stale: false, snapshot_id: 1, observed_at: '' }))
-  vi.mocked(etfApi.dates).mockResolvedValue(['2026-11-13', '2026-11-12'])
-  vi.mocked(etfApi.national).mockResolvedValue(national)
-  vi.mocked(etfApi.history).mockResolvedValue(history())
+beforeEach(() => {
+  localStorage.clear()
+  load.mockReset()
+  reference.mockReset().mockResolvedValue(null)
+  load.mockImplementation(async date => session(date || latest))
 })
+afterEach(() => { cleanup(); vi.useRealTimers() })
 
-describe('broad-market ETF dashboard', () => {
-  it('preserves daily market data and trading-date navigation', async () => {
-    const user = userEvent.setup()
-    render(<MemoryRouter initialEntries={['/etf?view=daily']}><BroadEtf /></MemoryRouter>)
-    await screen.findByRole('img', { name: '分钟成交' })
-    expect(etfApi.national).not.toHaveBeenCalled()
-    await user.click(screen.getByText('1只ETF明细'))
-    expect(screen.getAllByText('510300').length).toBeGreaterThan(0)
-    await user.click(screen.getByRole('button', { name: '前一交易日' }))
-    await waitFor(() => expect(etfApi.board).toHaveBeenCalledWith('2026-11-12', expect.any(AbortSignal)))
-    await waitFor(() => expect(screen.getByRole('button', { name: '前一交易日' }).hasAttribute('disabled')).toBe(true))
+describe('Tushare broad-market ETFs', () => {
+  it('uses each ETF’s first available minute so different price levels do not change the displayed move', () => {
+    const cheap = etfIntradayMove({ '09:30': 1, '09:32': 1.02 })
+    const expensive = etfIntradayMove({ '09:31': 10, '09:32': 10.2 })
+    expect(cheap?.baseMinute).toBe('09:30')
+    expect(cheap?.values.slice(0, 2)).toEqual([0, null])
+    expect(expensive?.baseMinute).toBe('09:31')
+    expect(expensive?.values.slice(0, 2)).toEqual([null, 0])
+    expect(cheap?.values[2]).toBeCloseTo(.02)
+    expect(expensive?.values[2]).toBeCloseTo(.02)
   })
 
-  it('loads named holdings separately and preserves the reporting date', async () => {
-    const user = userEvent.setup()
-    render(<MemoryRouter initialEntries={['/etf']}><BroadEtf /></MemoryRouter>)
-    await user.click(screen.getByRole('tab', { name: '国家队追踪' }))
-    await screen.findByRole('img', { name: '持有份额' })
-    await user.click(screen.getAllByRole('tab', { name: '日数据' })[1])
-    await screen.findByText('中央汇金投资有限责任公司')
-    expect(screen.getByText('2025-12-31')).toBeTruthy()
-    expect(screen.getByText('持仓ETF净申赎估算')).toBeTruthy()
-    expect(screen.queryByText('国家队今日买入')).toBeNull()
-    expect(screen.getByText('暂无逆势申购信号')).toBeTruthy()
+  it('switches by date and uses the archived result without a refresh action', async () => {
+    show()
+    expect(await screen.findByRole('img', { name: latest })).toBeTruthy()
+    expect(screen.getByText('2.5')).toBeTruthy()
+    expect(screen.getByText('部分分钟成交缺失')).toBeTruthy()
+    expect(reference).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: '前一日期' }))
+    expect(await screen.findByRole('img', { name: previous })).toBeTruthy()
+    expect(screen.getByTestId('search').textContent).toBe(`?date=${previous}`)
+    expect(load).toHaveBeenLastCalledWith(previous, false, expect.any(AbortSignal))
+    expect(screen.queryByRole('button', { name: '刷新行情' })).toBeNull()
+    expect(screen.queryByRole('link', { name: '国家队追踪' })).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: '最新交易日' }))
+    expect(await screen.findByRole('img', { name: latest })).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: '刷新行情' }))
+    await waitFor(() => expect(load).toHaveBeenLastCalledWith('', true, expect.any(AbortSignal)))
   })
 
-  it('offers retry when market data fails without inventing values', async () => {
-    vi.mocked(etfApi.board).mockRejectedValueOnce(new Error('offline'))
-    const user = userEvent.setup()
-    render(<MemoryRouter initialEntries={['/etf?view=daily']}><BroadEtf /></MemoryRouter>)
-    await screen.findByRole('alert')
-    await user.click(screen.getByRole('button', { name: '重试' }))
-    await screen.findByRole('img', { name: '分钟成交' })
+  it('supports keyboard resizing and stores the sidebar preference without reloading prices', async () => {
+    show()
+    await screen.findByRole('img', { name: latest })
+    fireEvent.keyDown(screen.getByRole('separator', { name: '调整侧栏宽度' }), { key: 'ArrowRight' })
+    expect(screen.getByRole('separator').getAttribute('aria-valuenow')).toBe('232')
+    fireEvent.click(screen.getByRole('button', { name: '收起侧栏' }))
+    expect(screen.getByRole('button', { name: '展开侧栏' }).getAttribute('aria-expanded')).toBe('false')
+    expect(screen.queryByRole('separator')).toBeNull()
+    expect(localStorage.getItem('panwatch_etf_sidebar_width')).toBe('232')
+    expect(localStorage.getItem('panwatch_etf_sidebar_collapsed')).toBe('true')
+    fireEvent.click(screen.getByRole('button', { name: '展开侧栏' }))
+    expect(screen.getByRole('separator').getAttribute('aria-valuenow')).toBe('232')
+    expect(load).toHaveBeenCalledTimes(1)
   })
 
-  it('supports keyboard inspection of minute data', async () => {
-    render(<MemoryRouter initialEntries={['/etf?view=daily']}><BroadEtf /></MemoryRouter>)
-    const chart = await screen.findByRole('img', { name: '分钟成交' })
-    fireEvent.keyDown(chart, { key: 'ArrowLeft' })
-    expect(screen.getByText('09:31')).toBeTruthy()
+  it('compares cumulative turnover with the historical average at the same minute', async () => {
+    const result = session()
+    load.mockResolvedValue({ ...result, etf_count: 2, turnover_baseline: { status: 'needs_calculation' }, points: [
+      { ...result.points[0], etf_count: 2 },
+      { ...result.points[1], etf_count: 2, minute: '09:31' },
+    ] })
+    let resolveBaseline!: (value: EtfTurnoverBaseline) => void
+    reference.mockReturnValue(new Promise(resolve => { resolveBaseline = resolve }))
+    show()
+    expect(await screen.findByText('计算中')).toBeTruthy()
+    expect(screen.getByRole('img', { name: latest })).toBeTruthy()
+    expect(screen.getByText('前 5 个交易日同分钟均值')).toBeTruthy()
+    await act(async () => { resolveBaseline({ sessions: 5, cumulative_cny: { '09:31': 200_000_000, '15:00': 500_000_000 } }) })
+    expect(await screen.findByText('较同期均值高 25%')).toBeTruthy()
+    expect(screen.queryByText('计算中')).toBeNull()
+    expect(screen.getByText('明显放量')).toBeTruthy()
+    expect(screen.getByText('对比前 5 个交易日同期均值 · 截至 09:31')).toBeTruthy()
+    expect(screen.getByText('前 5 个交易日同分钟均值')).toBeTruthy()
   })
 
-  it('defaults to three-month history and switches to a custom interval', async () => {
-    const user = userEvent.setup()
-    render(<MemoryRouter initialEntries={['/etf']}><BroadEtf /></MemoryRouter>)
-    await screen.findByRole('img', { name: '指数与ETF联动图' })
-    expect(etfApi.history).toHaveBeenLastCalledWith(expect.objectContaining({ period: '3m', scope: 'market' }), expect.any(AbortSignal))
-    expect(etfApi.board).not.toHaveBeenCalled()
-    await user.click(screen.getByRole('button', { name: '近1月' }))
-    await waitFor(() => expect(etfApi.history).toHaveBeenLastCalledWith(expect.objectContaining({ period: '1m' }), expect.any(AbortSignal)))
-    await user.click(screen.getByRole('button', { name: '自定义' }))
-    fireEvent.change(screen.getByLabelText('开始日期'), { target: { value: '2026-10-01' } })
-    fireEvent.change(screen.getByLabelText('结束日期'), { target: { value: '2026-10-30' } })
-    await user.click(screen.getByRole('button', { name: '应用' }))
-    await waitFor(() => expect(etfApi.history).toHaveBeenLastCalledWith(expect.objectContaining({ period: 'custom', start: '2026-10-01', end: '2026-10-30' }), expect.any(AbortSignal)))
-    const calls = vi.mocked(etfApi.history).mock.calls.length
-    fireEvent.change(screen.getByLabelText('开始日期'), { target: { value: '2026-11-01' } })
-    await user.click(screen.getByRole('button', { name: '应用' }))
-    expect(screen.getByRole('alert').textContent).toContain('请选择有效的起止日期')
-    expect(etfApi.history).toHaveBeenCalledTimes(calls)
+  it('renders cached averages together with each date without starting a calculation request', async () => {
+    load.mockImplementation(async date => {
+      const result = session(date || latest)
+      return { ...result, etf_count: 2, points: [
+        { ...result.points[0], etf_count: 2 },
+        { ...result.points[1], etf_count: 2, minute: '09:31' },
+      ], turnover_baseline: { status: 'ready', value: {
+        sessions: 5, cumulative_cny: { '09:31': result.date === latest ? 200_000_000 : 500_000_000 },
+      } } }
+    })
+    show()
+    expect(await screen.findByText('较同期均值高 25%')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: '前一日期' }))
+    expect(await screen.findByRole('img', { name: previous })).toBeTruthy()
+    expect(screen.getByText('较同期均值低 50%')).toBeTruthy()
+    expect(screen.queryByText('计算中')).toBeNull()
+    expect(reference).not.toHaveBeenCalled()
   })
 
-  it('opens a historical day by keyboard and retains the chosen range on return', async () => {
-    const user = userEvent.setup()
-    render(<MemoryRouter initialEntries={['/etf?period=6m']}><BroadEtf /></MemoryRouter>)
-    const chart = await screen.findByRole('img', { name: '指数与ETF联动图' })
-    fireEvent.keyDown(chart, { key: 'ArrowLeft' })
-    fireEvent.keyDown(chart, { key: 'Enter' })
-    await waitFor(() => expect(etfApi.board).toHaveBeenLastCalledWith('2026-11-12', expect.any(AbortSignal)))
-    await screen.findByRole('img', { name: '分钟成交' })
-    await user.click(screen.getByRole('tab', { name: '总览' }))
-    await screen.findByRole('img', { name: '指数与ETF联动图' })
-    expect(screen.getByRole('button', { name: '近半年' }).getAttribute('aria-pressed')).toBe('true')
-  })
-
-
-  it('reads the three benchmark returns and both ETF measures for the same day', async () => {
-    const data = history()
-    data.benchmark_base_date = data.series[0].date
-    data.series[0].benchmarks = {
-      '000001': { close: 3000, return_percent: 0, snapshot_id: 10 },
-      '000300': { close: 4000, return_percent: 0, snapshot_id: 20 },
-      '000688': { close: 600, return_percent: 0, snapshot_id: 30 },
+  it('separates the index and ETF catalogs and restores checked lines from both tabs', async () => {
+    if (typeof ResizeObserver === 'undefined') vi.stubGlobal('ResizeObserver', class { observe() {} disconnect() {} })
+    const coal = { symbol: '515220.SH', name: '国泰中证煤炭ETF' }
+    const power = { symbol: '159611.SZ', name: '广发中证全指电力ETF' }
+    const chip = { symbol: '159325.SZ', name: '南方中证半导体行业精选ETF' }
+    const star = { symbol: '000688.SH', name: '科创50', kind: 'index' as const }
+    const composite = { symbol: '000001.SH', name: '上证指数', kind: 'index' as const }
+    const catalog = vi.mocked(etfApi.priceCatalog)
+    catalog.mockClear().mockImplementation(async (_, kind) => ({
+      items: kind === 'index' ? [star, composite] : [coal, power, chip], issue: null,
+    }))
+    const prices = vi.mocked(etfApi.priceLine)
+    prices.mockClear().mockImplementation(async (date, symbol, _, kind) => ({
+      date, symbol, kind, closes: { '09:30': 1.23 }, complete: true, issue: null,
+    }))
+    show(`/etf?date=${previous}`)
+    const chart = await screen.findByRole('img', { name: previous })
+    const openPicker = () => fireEvent.click(screen.getByRole('button', { name: '选择波动线' }))
+    const tab = (label: string) => fireEvent.keyDown(screen.getByRole('tab', { name: label }), { key: 'Enter' })
+    const checkbox = (fund: EtfPriceInstrument) => screen.getByRole('checkbox', { name: `${fund.name} ${fund.symbol}` }) as HTMLInputElement
+    const checklist = () => within(screen.getByRole('list', { name: '波动线选项' }))
+    openPicker()
+    expect(await screen.findByText('全部 3 只 ETF')).toBeTruthy()
+    expect(screen.getAllByRole('checkbox')).toHaveLength(3)
+    expect(checkbox(coal).checked).toBe(false)
+    expect(checklist().queryByRole('heading')).toBeNull()
+    expect(checklist().queryByRole('separator')).toBeNull()
+    expect(prices).not.toHaveBeenCalled()
+    const input = screen.getByRole('searchbox', { name: '搜索 ETF 名称或代码' })
+    async function choose(query: string, fund: EtfPriceInstrument) {
+      fireEvent.change(input, { target: { value: query } })
+      expect(screen.getAllByRole('checkbox')).toHaveLength(1)
+      fireEvent.click(checkbox(fund))
+      await waitFor(() => expect(chart.getAttribute('data-price')).toContain(fund.symbol))
     }
-    data.series[1].benchmarks = {
-      '000001': { close: 3150, return_percent: 5, snapshot_id: 10 },
-      '000300': { close: 3860, return_percent: -3.5, snapshot_id: 20 },
-    }
-    data.series[0].net_by_index = { '沪深300': { net: -2, covered: 1, expected: 1 } }
-    data.series[1].net_by_index = { '沪深300': { net: 4, covered: 1, expected: 1 } }
-    vi.mocked(etfApi.history).mockResolvedValue(data)
-    render(<MemoryRouter><BroadEtf /></MemoryRouter>)
-    const chart = await screen.findByRole('img', { name: '指数与ETF联动图' })
-    expect(screen.getByText('2026-11-12 收盘为 0%')).toBeTruthy()
-    const readout = within(chart.nextElementSibling as HTMLElement)
-    expect(readout.getByText('2026-11-13')).toBeTruthy()
-    expect(readout.getByText('+5%')).toBeTruthy()
-    expect(readout.getByText('-3.5%')).toBeTruthy()
-    expect(readout.getByText('—')).toBeTruthy()
-    expect(readout.getByText('+4 亿')).toBeTruthy()
-    expect(readout.getByText('10 亿')).toBeTruthy()
-    expect(readout.getByText('+2 亿')).toBeTruthy()
-    const group = screen.getByRole('button', { name: '沪深300 ETF' })
-    expect(group.getAttribute('aria-pressed')).toBe('true')
-    fireEvent.click(group)
-    expect(group.getAttribute('aria-pressed')).toBe('false')
-    fireEvent.keyDown(chart, { key: 'ArrowLeft' })
-    expect(readout.getByText('2026-11-12')).toBeTruthy()
-    expect(readout.getAllByText('0%')).toHaveLength(3)
-    expect(readout.getAllByText('-2 亿')).toHaveLength(2)
+    await choose('煤炭', coal)
+    fireEvent.change(input, { target: { value: 'ETF' } })
+    expect(screen.getAllByRole('checkbox')).toEqual([checkbox(coal), checkbox(chip), checkbox(power)])
+    expect(checklist().getByRole('heading', { name: '已选 1' })).toBeTruthy()
+    expect(checklist().getByRole('separator').closest('li')?.previousElementSibling?.contains(checkbox(coal))).toBe(true)
+    await choose('159611', power)
+    await choose('159325', chip)
+    expect(catalog).toHaveBeenCalledTimes(1)
+    expect(chart.getAttribute('data-price')).toBe([coal.symbol, power.symbol, chip.symbol].join(','))
+    fireEvent.change(input, { target: { value: '' } })
+    expect(checkbox(coal).checked && checkbox(power).checked && checkbox(chip).checked).toBe(true)
+    expect(checklist().getByRole('heading', { name: '已选 3' })).toBeTruthy()
+    expect(checklist().queryByRole('separator')).toBeNull()
+    const toggleCoal = () => fireEvent.click(checkbox(coal))
+    toggleCoal()
+    expect(screen.getAllByRole('checkbox')).toEqual([checkbox(chip), checkbox(power), checkbox(coal)])
+    expect(checklist().getByRole('heading', { name: '已选 2' })).toBeTruthy()
+    expect(chart.getAttribute('data-price')).toBe([power.symbol, chip.symbol].join(','))
+    expect(screen.getByRole('group', { name: '当前显示的波动线' }).textContent).not.toContain(coal.name)
+    toggleCoal()
+    expect(chart.getAttribute('data-price')).toBe([coal.symbol, power.symbol, chip.symbol].join(','))
+    expect(prices).toHaveBeenCalledTimes(3)
+    toggleCoal()
+    tab('指数')
+    expect(await screen.findByText('全部 2 个沪深指数')).toBeTruthy()
+    expect(screen.getAllByRole('checkbox')).toEqual([checkbox(composite), checkbox(star)])
+    const indexSearch = screen.getByRole('searchbox', { name: '搜索指数名称或代码' })
+    fireEvent.change(indexSearch, { target: { value: '000688' } })
+    fireEvent.click(checkbox(star))
+    await waitFor(() => expect(chart.getAttribute('data-price')).toBe([power.symbol, chip.symbol, star.symbol].join(',')))
+    fireEvent.change(indexSearch, { target: { value: '' } })
+    expect(screen.getAllByRole('checkbox')).toEqual([checkbox(star), checkbox(composite)])
+    expect(checklist().getByRole('heading', { name: '已选 1' })).toBeTruthy()
+    expect(checklist().getByRole('separator').closest('li')?.nextElementSibling?.contains(checkbox(composite))).toBe(true)
+    expect(prices).toHaveBeenLastCalledWith(previous, star.symbol, expect.any(AbortSignal), 'index')
+    tab('ETF')
+    expect(await screen.findByText('全部 3 只 ETF')).toBeTruthy()
+    expect(checkbox(power).checked && checkbox(chip).checked).toBe(true)
+    expect(catalog).toHaveBeenCalledTimes(2)
+    cleanup()
+    show(`/etf?date=${previous}`)
+    const reopened = await screen.findByRole('img', { name: previous })
+    await waitFor(() => expect(reopened.getAttribute('data-price')).toBe([power.symbol, chip.symbol, star.symbol].join(',')))
+    openPicker()
+    expect(await screen.findByText('全部 3 只 ETF')).toBeTruthy()
+    expect(checkbox(coal).checked).toBe(false)
+    expect(checkbox(power).checked && checkbox(chip).checked).toBe(true)
+    tab('指数')
+    expect(await screen.findByRole('checkbox', { name: /科创50/ })).toBeTruthy()
+    expect(checkbox(star).checked).toBe(true)
+    expect(catalog).toHaveBeenCalledTimes(2)
+    expect(prices).toHaveBeenCalledTimes(7)
   })
 
-  it('keeps national history filters when drilling into daily holdings', async () => {
-    const user = userEvent.setup()
-    render(<MemoryRouter initialEntries={['/etf?view=national&period=all&institution=huijin&code=510300']}><BroadEtf /></MemoryRouter>)
-    const chart = await screen.findByRole('img', { name: '净申赎估算' })
-    expect(etfApi.history).toHaveBeenLastCalledWith(expect.objectContaining({ period: 'all', scope: 'national', code: '510300', institution: 'huijin' }), expect.any(AbortSignal))
-    expect(screen.getByText('区间前最近披露')).toBeTruthy()
-    fireEvent.keyDown(chart, { key: 'Enter' })
-    await screen.findByText('中央汇金投资有限责任公司')
-    expect(etfApi.national).toHaveBeenCalledWith('2026-11-13', expect.any(AbortSignal))
-    await user.click(screen.getByRole('tab', { name: '历史趋势' }))
-    await screen.findByRole('img', { name: '持有份额' })
-    expect(screen.getByRole('button', { name: '全部', exact: true }).getAttribute('aria-pressed')).toBe('true')
+  it('keeps the active line from saved single-line preferences', async () => {
+    if (typeof ResizeObserver === 'undefined') vi.stubGlobal('ResizeObserver', class { observe() {} disconnect() {} })
+    const coal = { symbol: '515220.SH', name: '国泰中证煤炭ETF' }
+    localStorage.setItem('panwatch_etf_price_lines', JSON.stringify({ items: [coal], active: coal.symbol }))
+    vi.mocked(etfApi.priceLine).mockImplementation(async (date, symbol) => ({
+      date, symbol, closes: { '09:30': 1.25 }, complete: true, issue: null,
+    }))
+    show(`/etf?date=${previous}`)
+    const chart = await screen.findByRole('img', { name: previous })
+    await waitFor(() => expect(chart.getAttribute('data-price')).toBe(coal.symbol))
+    expect(JSON.parse(localStorage.getItem('panwatch_etf_price_lines')!)).toEqual({ items: [coal], visible: [coal.symbol] })
   })
 
-  it('recovers a failed historical query using retry', async () => {
-    vi.mocked(etfApi.history).mockRejectedValueOnce(new Error('offline'))
-    const user = userEvent.setup()
-    render(<MemoryRouter><BroadEtf /></MemoryRouter>)
-    await screen.findByRole('alert')
-    await user.click(screen.getByRole('button', { name: '重试' }))
-    await screen.findByRole('img', { name: '指数与ETF联动图' })
+  it('aligns visible refresh to minute bars, adapts to a late bar and stops on historical dates', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date(`${latest}T09:33:58+08:00`))
+    load.mockImplementation(async date => {
+      const result = session(date || latest)
+      return { ...result, market: { ...result.market, at: new Date().toISOString() },
+        turnover_baseline: { status: 'needs_calculation' },
+        points: [{ minute: load.mock.calls.length >= 3 ? '09:35' : '09:33',
+          turnover_cny: 100_000_000, index_close: 3550, etf_count: 2 }] }
+    })
+    await act(async () => { show() })
+    expect(screen.getByText('盘中')).toBeTruthy()
+    expect(screen.getByText('09:33:58')).toBeTruthy()
+    await act(async () => { await vi.advanceTimersByTimeAsync(13_999) })
+    expect(load).toHaveBeenCalledTimes(1)
+    await act(async () => { await vi.advanceTimersByTimeAsync(1) })
+    expect(load).toHaveBeenCalledTimes(2)
+    expect(load).toHaveBeenLastCalledWith('', true, expect.any(AbortSignal))
+    expect(screen.getByText('09:33:58')).toBeTruthy()
+    await act(async () => { await vi.advanceTimersByTimeAsync(65_999) })
+    expect(load).toHaveBeenCalledTimes(2)
+    await act(async () => { await vi.advanceTimersByTimeAsync(1) })
+    expect(load).toHaveBeenCalledTimes(3)
+    expect(screen.getByText('09:35:18')).toBeTruthy()
+    expect(reference).toHaveBeenCalledTimes(1)
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: '前一日期' })) })
+    expect(load).toHaveBeenCalledTimes(4)
+    await act(async () => { await vi.advanceTimersByTimeAsync(120_000) })
+    expect(load).toHaveBeenCalledTimes(4)
   })
 
-
-  it.each(['1y', 'all'])('shows available totals and coverage for %s when a day is missing', async period => {
-    const data = history()
-    data.summary = { ...data.summary, days: 3, missing_net_dates: ['2026-11-11'], missing_amount_dates: ['2026-11-11'] }
-    data.series.unshift({ ...data.series[0], date: '2026-11-11', net: null, amount: null, cumulative_net: null, cumulative_net_days: 0 })
-    vi.mocked(etfApi.history).mockResolvedValue(data)
-    render(<MemoryRouter initialEntries={[`/etf?period=${period}`]}><BroadEtf /></MemoryRouter>)
-    await screen.findByRole('button', { name: '已知净申赎累计' })
-    const totals = document.querySelector('.etf-history-stats')!
-    expect(totals.textContent).toContain('+2亿')
-    expect(totals.textContent).toContain('+4亿')
-    expect(totals.textContent).toContain('-2亿')
-    expect(totals.textContent).toContain('20亿')
-    expect(totals.querySelectorAll('.etf-card').length).toBe(4)
-    expect(screen.getAllByText('已知数据合计 · 2/3交易日').length).toBeGreaterThanOrEqual(4)
-    expect(etfApi.history).toHaveBeenCalledWith(expect.objectContaining({ period }), expect.any(AbortSignal))
+  it('schedules the final bars and skips the lunch break and market holidays', () => {
+    const market = session().market
+    const at = (time: string) => Date.parse(`${latest}T${time}+08:00`)
+    const next = (time: string) => nextEtfRefresh(at(time), market, '', 12_000, undefined, undefined)
+    expect(marketPhase(at('09:29:59'), latest, market)).toBe('marketPreopen')
+    expect(next('11:30:05')).toMatchObject({ minute: '11:30', at: at('11:30:32') })
+    expect(next('11:45:00')).toMatchObject({ minute: '13:01', at: at('13:01:12') })
+    expect(marketPhase(at('15:00:00'), latest, market)).toBe('marketClosed')
+    expect(next('15:00:00')).toMatchObject({ minute: '15:00', at: at('15:00:32') })
+    expect(next('15:02:00')).toMatchObject({ day: '2026-11-18', minute: '09:30' })
+    expect(marketPhase(at('10:00:00'), latest, { ...market, trading_day: false })).toBe('marketHoliday')
+    expect(nextEtfRefresh(at('10:00:00'), { ...market, trading_day: false }, '', 12_000, undefined, undefined))
+      .toMatchObject({ day: '2026-11-18', minute: '09:30' })
   })
 
+  it('shows names and codes in both sample groups and links verified disclosures', async () => {
+    const report = 'https://www.sse.com.cn/report.pdf'
+    load.mockResolvedValue({ ...session(), disclosures: {
+      '510300.SH': { report_date: '2025-12-31', url: report },
+    } })
+    show()
+    fireEvent.click(screen.getByText('数据来源与统计口径'))
+    await screen.findByText('ETF 样本（2 只）')
+    expect(screen.getByRole('link', { name: '华泰柏瑞沪深300ETF 510300.SH' }).getAttribute('href')).toBe(report)
+    expect(screen.getByText('易方达创业板ETF').closest('li')?.textContent).toContain('159915.SZ')
+  })
+
+  it('shows configuration and retry when the source key is unavailable', async () => {
+    load.mockResolvedValue({ ...session(), points: [], issues: ['key_required'] })
+    show()
+    expect((await screen.findByRole('alert')).textContent).toContain('请检查 Tushare Token 是否已配置且有效。')
+    expect(screen.getByRole('link', { name: '打开 Tushare 配置' }).getAttribute('href')).toBe('/settings#sec-data-providers')
+    expect(screen.queryByRole('img')).toBeNull()
+    expect(screen.getByRole('button', { name: '重试' })).toBeTruthy()
+  })
 })

@@ -7,7 +7,7 @@ import DataSourcesPage from './DataSources'
 
 vi.mock('@panwatch/api', () => ({ fetchAPI: vi.fn(), resetDataSourcesToSeed: vi.fn() }))
 const request = vi.mocked(fetchAPI)
-const source = { id: 80, name: '腾讯 ETF 历史行情', type: 'etf_history', provider: 'tencent',
+const source = { id: 80, name: '腾讯日线行情', type: 'kline', provider: 'tencent',
   config: {}, enabled: true, priority: 0, supports_batch: false, test_symbols: ['510300'], connection_status: 'ready' }
 function fuyaoEntry(id: number, operation: string, name: string, business: string, suffix: string) {
   return { ...source, id, name, type: `fuyao:${operation}`, provider: 'fuyao', business_type: business,
@@ -87,12 +87,61 @@ it('searches the selected provider locally and locates a result from another pro
 
   fireEvent.click(screen.getByRole('button', { name: '搜索全部接口' }))
   const dialog = screen.getByRole('dialog', { name: '搜索全部接口' })
-  fireEvent.change(within(dialog).getByRole('searchbox'), { target: { value: '腾讯 ETF 历史行情' } })
-  fireEvent.click(within(dialog).getByRole('button', { name: /腾讯 ETF 历史行情/ }))
-  const row = await screen.findByRole('row', { name: /腾讯 ETF 历史行情/ })
+  fireEvent.change(within(dialog).getByRole('searchbox'), { target: { value: '腾讯日线行情' } })
+  fireEvent.click(within(dialog).getByRole('button', { name: /腾讯日线行情/ }))
+  const row = await screen.findByRole('row', { name: /腾讯日线行情/ })
   await waitFor(() => expect(document.activeElement).toBe(row))
   expect(screen.getByRole('button', { name: '腾讯财经' }).getAttribute('aria-pressed')).toBe('true')
   expect(screen.queryByRole('searchbox', { name: '搜索当前来源' })).toBeNull()
+})
+
+it('filters Tushare by the official category and subgroup order and tests with saved parameters', async () => {
+  const entry = (id: number, order: number, name: string, api: string, group: string, subgroup?: string) => ({
+    ...source, id, name, provider: 'tushare', type: 'tushare:' + api,
+    tushare_operation: { id: api, order, group, subgroup, summary: name, docs_url: 'https://tushare.pro/document/2',
+      parameters: [{ name: 'ts_code', type: 'string', required: true, example: '600519.SH' }] },
+  })
+  const sources = [
+    entry(10, 4, '指数日线行情', 'index_daily', '指数专题'),
+    entry(11, 2, '历史日线', 'daily', '股票数据', '行情数据'),
+    entry(12, 3, 'ETF日线行情', 'fund_daily', 'ETF专题'),
+    entry(13, 1, '股票列表', 'stock_basic', '股票数据', '基础数据'),
+  ]
+  request.mockImplementation(async path => {
+    if (path === '/datasources/providers') return { paused: [] }
+    if (path === '/datasources/11/test') return { test_passed: true, source_name: '历史日线', source_type: 'tushare:daily',
+      type_label: '股票数据', provider: 'tushare', http_status: 200, business_code: 0, count: 1,
+      raw_response: '{"code":0,"data":{"fields":["close"],"items":[[4.2]]}}' }
+    return sources
+  })
+  render(<DataSourcesPage />)
+  fireEvent.click(await screen.findByRole('button', { name: 'Tushare' }))
+  expect(screen.getByRole('link', { name: '管理 API Key' }).getAttribute('href')).toBe('/settings#sec-data-providers')
+  const categories = within(screen.getByRole('group', { name: '接口分类' }))
+  expect(categories.getAllByRole('button').map(button => button.textContent)).toEqual(['全部', '股票数据', 'ETF专题', '指数专题'])
+  fireEvent.click(categories.getByRole('button', { name: '股票数据' }))
+  const subcategories = within(screen.getByRole('group', { name: '接口子分类' }))
+  expect(subcategories.getAllByRole('button').map(button => button.textContent)).toEqual(['全部', '基础数据', '行情数据'])
+  fireEvent.click(subcategories.getByRole('button', { name: '行情数据' }))
+  expect(screen.queryByRole('row', { name: /股票列表/ })).toBeNull()
+  fireEvent.click(screen.getByRole('button', { name: '设置历史日线' }))
+  const settings = within(screen.getByRole('dialog'))
+  const code = settings.getByRole('textbox', { name: 'ts_code' }) as HTMLInputElement
+  expect(code.value).toBe('600519.SH')
+  fireEvent.change(settings.getByLabelText('返回字段'), { target: { value: 'close' } })
+  fireEvent.click(settings.getByRole('button', { name: '保存' }))
+  await waitFor(() => expect(request).toHaveBeenCalledWith('/datasources/11', {
+    method: 'PUT', body: '{"config":{"params":{"ts_code":"600519.SH"},"fields":"close"}}',
+  }))
+  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+  fireEvent.click(screen.getByRole('button', { name: '测试历史日线' }))
+  const result = within(await screen.findByRole('dialog'))
+  expect(result.getByText('200', { exact: false })).toBeTruthy()
+  expect(result.getByText('4.2', { exact: false })).toBeTruthy()
+  fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' })
+  fireEvent.click(categories.getByRole('button', { name: 'ETF专题' }))
+  expect(screen.queryByRole('group', { name: '接口子分类' })).toBeNull()
+  expect(screen.getByRole('row', { name: /ETF日线行情/ })).toBeTruthy()
 })
 
 it('links Fuyao to the shared key configuration and gates its switch', async () => {
@@ -114,7 +163,7 @@ it('keeps FTShare in the provider list without registering any endpoints', async
   expect(await screen.findByText('API Key 已配置')).toBeTruthy()
   expect(screen.getByText('暂无数据源')).toBeTruthy()
   expect(screen.getByRole('link', { name: '管理 API Key' }).getAttribute('href')).toBe('/settings#sec-data-providers')
-  expect(within(screen.getByRole('navigation', { name: '数据来源' })).getAllByRole('switch')).toHaveLength(6)
+  expect(within(screen.getByRole('navigation', { name: '数据来源' })).getAllByRole('switch')).toHaveLength(7)
 })
 
 it('pauses an entire provider without changing the preferences of its individual endpoints', async () => {
@@ -290,7 +339,7 @@ it('tests the selected provider when two endpoints have the same name and type',
   expect(request).not.toHaveBeenCalledWith('/datasources/80/test', expect.anything())
 })
 
-it('shows exactly six flat providers, each with a local logo and a directly actionable switch', async () => {
+it('shows the registered providers, each with a local logo and a directly actionable switch', async () => {
   const writes: string[] = []
   request.mockImplementation(async (path, options) => {
     if (options?.method === 'PUT') writes.push(path)
@@ -301,11 +350,11 @@ it('shows exactly six flat providers, each with a local logo and a directly acti
   render(<DataSourcesPage />)
   const navigation = within(await screen.findByRole('navigation', { name: '数据来源' }))
   expect(navigation.getAllByRole('button').map(button => button.textContent))
-    .toEqual(['同花顺', 'FTShare', '财联社', '东方财富', '腾讯财经', '新浪财经'])
+    .toEqual(['同花顺', 'FTShare', 'Tushare', '财联社', '东方财富', '腾讯财经', '新浪财经'])
   expect(navigation.queryByText('其他来源')).toBeNull()
   expect(navigation.queryByText('雪球')).toBeNull()
   expect(navigation.getAllByRole('button').map(button => button.querySelector('img')?.getAttribute('src')))
-    .toEqual(['fuyao', 'ftshare', 'cls', 'eastmoney', 'tencent', 'sina'].map(id => '/providers/' + id + '.png'))
+    .toEqual(['fuyao', 'ftshare', 'tushare', 'cls', 'eastmoney', 'tencent', 'sina'].map(id => '/providers/' + id + '.png'))
   fireEvent.click(navigation.getByRole('switch', { name: '启用东方财富来源' }))
   await waitFor(() => expect(writes).toEqual(['/datasources/providers/eastmoney']))
   expect(screen.getByRole('heading', { name: '腾讯财经' })).toBeTruthy()

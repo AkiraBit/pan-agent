@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from src.platform.persistence.models import DataSource, DataSourceProviderPause
 
 PROVIDER_ALIASES = {"eastmoney_news": "eastmoney", "ths": "fuyao"}
-REGISTERED_PROVIDERS = {"fuyao", "ftshare", "cls", "eastmoney", "tencent", "sina"}
+REGISTERED_PROVIDERS = {"fuyao", "ftshare", "tushare", "cls", "eastmoney", "tencent", "sina"}
 RETIRED_TYPES = {"etf_shares", "etf_pcf"}
 
 

@@ -24,6 +24,7 @@ from src.modules.administration.api import (
     pats,
     providers,
     settings,
+    tushare_rest,
 )
 from src.modules.administration.api.auth import get_current_user
 from src.modules.administration.api.settings import get_app_version
@@ -83,6 +84,7 @@ protected = [Depends(get_current_user)]
 app.include_router(research_data.router, prefix="/api/research-data", tags=["research-data"], dependencies=protected)
 app.include_router(fuyao_rest.router, prefix="/api/datasources/fuyao", tags=["fuyao-rest"])
 app.include_router(ftshare_rest.router, prefix="/api/datasources/ftshare", tags=["ftshare-rest"])
+app.include_router(tushare_rest.router, prefix="/api/datasources/tushare", tags=["tushare-rest"])
 app.include_router(mcp_connections.router, prefix="/api/mcp-connections", tags=["mcp-connections"])
 app.include_router(builtin_skills.router, prefix="/api/builtin-skills", tags=["builtin-skills"])
 app.include_router(review.router, prefix="/api/market-review", tags=["market-review"], dependencies=protected)
@@ -212,9 +214,6 @@ app.include_router(notifications_api.router, prefix="/api/notifications", tags=[
 app.router.on_startup.append(assistant_task_runner.recover_pending)
 app.router.on_startup.append(context_export_runner.recover_pending)
 app.router.on_startup.append(emotion_runner.recover_pending)
-from src.modules.market.etf import service as etf_service
-app.router.on_startup.append(etf_service.start)
-app.router.on_shutdown.append(etf_service.stop)
 app.router.on_shutdown.append(emotion_runner.shutdown)
 app.router.on_shutdown.append(context_export_runner.shutdown)
 app.router.on_shutdown.append(short_term_api.shutdown)

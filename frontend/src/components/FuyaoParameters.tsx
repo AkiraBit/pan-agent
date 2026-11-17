@@ -13,9 +13,11 @@ function example(param: FuyaoParameter) {
   return param.example === undefined ? '' : String(param.example)
 }
 
-export function initialFuyaoParams(operation: FuyaoOperation, settings?: unknown) {
-  const saved = (settings as { params?: Record<string, string> } | null | undefined)?.params
-  return Object.fromEntries(operation.parameters.map(param => [param.name, saved ? (saved[param.name] ?? '') : example(param)]))
+type ParameterList = Pick<FuyaoOperation, 'parameters'>
+
+export function initialFuyaoParams(operation: ParameterList, settings?: unknown) {
+  const saved = (settings as { params?: Record<string, string | number> } | null | undefined)?.params
+  return Object.fromEntries(operation.parameters.map(param => [param.name, saved ? String(saved[param.name] ?? '') : example(param)]))
 }
 
 export function fuyaoQueryValues(params: Record<string, string>) {
@@ -23,7 +25,7 @@ export function fuyaoQueryValues(params: Record<string, string>) {
 }
 
 export function FuyaoParameters({ operation, value, onChange, disabled }: {
-  operation: FuyaoOperation
+  operation: ParameterList
   value: Record<string, string>
   onChange: (value: Record<string, string>) => void
   disabled?: boolean

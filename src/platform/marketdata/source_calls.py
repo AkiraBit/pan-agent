@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from src.platform.persistence.models import DataSource
 
-from . import ftshare_rest, fuyao_credentials, fuyao_rest, source_activation
+from . import ftshare_rest, fuyao_credentials, fuyao_rest, source_activation, tushare_rest
 
 
 class CallError(RuntimeError):
@@ -29,7 +29,10 @@ def _source_type(provider: str, operation: str) -> str:
         return ftshare_rest.TYPE_PREFIX + operation
     if provider == fuyao_credentials.PROVIDER and operation in fuyao_rest.OPERATIONS:
         return fuyao_rest.TYPE_PREFIX + operation
-    code = {"fuyao": "fuyao_rest_unknown_operation", "ftshare": "ftshare_unknown_operation"}.get(
+    if provider == tushare_rest.PROVIDER and operation in tushare_rest.OPERATIONS:
+        return tushare_rest.TYPE_PREFIX + operation
+    code = {"fuyao": "fuyao_rest_unknown_operation", "ftshare": "ftshare_unknown_operation",
+            "tushare": "tushare_unknown_operation"}.get(
         provider, "datasource_provider_not_registered")
     raise CallError(404, code, "数据来源或接口不在已注册的调用目录中。")
 
@@ -54,13 +57,18 @@ def prepare(db: Session, provider: str, operation: str, request: dict) -> Prepar
         if provider == ftshare_rest.PROVIDER:
             params = ftshare_rest.validate(ftshare_rest.OPERATIONS[operation], request)
             key = ftshare_rest.read_key(db)
+        elif provider == tushare_rest.PROVIDER:
+            params = tushare_rest.validate(tushare_rest.OPERATIONS[operation], request)
+            key = tushare_rest.read_key(db)
         else:
             params = fuyao_rest.query_params(fuyao_rest.OPERATIONS[operation], request)
             key = fuyao_credentials.decrypt(fuyao_credentials.read(db))
     except fuyao_rest.InvalidQuery as exc:
-        code = "ftshare_invalid_params" if provider == "ftshare" else "fuyao_rest_invalid_params"
+        code = {"ftshare": "ftshare_invalid_params", "tushare": "tushare_invalid_params",
+                "fuyao": "fuyao_rest_invalid_params"}[provider]
         raise CallError(422, code, str(exc)) from None
-    except (ftshare_rest.CredentialUnavailable, fuyao_credentials.CredentialUnavailable) as exc:
+    except (ftshare_rest.CredentialUnavailable, fuyao_credentials.CredentialUnavailable,
+            tushare_rest.CredentialUnavailable) as exc:
         raise CallError(409, "provider_key_required", str(exc)) from None
     return PreparedCall(provider, operation, params, key)
 
@@ -69,8 +77,10 @@ async def send(call: PreparedCall) -> dict:
     try:
         if call.provider == ftshare_rest.PROVIDER:
             return await ftshare_rest.query(call.operation, call.query, call.key)
+        if call.provider == tushare_rest.PROVIDER:
+            return await tushare_rest.query(call.operation, call.query, call.key)
         return await fuyao_rest.query(call.operation, call.query, call.key)
-    except ftshare_rest.UpstreamError as exc:
+    except (ftshare_rest.UpstreamError, tushare_rest.UpstreamError) as exc:
         raise CallError(exc.status, exc.code, str(exc)) from None
     except fuyao_rest.UpstreamError as exc:
         raise CallError(504 if exc.code == "fuyao_rest_timeout" else 502, exc.code, str(exc)) from None
@@ -87,6 +97,8 @@ async def call(provider: str, operation: str, *, params: dict, variant: int = 0,
     if provider != ftshare_rest.PROVIDER and variant != 0:
         raise CallError(422, "datasource_invalid_variant", "该数据来源不支持路径选项。")
     request = {"params": params, "variant": variant} if provider == ftshare_rest.PROVIDER else params
+    if provider == tushare_rest.PROVIDER:
+        request = {"params": params}
     with (SessionLocal() if bind is None else Session(bind)) as db:
         prepared = prepare(db, provider, operation, request)
     return await send(prepared)

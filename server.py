@@ -349,16 +349,16 @@ def seed_agents():
 
 # 预置数据源种子(供 seed_data_sources / reconcile_data_sources 复用)。
 # 只增不删的 upsert 目标;删孤儿的对账逻辑见 reconcile_data_sources。
-from src.modules.market.etf.free_sources import SPECS as PUBLIC_ETF_SPECS
 from src.platform.marketdata.ftshare_rest import seeds as ftshare_seeds
 from src.platform.marketdata.fuyao_business import seeds as fuyao_seeds
+from src.platform.marketdata.tushare_rest import seeds as tushare_seeds
+
+_MANAGED_SOURCE_PROVIDERS = {"ftshare", "fuyao", "tushare"}
 
 DATA_SOURCE_SEEDS: list[dict] = [
         *fuyao_seeds(),
         *ftshare_seeds(),
-        *[{'name': spec[1], 'type': kind, 'provider': provider, 'config': {},
-           'enabled': True, 'priority': 0, 'supports_batch': False,
-           'test_symbols': spec[2]} for (kind, provider), spec in PUBLIC_ETF_SPECS.items() if provider != "fuyao"],
+        *tushare_seeds(),
         # 新闻类数据源
         {
             "name": "东方财富资讯",
@@ -611,7 +611,7 @@ def seed_data_sources(db=None, *, reset_test_symbols: bool = False) -> list[dict
     seeded_missing: list[dict] = []
     for source_data in DATA_SOURCE_SEEDS:
         identity = (
-            DataSource.type == source_data["type"] if source_data["provider"] in {"ftshare", "fuyao"}
+            DataSource.type == source_data["type"] if source_data["provider"] in _MANAGED_SOURCE_PROVIDERS
             else DataSource.name == source_data["name"]
         )
         existing = (
@@ -623,7 +623,7 @@ def seed_data_sources(db=None, *, reset_test_symbols: bool = False) -> list[dict
             .first()
         )
         if existing:
-            if source_data["provider"] in {"ftshare", "fuyao"}:
+            if source_data["provider"] in _MANAGED_SOURCE_PROVIDERS:
                 existing.name = source_data["name"]
             # 恢复默认时只重置测试代码；配置和启用状态保留。
             if existing.supports_batch != source_data.get("supports_batch", False):

@@ -1,0 +1,18 @@
+.etf-intraday-chart {
+  --etf-turnover-bar: #a1aab8;
+  --etf-partial-bar: #ccd3de;
+  --etf-excess-bar: #d53c49;
+  --etf-usual-line: #a45d13;
+  --etf-index-line: #3469bf;
+}
+
+.dark .etf-intraday-chart {
+  --etf-turnover-bar: #79879a;
+  --etf-partial-bar: #4a5566;
+  --etf-excess-bar: #fa6f7c;
+  --etf-usual-line: #edb463;
+  --etf-index-line: #86b6ff;
+}
+
+.etf-price-chip { --price-color: var(--price-light); }
+.dark .etf-price-chip { --price-color: var(--price-dark); }

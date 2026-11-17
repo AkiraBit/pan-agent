@@ -2392,6 +2392,63 @@ def _m150_retire_longbridge_data_sources(conn: Connection) -> None:
     conn.execute(text("DELETE FROM data_source_provider_pauses WHERE provider = 'longbridge'"))
 
 
+def _m151_replace_legacy_etf(conn: Connection) -> None:
+    conn.execute(text("""CREATE TABLE IF NOT EXISTS etf_intraday_days (
+        trade_date VARCHAR(10) PRIMARY KEY NOT NULL, parts JSON NOT NULL
+    )"""))
+    # Drop children before the snapshot table referenced by their foreign keys.
+    for table in (
+        "etf_daily", "etf_basket_minutes", "etf_turnover_daily", "etf_basket_daily",
+        "etf_holder_disclosures", "etf_measurements", "etf_fetch_states", "etf_source_snapshots",
+    ):
+        conn.execute(text(f"DROP TABLE IF EXISTS {table}"))
+    if _has_table(conn, "data_sources"):
+        conn.execute(text("""DELETE FROM data_sources
+            WHERE (type = 'etf_nav' AND provider = 'eastmoney')
+               OR (type = 'etf_history' AND provider = 'tencent')
+        """))
+
+
+def _m152_tushare_etf_cache(conn: Connection) -> None:
+    conn.execute(text("""CREATE TABLE IF NOT EXISTS etf_tushare_intraday_days (
+        trade_date VARCHAR(10) PRIMARY KEY NOT NULL, parts JSON NOT NULL
+    )"""))
+    conn.execute(text("""CREATE TABLE IF NOT EXISTS etf_tushare_universes (
+        key VARCHAR PRIMARY KEY NOT NULL, updated_on VARCHAR(10) NOT NULL, payload JSON NOT NULL
+    )"""))
+    if _has_table(conn, "data_sources"):
+        conn.execute(text("""
+            INSERT INTO data_sources (name, type, provider, config, enabled, priority, supports_batch, test_symbols)
+            SELECT '公募基金业绩基准库', 'tushare:mkt_idx_bmk', 'tushare', '{}', 1, 0, 0, '[]'
+            WHERE NOT EXISTS (
+                SELECT 1 FROM data_sources WHERE provider = 'tushare' AND type = 'tushare:mkt_idx_bmk'
+            )
+        """))
+
+
+def _m153_tushare_turnover_baselines(conn: Connection) -> None:
+    columns = {row[1] for row in conn.execute(text("PRAGMA table_info(etf_tushare_intraday_days)"))}
+    if "turnover_revision" not in columns:
+        conn.execute(text("ALTER TABLE etf_tushare_intraday_days ADD COLUMN turnover_revision INTEGER NOT NULL DEFAULT 0"))
+    conn.execute(text("""CREATE TABLE IF NOT EXISTS etf_tushare_turnover_baselines (
+        trade_date VARCHAR(10) PRIMARY KEY NOT NULL, payload JSON NOT NULL
+    )"""))
+
+
+def _m154_tushare_etf_price_sessions(conn: Connection) -> None:
+    conn.execute(text("""CREATE TABLE IF NOT EXISTS etf_tushare_price_sessions (
+        trade_date VARCHAR(10) NOT NULL, symbol VARCHAR(9) NOT NULL, payload JSON NOT NULL,
+        PRIMARY KEY (trade_date, symbol)
+    )"""))
+
+
+def _m155_tushare_index_price_sessions(conn: Connection) -> None:
+    conn.execute(text("""CREATE TABLE IF NOT EXISTS etf_tushare_index_price_sessions (
+        trade_date VARCHAR(10) NOT NULL, symbol VARCHAR(9) NOT NULL, payload JSON NOT NULL,
+        PRIMARY KEY (trade_date, symbol)
+    )"""))
+
+
 MIGRATIONS: tuple[Migration, ...] = (
     Migration(101, "agent_config_kind_and_visibility", _m101_agent_config_kind),
     Migration(102, "backfill_agent_kind_data", _m102_backfill_agent_kind),
@@ -2443,6 +2500,11 @@ MIGRATIONS: tuple[Migration, ...] = (
     Migration(148, "ftshare_backup_priorities", _m148_ftshare_backup_priorities),
     Migration(149, "fuyao_operation_settings", _m149_fuyao_operation_settings),
     Migration(150, "retire_longbridge_data_sources", _m150_retire_longbridge_data_sources),
+    Migration(151, "replace_legacy_etf", _m151_replace_legacy_etf),
+    Migration(152, "tushare_etf_cache", _m152_tushare_etf_cache),
+    Migration(153, "tushare_turnover_baselines", _m153_tushare_turnover_baselines),
+    Migration(154, "tushare_etf_price_sessions", _m154_tushare_etf_price_sessions),
+    Migration(155, "tushare_index_price_sessions", _m155_tushare_index_price_sessions),
 )
 
 

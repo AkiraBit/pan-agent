@@ -112,7 +112,7 @@ def get_timezone():
     return {"execution_timezone": Settings().app_timezone}
 
 
-DATA_PROVIDERS = {"fuyao": "同花顺", "ftshare": "FTShare"}
+DATA_PROVIDERS = {"fuyao": "同花顺", "ftshare": "FTShare", "tushare": "Tushare"}
 
 
 def _data_provider_name(provider: str) -> str:
@@ -120,6 +120,20 @@ def _data_provider_name(provider: str) -> str:
     if name is None:
         raise api_error(404, "provider_not_found", "数据源服务商不存在。")
     return name
+
+
+def _tushare_key_from_input(value: str) -> str:
+    # Accept a token copied from rich text or the single-line Tushare SDK example.
+    value = re.sub(r"[\u200b\u200c\u200d\u2060\ufeff]", "", value).strip()
+    quoted = value.translate(str.maketrans("‘’“”", "''\"\""))
+    literal = r"""(['"])([^'"\\\s]+)\1"""
+    sdk_call = r"(?:[A-Za-z_]\w*\s*=\s*)?(?:ts|tushare)\.pro_api\s*\("
+    match = re.fullmatch(literal, quoted) or re.fullmatch(sdk_call + r"\s*" + literal + r"\s*\)", quoted)
+    if match:
+        value = match[2]
+    elif quoted.startswith(("'", '"')) or re.match(sdk_call, quoted):
+        return ""
+    return "" if "://" in value else value
 
 
 @router.get("/data-providers/{provider}", dependencies=[Depends(require_login)])
@@ -139,7 +153,12 @@ async def set_provider_credential(provider: str, request: Request, db: Session =
         body = None
     key = body.get("api_key") if isinstance(body, dict) else None
     key = key.strip() if isinstance(key, str) else ""
+    if provider == "tushare":
+        key = _tushare_key_from_input(key)
     if not re.fullmatch(r"[!-~]{1,512}", key):
+        if provider == "tushare":
+            raise api_error(422, "tushare_key_format_invalid",
+                            "请粘贴 Tushare Token（示例中引号内的内容），不要带空格或中转地址。")
         raise api_error(422, "provider_key_invalid", f"请输入有效的{name} API Key。")
     try:
         provider_credentials.replace(db, provider, key)

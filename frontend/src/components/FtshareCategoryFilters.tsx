@@ -38,18 +38,20 @@ function CategoryRow({ options, current, label, getName, onChange, compact = fal
   </div>
 }
 
-export function FtshareCategoryFilters({ operations, value, onChange, groupName, subgroupName }: {
+export function FtshareCategoryFilters({ operations, value, onChange, groupName, subgroupName, documentOrder = false }: {
   operations: CategoryFields[]
   value: FtshareCategorySelection
   onChange: (selection: FtshareCategorySelection) => void
   groupName?: (group: string) => string
   subgroupName?: (subgroup: string) => string
+  documentOrder?: boolean
 }) {
   const { t } = useTranslation('configuration')
-  const groups = orderedCategories(operations, 'group')
+  const groups = documentOrder ? [...new Set(operations.map(op => op.group))] : orderedCategories(operations, 'group')
   const inGroup = value.group ? operations.filter(op => op.group === value.group) : []
   const availableSubgroups = orderedCategories(inGroup, 'subgroup')
-  const subgroups = value.group === '股票数据'
+  const subgroups = documentOrder ? [...new Set(inGroup.flatMap(op => op.subgroup ? [op.subgroup] : []))]
+    : value.group === '股票数据'
     ? [...STOCK_SUBCATEGORY_ORDER.filter(name => availableSubgroups.includes(name)),
       ...availableSubgroups.filter(name => !STOCK_SUBCATEGORY_ORDER.includes(name))]
     : availableSubgroups
@@ -61,7 +63,7 @@ export function FtshareCategoryFilters({ operations, value, onChange, groupName,
       getName={group => group ? groupName?.(group) ?? group : all} onChange={group => onChange({ group, subgroup: '' })} />
     {(subgroups.length > 1 || (subgroups.length === 1 && inGroup.some(op => !op.subgroup))) && <CategoryRow
       key={value.group} compact options={subgroups} current={value.subgroup} label={t('ftshare.subcategoryFilter')}
-      getName={subgroup => subgroup ? subgroupName?.(subgroup) ?? (subgroup === '资金流向数据' ? t('ftshare.capitalFlowSubcategory') : subgroup) : all}
+      getName={subgroup => subgroup ? subgroupName?.(subgroup) ?? (!documentOrder && subgroup === '资金流向数据' ? t('ftshare.capitalFlowSubcategory') : subgroup) : all}
       onChange={subgroup => onChange({ group: value.group, subgroup })} />}
   </div>
 }

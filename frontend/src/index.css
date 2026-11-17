@@ -88,6 +88,26 @@
 }
 
 @layer components {
+  .app-nav-focus:focus-visible,
+  .app-nav-control:focus-visible {
+    @apply outline outline-2 outline-offset-2 outline-ring;
+  }
+  .app-nav-control {
+    @apply flex shrink-0 items-center justify-center rounded-lg text-secondary-foreground active:bg-accent;
+  }
+  .app-nav-control[data-state='open'] {
+    @apply bg-accent text-foreground;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .app-nav-control:hover {
+      @apply bg-accent/70 text-foreground;
+    }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .app-nav-control {
+      @apply transition-colors duration-150;
+    }
+  }
   .card {
     @apply bg-card rounded-xl border border-border/60 shadow-[0_1px_0_hsl(var(--border)/0.35)];
   }
