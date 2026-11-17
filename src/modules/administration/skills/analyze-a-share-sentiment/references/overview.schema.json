@@ -65,6 +65,230 @@
       "title": "Claim",
       "type": "object"
     },
+    "DecisionBoundary": {
+      "additionalProperties": false,
+      "properties": {
+        "topic": {
+          "maxLength": 2400,
+          "minLength": 1,
+          "title": "Topic",
+          "type": "string"
+        },
+        "strengthens": {
+          "maxLength": 2400,
+          "minLength": 1,
+          "title": "Strengthens",
+          "type": "string"
+        },
+        "invalidates": {
+          "maxLength": 2400,
+          "minLength": 1,
+          "title": "Invalidates",
+          "type": "string"
+        }
+      },
+      "required": [
+        "topic",
+        "strengthens",
+        "invalidates"
+      ],
+      "title": "DecisionBoundary",
+      "type": "object"
+    },
+    "DecisionPage": {
+      "additionalProperties": false,
+      "properties": {
+        "confidence": {
+          "enum": [
+            "low",
+            "medium",
+            "high"
+          ],
+          "title": "Confidence",
+          "type": "string"
+        },
+        "rhythm": {
+          "maxLength": 2400,
+          "minLength": 1,
+          "title": "Rhythm",
+          "type": "string"
+        },
+        "assessment": {
+          "maxLength": 2400,
+          "minLength": 1,
+          "title": "Assessment",
+          "type": "string"
+        },
+        "cycle_note": {
+          "maxLength": 2400,
+          "minLength": 1,
+          "title": "Cycle Note",
+          "type": "string"
+        },
+        "short_term": {
+          "maxLength": 2400,
+          "minLength": 1,
+          "title": "Short Term",
+          "type": "string"
+        },
+        "index_context": {
+          "maxLength": 2400,
+          "minLength": 1,
+          "title": "Index Context",
+          "type": "string"
+        },
+        "structure": {
+          "maxLength": 2400,
+          "minLength": 1,
+          "title": "Structure",
+          "type": "string"
+        },
+        "theme_verdict": {
+          "maxLength": 2400,
+          "minLength": 1,
+          "title": "Theme Verdict",
+          "type": "string"
+        },
+        "today_strategy": {
+          "maxLength": 2400,
+          "minLength": 1,
+          "title": "Today Strategy",
+          "type": "string"
+        },
+        "buy_point_verdict": {
+          "maxLength": 2400,
+          "minLength": 1,
+          "title": "Buy Point Verdict",
+          "type": "string"
+        },
+        "tomorrow_title": {
+          "maxLength": 2400,
+          "minLength": 1,
+          "title": "Tomorrow Title",
+          "type": "string"
+        },
+        "tomorrow_expectation": {
+          "maxLength": 2400,
+          "minLength": 1,
+          "title": "Tomorrow Expectation",
+          "type": "string"
+        },
+        "boundaries": {
+          "items": {
+            "$ref": "#/$defs/DecisionBoundary"
+          },
+          "maxItems": 6,
+          "minItems": 3,
+          "title": "Boundaries",
+          "type": "array"
+        },
+        "actions": {
+          "items": {
+            "maxLength": 2400,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 5,
+          "minItems": 2,
+          "title": "Actions",
+          "type": "array"
+        },
+        "paths": {
+          "items": {
+            "$ref": "#/$defs/DecisionPath"
+          },
+          "maxItems": 2,
+          "minItems": 2,
+          "title": "Paths",
+          "type": "array"
+        }
+      },
+      "required": [
+        "confidence",
+        "rhythm",
+        "assessment",
+        "cycle_note",
+        "short_term",
+        "index_context",
+        "structure",
+        "theme_verdict",
+        "today_strategy",
+        "buy_point_verdict",
+        "tomorrow_title",
+        "tomorrow_expectation",
+        "boundaries",
+        "actions",
+        "paths"
+      ],
+      "title": "DecisionPage",
+      "type": "object"
+    },
+    "DecisionPath": {
+      "additionalProperties": false,
+      "properties": {
+        "side": {
+          "enum": [
+            "left",
+            "right"
+          ],
+          "title": "Side",
+          "type": "string"
+        },
+        "title": {
+          "maxLength": 2400,
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        },
+        "trigger": {
+          "maxLength": 2400,
+          "minLength": 1,
+          "title": "Trigger",
+          "type": "string"
+        },
+        "invalidation": {
+          "maxLength": 2400,
+          "minLength": 1,
+          "title": "Invalidation",
+          "type": "string"
+        },
+        "action": {
+          "maxLength": 2400,
+          "minLength": 1,
+          "title": "Action",
+          "type": "string"
+        },
+        "sectors": {
+          "items": {
+            "maxLength": 2400,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 4,
+          "title": "Sectors",
+          "type": "array"
+        },
+        "candidates": {
+          "items": {
+            "$ref": "#/$defs/FocusStock"
+          },
+          "maxItems": 3,
+          "title": "Candidates",
+          "type": "array"
+        }
+      },
+      "required": [
+        "side",
+        "title",
+        "trigger",
+        "invalidation",
+        "action",
+        "sectors",
+        "candidates"
+      ],
+      "title": "DecisionPath",
+      "type": "object"
+    },
     "EvidenceGroup": {
       "additionalProperties": false,
       "properties": {
@@ -111,6 +335,68 @@
         "evidence_ids"
       ],
       "title": "EvidenceGroup",
+      "type": "object"
+    },
+    "FocusStock": {
+      "additionalProperties": false,
+      "properties": {
+        "symbol": {
+          "maxLength": 2400,
+          "minLength": 1,
+          "title": "Symbol",
+          "type": "string"
+        },
+        "name": {
+          "maxLength": 2400,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "role": {
+          "maxLength": 2400,
+          "minLength": 1,
+          "title": "Role",
+          "type": "string"
+        },
+        "reason": {
+          "maxLength": 2400,
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        },
+        "trigger": {
+          "maxLength": 2400,
+          "minLength": 1,
+          "title": "Trigger",
+          "type": "string"
+        },
+        "invalidation": {
+          "maxLength": 2400,
+          "minLength": 1,
+          "title": "Invalidation",
+          "type": "string"
+        },
+        "evidence_ids": {
+          "items": {
+            "pattern": "^[a-zA-Z0-9_.:-]{1,100}$",
+            "type": "string"
+          },
+          "maxItems": 6,
+          "minItems": 1,
+          "title": "Evidence Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "symbol",
+        "name",
+        "role",
+        "reason",
+        "trigger",
+        "invalidation",
+        "evidence_ids"
+      ],
+      "title": "FocusStock",
       "type": "object"
     },
     "NextCheck": {
@@ -381,6 +667,17 @@
       "minItems": 1,
       "title": "Limitations",
       "type": "array"
+    },
+    "decision": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/DecisionPage"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
     }
   },
   "required": [

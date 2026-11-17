@@ -94,6 +94,14 @@ export type SentimentSupplement = {
   dragon_tiger: { status: string; data: { stock_items: Array<{ thscode: string; name: string; net_value?: number; range_days?: number }> } | null };
 }
 export type Breadth = { valid: number; rising: number; falling: number; flat: number; positive_ratio: number | null; median: number | null; p10: number | null; p90: number | null }
+export type SentimentDecision = {
+  confidence: 'low' | 'medium' | 'high'; rhythm: string; assessment: string; cycle_note: string; short_term: string;
+  index_context: string; structure: string; theme_verdict: string; today_strategy: string; buy_point_verdict: string;
+  tomorrow_title: string; tomorrow_expectation: string; actions: string[];
+  boundaries: Array<{ topic: string; strengthens: string; invalidates: string }>;
+  paths: Array<{ side: 'left' | 'right'; title: string; trigger: string; invalidation: string; action: string; sectors: string[];
+    candidates: Array<{ symbol: string; name: string; role: string; reason: string; trigger: string; invalidation: string; evidence_ids: string[] }> }>;
+}
 export type SentimentOverview = {
   schema_version: string; run_id: string; input_version: number; trade_date: string; previous_trade_date: string | null;
   as_of: string; collected_at: string; analyzed_at: string; refresh_after: string; intraday: boolean; provider: string; model_label: string;
@@ -107,6 +115,6 @@ export type SentimentOverview = {
   supplement?: SentimentSupplement;
   analysis: { title: string; summary: string; direction: SentimentDirection; direction_reason: string; stage: StagePosition; loss_relief: SentimentAxis; profit_diffusion: SentimentAxis;
     groups: Array<{ group: 'G' | 'A' | 'P' | 'R'; status: 'observed' | 'proxy' | 'missing' | 'conflicted'; explanation: string; evidence_ids: string[] }>;
-    supports: Claim[]; counters: Claim[]; next_checks: SentimentCheck[]; limitations: string[] };
+    supports: Claim[]; counters: Claim[]; next_checks: SentimentCheck[]; limitations: string[]; decision?: SentimentDecision | null };
 }
 export type SentimentOverviewState = { overview: SentimentOverview | null; stale: boolean; active_run: EmotionRun | null; last_run: EmotionRun | null; can_analyze: boolean; skill_enabled: boolean; connection_status: string; retry_after: string | null; server_time: string }

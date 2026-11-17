@@ -94,13 +94,17 @@ class EmotionRunner:
                 facts = await asyncio.wait_for(collect_overview(query, run.inputs.get('previous')), 300)
                 from .overview_supplement import supplement
                 async def supplementary_query(operation, arguments):
-                    # Older installations can still run the Longbridge overview;
-                    # an absent optional adapter is recorded as a source gap.
+                    # The configured adapter supplies the report's specialist data.
                     from src.platform.marketdata.fuyao_business import fetch as fetch_fuyao
                     with self.session_factory() as source_db:
                         bind = source_db.get_bind()
                     return await fetch_fuyao(operation, arguments, bind=bind)
                 facts = await supplement(facts, supplementary_query)
+                from .overview_context import collect_report_context
+                context = await collect_report_context(facts, supplementary_query)
+                if not context['ready']:
+                    await self.write(lambda r: r.append_event(identity, 'data_required', {'missing': context['missing']}))
+                    raise ValueError('overview_report_data_missing')
                 from .facts import evidence
                 facts['evidence'] += [evidence('note:' + n['id'], 'user_context', n['content'][:100], 'user',
                     {'text': n['content'], 'verification': 'user_unverified'}, facts['collected_at'], status='user_unverified') for n in run.inputs['notes']]

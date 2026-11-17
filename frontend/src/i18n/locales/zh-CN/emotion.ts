@@ -1,5 +1,34 @@
 export const emotion = {
   "overview": {
+  "decision": {
+    "dataNeeded": "生成结果前，还需要补充以下数据：",
+    "resumeHint": "补齐后点击“更新市场判断”继续。",
+
+    "title": "情绪周期 · 综合看板",
+    "confidence": "置信度",
+    "low": "较低",
+    "medium": "中等",
+    "high": "较高",
+    "conclusion": "① 结论区",
+    "today": "今日评价",
+    "cycle_note": "周期定位",
+    "short_term": "短线情绪",
+    "index_context": "指数 · 趋势端",
+    "structure": "盘面关键变化",
+    "theme_verdict": "板块与承接",
+    "today_strategy": "今日应对",
+    "buy_point_verdict": "买点判定",
+    "tomorrow": "② 明日预判",
+    "opportunities": "明日机会",
+    "left": "左侧",
+    "right": "右侧",
+    "trigger": "关注条件",
+    "cancel": "取消条件",
+    "boundaries": "明日边界",
+    "actions": "明日操作",
+    "focus": "③ 明日买点聚焦",
+    "sources": "查看数据来源与判断依据"
+},
   "report": {
     "preview": "预览结果页",
     "structure": "涨跌停与接力结构",

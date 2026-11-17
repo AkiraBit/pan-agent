@@ -81,6 +81,19 @@ def test_proxy_feedback_cannot_be_promoted_to_observed_and_numeric_windows_are_e
     assert validate_overview(draft,f)
 
 
+def test_observed_attack_can_cite_host_calculated_exact_cohort_promotion():
+    f = payload()
+    f['supplement'] = {'statistics': {'status': 'available'},
+                       'pools': {k: {'status': 'available'} for k in ('up', 'down', 'broken')}}
+    f['evidence'].append({'id': 'overview:context-promotions'})
+    draft = analysis()
+    draft['groups'][1].update(status='observed', evidence_ids=['overview:context-promotions'])
+    assert validate_overview(draft, f)
+    f['supplement']['pools']['up']['status'] = 'partial'
+    with pytest.raises(ValueError, match='exact limit events are unavailable'):
+        validate_overview(draft, f)
+
+
 def test_renderer_and_cli_preserve_chinese_content_and_escape_injection(tmp_path):
     p=registered(); p.pop('raw',None)
     p['analysis']['title']='复盘 <script>alert(1)</script>'

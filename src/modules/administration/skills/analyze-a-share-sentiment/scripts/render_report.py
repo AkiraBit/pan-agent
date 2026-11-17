@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import argparse
 from copy import deepcopy
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from html import escape
 import json
 import math
@@ -111,6 +111,9 @@ def enrich_report(payload, previous=None):
                 {'id': 'dragon_tiger', 'label': '龙虎榜明细', 'impact': '不能核对上榜席位或买卖差额',
                  'required': '交易日、发布时间、上榜原因与席位买卖明细', 'status': 'missing'}]}
     supplement = payload.get('supplement', {})
+    if payload.get('report_context', {}).get('ready'):
+        result['data_gaps'] = []
+        return result
     if supplement.get('statistics', {}).get('status') == 'available' and all(
             supplement.get('pools', {}).get(k, {}).get('status') == 'available' for k in ('up', 'down', 'broken')):
         result['data_gaps'] = [g for g in result['data_gaps'] if g['id'] != 'limit_events']
@@ -145,71 +148,99 @@ def _curve(position):
     else:
         indices = {i for i, name in enumerate(names[:6]) if name in active}
     markers = ''.join(f'<circle cx="{x}" cy="{y}" r="{8 if i in indices else 4}" class="{"active" if i in indices else "dot"}"/><text x="{x}" y="185" text-anchor="middle">{_text(STAGES[names[i]])}</text>' for i, (x, y) in enumerate(points))
+    if indices:
+        x = sum(points[i][0] for i in indices) / len(indices)
+        y = min(points[i][1] for i in indices) - 16
+        markers += f'<text x="{x}" y="{y}" text-anchor="middle" style="fill:#a45b0b;font-weight:700">当前</text>'
     return f'<svg viewBox="0 0 816 205" role="img" aria-label="{_text(stage_label(position))}"><path d="M48 150 C110 150 130 140 168 125 S245 80 288 65 S370 15 408 30 S490 45 528 76 S610 135 648 137 S735 160 768 150"/>{markers}</svg>'
 
 
 def render_html(payload):
-    """Render a validated overview envelope, not an arbitrary model-supplied HTML string."""
+    """A conclusion-first Chinese trading review; provenance stays in one disclosure."""
     for key in ('trade_date', 'as_of', 'collected_at', 'analyzed_at', 'run_id', 'analysis', 'metrics', 'coverage', 'evidence'):
         if key not in payload:
             raise ValueError(f'Missing report field: {key}')
-    analysis = payload['analysis']
-    report = payload.get('report') or enrich_report(payload)
-    stage = analysis['stage']
-    known = {e['id']: e for e in payload['evidence']}
-    def refs(ids):
-        return '<div class="refs">' + ' · '.join(f'<a href="#ev-{_text(i)}">{_text(known[i]["title"])}</a>' for i in ids if i in known) + '</div>'
-    def section(title, body, cls=''):
-        return f'<section class="{cls}"><h2>{_text(title)}</h2>{body}</section>'
-    def paragraph(value):
-        return f'<p>{_text(value)}</p>'
+    a = payload['analysis']
+    d = a.get('decision') or {}
+    stage = a['stage']
+    def p(value, cls=''):
+        return f'<p class="{cls}">{_text(value)}</p>'
+    def row(label, value):
+        return f'<div class="conclusion-row"><dt>{_text(label)}</dt><dd>{_text(value)}</dd></div>'
+    def bullets(values):
+        return '<ul>' + ''.join(f'<li>{_text(v)}</li>' for v in values) + '</ul>'
+    def card(title, body, cls=''):
+        return f'<article class="{cls}"><h3>{_text(title)}</h3>{body}</article>'
+    body = f'<header><h1>情绪周期 · 综合看板</h1><p class="subtitle">短线情绪复盘 · 今日结论 / 明日预案 / 买点聚焦 · {_text(payload["trade_date"])}</p>'
+    confidence = {'low': '较低', 'medium': '中等', 'high': '较高'}.get(d.get('confidence'), '')
+    body += '<div class="headline-badges">'
+    if confidence:
+        body += f'<span class="confidence">置信度 {_text(confidence)}</span>'
+    body += f'<strong class="stage-badge">{_text(stage_label(stage))}</strong></div></header>'
+    body += '<section class="conclusion"><h2>① 结论区</h2><div class="today">'
+    body += f'<h3 class="evaluation">今日评价 <span class="rhythm">节奏：{_text(d.get("rhythm", DIRECTIONS[a["direction"]]))}</span></h3>'
+    body += p(d.get('assessment', a['summary']), 'assessment')
+    rows = [('周期定位', d.get('cycle_note', stage['rationale'])), ('短线情绪', d.get('short_term', a['direction_reason'])),
+            ('指数 · 趋势端', d.get('index_context')), ('盘面关键变化', d.get('structure')), ('板块与承接', d.get('theme_verdict')),
+            ('今日应对', d.get('today_strategy')), ('买点判定', d.get('buy_point_verdict'))]
+    body += '<dl>' + ''.join(row(k, v) for k, v in rows if v) + '</dl>'
+    body += '</div><div class="cycle"><span class="cycle-title">当前周期位置</span>' + _curve(stage) + '</div></section>'
+    if d:
+        body += '<section class="tomorrow"><h2>② 明日预判</h2>'
+        body += f'<h3 class="forecast">{_text(payload.get("next_trade_date", "下一交易日"))} · {_text(d["tomorrow_title"])}</h3>'
+        body += p(d['tomorrow_expectation'], 'expectation') + '<h3>明日机会</h3>'
+        for path in d['paths']:
+            label = '左侧' if path['side'] == 'left' else '右侧'
+            body += f'<div class="opportunity"><b>{label}</b><div><p><strong>触发</strong> {_text(path["trigger"])}</p><p><strong>失效</strong> {_text(path["invalidation"])}</p></div></div>'
+        body += '<h3 class="subheading">明日边界</h3>'
+        for boundary in d['boundaries']:
+            body += card(boundary['topic'], bullets([boundary['strengthens'], boundary['invalidates']]), 'boundary')
+        body += '<h3 class="subheading">明日操作</h3>' + bullets(d['actions']) + '</section>'
+        body += '<section class="focus"><h2>③ 明日买点聚焦</h2>'
+        for path in d['paths']:
+            side = '左侧路径' if path['side'] == 'left' else '右侧路径'
+            content = p(path['action'], 'path-action')
+            if path['sectors']:
+                content += '<div class="sector-tags">' + ''.join(f'<span>{_text(s)}</span>' for s in path['sectors']) + '</div>'
+            for stock in path['candidates']:
+                content += '<div class="stock"><div class="stock-heading"><strong>' + _text(stock['name']) + '</strong><span>' + _text(stock['symbol']) + '</span><b>' + _text(stock['role']) + '</b></div>'
+                content += p(stock['reason']) + '<p><b>关注条件</b> ' + _text(stock['trigger']) + '</p><p><b>取消条件</b> ' + _text(stock['invalidation']) + '</p></div>'
+            body += card(side + ' · ' + path['title'], content, 'path ' + path['side'])
+        body += '</section>'
+    else:
+        body += '<section class="tomorrow"><h2>② 下一交易日观察</h2>'
+        for check in a.get('next_checks', []):
+            body += card(check['observe'], bullets([check['strengthens'], check['invalidates']]))
+        body += '</section>'
     breadth = payload['metrics']['breadth']
-    cards = ''.join(f'<div class="metric"><span>{title}</span><strong>{_text(value)}</strong></div>' for title, value in [
-        ('上涨家数', breadth.get('rising')), ('下跌家数', breadth.get('falling')),
-        ('上涨占比', _num(breadth.get('positive_ratio'), True)), ('涨幅中位数（%）', _num(breadth.get('median')))])
-    summary = f'<div class="eyebrow">A-SHARE SENTIMENT · {_text(payload["trade_date"])}</div><h1>{_text(analysis["title"])}</h1><p class="lead">{_text(analysis["summary"])}</p><div class="pills"><b>{_text(DIRECTIONS[analysis["direction"]])}</b><b>{_text(stage_label(stage))}</b><b>{_text(STATUSES[stage["status"]])}</b></div>'
-    body = '<header>' + summary + '</header>'
-    body += section('01 · 周期定位', _curve(stage) + paragraph(stage['rationale']) + refs(stage['evidence_ids']) +
-                    '<small>曲线表示阶段关系；双点表示相邻区间，不是进度、概率或未来走势。</small>')
-    body += section('02 · 今日评价与市场数据', '<div class="metrics">' + cards + '</div>' + paragraph(analysis['direction_reason']) +
-                    f'<small>行情时点 {_text(payload["as_of"])} · {"盘中暂定" if payload.get("intraday") else "收盘快照"} · 有效样本 {_text(payload["coverage"]["valid"])} / 目录 {_text(payload["coverage"]["directory_total"])}</small>')
-    axes = ''.join(f'<article><h3>{label} · {_text(DIRECTIONS[analysis[key]["state"]])}</h3>{paragraph(analysis[key]["explanation"])}{refs(analysis[key]["evidence_ids"])}</article>' for key, label in [('loss_relief', '亏损缓和'), ('profit_diffusion', '盈利扩散')])
-    groups = ''.join(f'<article><h3>{g["group"]} · {_text(STATUSES[g["status"]])}</h3>{paragraph(g["explanation"])}{refs(g["evidence_ids"])}</article>' for g in analysis['groups'])
-    body += section('03 · 情绪与结构', '<div class="grid">' + axes + groups + '</div>')
-    validation = ''
-    for check in report['continuity']['checks']:
-        observations = ''.join(paragraph(f'{METRICS[o["metric"]]}：实际 {_num(o["observed_value"])}；登记 {o["operator"]} {o["value"]}（待回测）') for o in check['observations'])
-        validation += f'<article><h3>{_text(check["observe"])}</h3><b>{_text(STATUSES[check["state"]])}</b>{paragraph(REASONS[check["reason"]])}{paragraph("原加强条件：" + check["strengthens"])}{paragraph("原反证条件：" + check["invalidates"])}<small>登记 {_text(check["registered_at"])} → 验证 {_text(check["target_trade_date"])} 收盘</small>{observations}</article>'
-    body += section('04 · 上次预期 → 本次验证', validation or '<p>尚无可用的前一交易日登记条件。首次生成不补造历史命中记录。</p>')
-    revision = report.get('revision')
-    if revision:
-        body += section('判断修订记录', paragraph(f'原判断（{revision["previous_as_of"]}）：{revision["previous_title"]}') +
-                        paragraph(f'{stage_label(revision["previous_stage"])} → {stage_label(revision["current_stage"])}') +
-                        paragraph(revision['explanation']) + '<small>原判断按发布时点保留；本次解释不覆盖原记录。</small>')
-    conditions = ''.join(f'<article><h3>{_text(c["observe"])}</h3><small>{_text(c["window"])}</small><p><b>加强判断</b> {_text(c["strengthens"])}</p><p><b>推翻判断</b> {_text(c["invalidates"])}</p><small>{"已登记数值条件 · 参数待回测 · 次日收盘验证" if c.get("rule") else "文字观察条件 · 需要复核，不能自动认定命中"}</small></article>' for c in analysis['next_checks'])
-    body += section('05 · 下一交易日观察预案', conditions + '<p class="note">观察条件成立不等于可以成交。本页未评估账户与仓位。普通 A 股当日新买入部分不能在同日卖出；撤销未成交委托与卖出已成交股份必须分开。</p>')
-    claims = ''.join(f'<article><h3>{label}</h3>' + ''.join(paragraph(c['text']) + refs(c['evidence_ids']) for c in analysis[key]) + '</article>' for key, label in [('supports', '支持当前判断'), ('counters', '反证与其他解释')])
-    body += section('06 · 依据与反证', '<div class="grid">' + claims + '</div>')
-    supplement = payload.get('supplement')
-    if supplement:
-        stats = supplement['statistics']['data'] if supplement['statistics']['status'] == 'available' else None
-        event_body = paragraph(f'扶摇 REST · 交易日 {supplement["trade_date"]} · 采集 {supplement["collected_at"]}')
-        if stats:
-            event_body += paragraph(f'供应商封板 {stats["limit_up_stock_count"]} 家；打开 {stats["open_stock_count"]} 家；封板率 {_num(stats["seal_rate"], True)}')
-        else:
-            event_body += paragraph('汇总指标暂不可用或未通过口径核验。')
-        for ladder in supplement['ladders']:
-            levels = ' · '.join(f'{x["level"]} 板 {x["count"]} 家' for x in ladder['levels']) or '没有可展示记录'
-            event_body += f'<article><h3>{_text({"main":"主板","growth":"创业板","star":"科创板","beijing":"北交所"}[ladder["board"]])}</h3>{paragraph(levels)}<small>样本 {ladder["sample"]} · 排除或未知 {ladder["excluded_or_unknown"]} · {"池完整" if ladder["status"] == "available" else "池或字段不完整，不能据此认定梯队空缺"}</small></article>'
-        event_body += '<small>汇总与过滤后梯队各用各自分母；页面档位晋级率不等于冻结队列晋级。龙虎榜原始记录见证据，单日和多日不得叠加。</small>'
-        body += section('专项数据 · 涨跌停与接力梯队', event_body)
-    gaps = ''.join(f'<article><h3>{_text(g["label"])} · {"部分可用" if g["status"] == "partial" else "缺失"}</h3>{paragraph(g["impact"])}<small>需要：{_text(g["required"])}</small></article>' for g in report['data_gaps'])
-    body += section('07 · 数据缺口与待回测参数', gaps + '<p class="note">强势代理阈值：主板 5%、创业板 / 科创板 10%、北交所 15%，以及本页新增数值条件均未经预测能力校准。制度约束有规则依据，阶段解释有方法依据，均不等于收益已验证。</p>' + ''.join(paragraph(x) for x in analysis['limitations']))
-    evidence = ''.join(f'<details id="ev-{_text(e["id"])}"><summary>{_text(e["title"])}</summary><p>{_text(e["source"])} · {_text(e["observed_at"])}</p><pre>{_text(json.dumps(e["content"], ensure_ascii=False, indent=2, allow_nan=False))}</pre><small>SHA256 {_text(e.get("content_hash"))}</small></details>' for e in payload['evidence'])
-    body += section('来源与计算口径', evidence)
-    body += f'<footer>采集 {_text(payload["collected_at"])} · 分析 {_text(payload["analyzed_at"])}<br>运行 {_text(payload["run_id"])} · Skill {_text(payload.get("skill", {}).get("version"))} · {_text(payload.get("model_label"))}<br>离线报告快照；不会自动刷新。源 JSON 与本页一起保存，以便复核。</footer>'
-    css = '''*{box-sizing:border-box}body{margin:0;background:#f4f5f8;color:#232736;font:15px/1.75 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC",sans-serif}main{max-width:1120px;margin:auto;padding:32px 20px}header{background:#202838;color:#fff;padding:38px;border-radius:22px;margin-bottom:22px}.eyebrow{font-size:11px;letter-spacing:2px;color:#bdc8db}h1{font-size:30px;line-height:1.4;margin:12px 0}.lead{color:#dce3ef;max-width:900px}.pills{display:flex;flex-wrap:wrap;gap:8px}.pills b{font-size:12px;background:#ffffff16;border:1px solid #ffffff35;border-radius:30px;padding:5px 14px}section{background:white;border:1px solid #e3e6ec;border-radius:18px;padding:28px;margin:18px 0}h2{font-size:18px;margin:0 0 18px;color:#4e4584}h3{font-size:15px;margin:0 0 8px}p{margin:8px 0;overflow-wrap:anywhere}small,footer{font-size:12px;color:#687386}article{border:1px solid #e5e8ed;border-radius:12px;padding:18px;margin:8px 0}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:16px 0}.metric{background:#f5f6fa;border-radius:12px;padding:16px}.metric span{display:block;color:#687386;font-size:12px}.metric strong{display:block;font-size:28px;font-variant-numeric:tabular-nums}.note{background:#faf5e8;border-left:3px solid #c59540;padding:14px 18px;font-size:13px}.refs{font-size:11px;margin-top:10px}a{color:#60539f;overflow-wrap:anywhere}svg{width:100%;display:block}svg path{fill:none;stroke:#887bb6;stroke-width:3}svg .dot{fill:#b6becd}svg .active{fill:#d17a30;stroke:#fff;stroke-width:3}svg text{font-size:12px;fill:#687386}details{border-top:1px solid #e5e8ed;padding:12px 0}summary{cursor:pointer}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f5f6fa;padding:16px;border-radius:10px;font-size:11px}footer{padding:16px 4px}@media(max-width:640px){main{padding:14px 10px}header,section{padding:20px 16px;border-radius:14px}h1{font-size:23px}.grid{grid-template-columns:1fr}.metrics{grid-template-columns:1fr 1fr}.metric strong{font-size:24px}svg text{font-size:13px}}@media(prefers-color-scheme:dark){body{background:#131720;color:#e2e6ee}section{background:#1c2230;border-color:#343c4d}h2{color:#c1b5f0}article,details{border-color:#343c4d}.metric,pre{background:#262d3d}small,footer,.metric span{color:#a6b1c5}.note{background:#332f25}a{color:#c1b5f0}svg text{fill:#a6b1c5}}@media print{body{background:white}main{max-width:none;padding:0}header{background:white;color:#232736;border:1px solid #ccc}.lead{color:inherit}section,article{break-inside:avoid}details{display:block}footer{color:#555}}'''
-    return '<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src \'none\'; style-src \'unsafe-inline\'; base-uri \'none\'; form-action \'none\'"><title>' + _text(analysis['title']) + '</title><style>' + css + '</style></head><body><main>' + body + '</main></body></html>'
+    stats = payload.get('supplement', {}).get('statistics', {}).get('data') or {}
+    metric_items = [('上涨', breadth.get('rising')), ('下跌', breadth.get('falling')), ('上涨占比', _num(breadth.get('positive_ratio'), True)),
+                    ('涨幅中位数', _num(breadth.get('median')) + '%'), ('涨停', stats.get('limit_up_stock_count')),
+                    ('炸板', stats.get('open_stock_count')), ('封板率', _num(stats.get('seal_rate'), True))]
+    body += '<section class="data-section"><h2>④ 情绪数据</h2><div class="metrics">' + ''.join(f'<div class="metric"><span>{_text(k)}</span><strong>{_text(v)}</strong></div>' for k, v in metric_items if v is not None) + '</div>'
+    ladders = payload.get('supplement', {}).get('ladders', [])
+    for ladder in ladders:
+        if ladder.get('sample'):
+            levels = '　'.join(f'{r["level"]} 板 {r["count"]} 家' for r in ladder['levels'])
+            body += p({'main': '主板', 'growth': '创业板', 'star': '科创板', 'beijing': '北交所'}[ladder['board']] + '：' + levels)
+    body += '</section>'
+    # Source attribution remains per fact, but never competes with the actual verdict.
+    body += '<details class="sources"><summary>查看数据来源与判断依据</summary><div class="source-body">'
+    for key, label in [('supports', '主要依据'), ('counters', '相反证据')]:
+        body += '<h3>' + label + '</h3>' + bullets([c['text'] for c in a.get(key, [])])
+    body += '<h3>来源明细</h3><table><thead><tr><th>数据项</th><th>来源</th><th>获取时间</th></tr></thead><tbody>'
+    for e in payload['evidence']:
+        body += f'<tr><td>{_text(e["title"])}</td><td>{_text(e["source"])}</td><td>{_text(e["observed_at"])}</td></tr>'
+    body += '</tbody></table>'
+    if a.get('limitations'):
+        body += '<h3>口径说明</h3>' + bullets(a['limitations'])
+    for e in payload['evidence']:
+        body += f'<details id="ev-{_text(e["id"])}"><summary>{_text(e["title"])}</summary><pre>{_text(json.dumps(e["content"], ensure_ascii=False, indent=2, allow_nan=False))}</pre></details>'
+    body += '</div></details>'
+    generated_at = datetime.fromisoformat(payload['analyzed_at']).astimezone(timezone(timedelta(hours=8))).strftime('%Y-%m-%d %H:%M')
+    body += f'<footer>行情日期 {_text(payload["trade_date"])} · {"盘中" if payload.get("intraday") else "收盘复盘"} · 生成 {_text(generated_at)}（北京时间）</footer>'
+    css = '''*{box-sizing:border-box}body{margin:0;background:#f4f6f8;color:#29282c;font:16px/1.8 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}main{max-width:1040px;margin:0 auto;padding:32px 22px}header,section{background:#fff;border:1px solid #ebedf0;border-radius:18px;padding:28px 34px;margin-bottom:22px;box-shadow:0 2px 6px #20242b06}h1{font-size:30px;line-height:1.4;margin:0 0 10px}h2{font-size:23px;line-height:1.4;margin:0 0 20px;padding-left:13px;border-left:5px solid #782fc0}h3{font-size:18px;line-height:1.6;margin:0 0 10px}p{margin:6px 0;overflow-wrap:anywhere}.subtitle{color:#89868b;font-size:14px}.headline-badges{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-top:20px}.confidence{border:1px solid #b68139;color:#a66b26;padding:3px 14px;border-radius:30px;font-size:13px}.stage-badge{border-radius:12px;background:#cf7009;color:white;padding:12px 24px;font-size:22px}.today{background:#f8f0fd;border:1px solid #d8bae8;border-radius:13px;padding:22px}.evaluation{color:#5a2793}.rhythm{font-size:14px;color:#fff;background:#7b2cc1;border-radius:30px;padding:4px 14px;margin-left:6px;white-space:nowrap}.assessment{color:#a85c09;font-weight:650;font-size:17px;margin-bottom:14px}dl{margin:0}.conclusion-row{display:grid;grid-template-columns:120px minmax(0,1fr);gap:14px;margin:12px 0}dt{color:#89838d}dd{margin:0;white-space:pre-line;overflow-wrap:anywhere}.cycle{padding:18px 10px 0}.cycle-title{font-size:13px;color:#8c8397}svg{width:100%;display:block;max-height:180px}svg path{fill:none;stroke:#887bb6;stroke-width:3}svg .dot{fill:#b6becd}svg .active{fill:#ce6c09;stroke:#fff;stroke-width:3}svg text{font-size:12px;fill:#777080}.tomorrow{background:#fffbea;border-color:#eddfac}.tomorrow h2,.focus h2{border-left-color:#cc790b}.forecast{color:#a7710a;font-size:21px}.expectation{color:#86651d;margin-bottom:22px}.opportunity{display:flex;gap:18px;margin:14px 0;color:#9b691b}.opportunity>b{color:#b82632;white-space:nowrap}.opportunity p{margin:0 0 4px}.subheading{margin-top:24px}article{background:#ffffff94;border:1px solid #e6e3db;border-radius:12px;padding:18px 20px;margin:12px 0}.boundary{border-left:4px solid #d8d7d3}.boundary ul{margin:0}ul{margin:10px 0;padding-left:22px}li{padding-left:2px;margin:7px 0;overflow-wrap:anywhere}.path{border-left:4px solid #cb790a;background:#fffdf2;padding:22px}.path.left{border-left-color:#bf2537}.path h3{color:#a66d14}.path.left h3{color:#ac2939}.path-action{font-weight:600;color:#9d6b18}.sector-tags{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}.sector-tags span{border:1px solid #dcd6c6;background:#fff;border-radius:20px;padding:1px 12px;color:#997120;font-size:14px}.stock{border:1px solid #e9e5da;border-radius:10px;padding:15px 18px;margin-top:12px}.stock-heading{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.stock-heading>strong{font-size:19px;color:#a36c0d}.stock-heading>span{font-size:12px;color:#948c7b}.stock-heading>b{font-size:13px;line-height:1.5;font-weight:500;background:#f0f5ff;color:#4168a8;border:1px solid #c1d1ed;border-radius:20px;padding:3px 10px}.stock p{font-size:14px}.stock p>b{color:#867448}.metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.metric{border:1px solid #eee9e2;border-radius:10px;padding:14px;background:#fcfbf9}.metric span{display:block;font-size:13px;color:#8b8581}.metric strong{font-size:25px;font-variant-numeric:tabular-nums}.data-section p{font-size:14px;color:#77716b}.sources{background:white;border:1px solid #e5e6e8;border-radius:12px;padding:15px 22px;color:#79747e;font-size:13px}.source-body{padding-top:20px}.source-body h3{font-size:15px}.source-body details{border-top:1px solid #eee;padding:8px 0}summary{cursor:pointer}pre{font-size:11px;white-space:pre-wrap;overflow-wrap:anywhere;background:#f6f6f7;padding:12px;border-radius:8px}table{border-collapse:collapse;width:100%;table-layout:fixed;font-size:11px;margin:12px 0}th,td{text-align:left;vertical-align:top;border-bottom:1px solid #eee;padding:8px;overflow-wrap:anywhere}footer{font-size:12px;color:#99919c;padding:18px 4px;text-align:center}@media(max-width:600px){body{font-size:14px}main{padding:14px 10px}header,section{padding:20px 16px;margin-bottom:14px;border-radius:13px}h1{font-size:24px}h2{font-size:20px}h3{font-size:16px}.subtitle{font-size:12px}.stage-badge{font-size:18px}.today{padding:16px 13px}.assessment{font-size:15px}.conclusion-row{grid-template-columns:82px minmax(0,1fr);gap:10px;margin:13px 0}.evaluation{line-height:2.2}.rhythm{font-size:12px;padding:3px 10px}.forecast{font-size:18px}.opportunity{gap:12px}article,.path{padding:15px 13px}.stock{padding:12px}.stock-heading>strong{font-size:17px}.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.metric strong{font-size:23px}.sources{padding:14px}.cycle{padding:16px 0 0}svg text{font-size:13px}}@media print{body{background:white}main{max-width:none;padding:0}header,section{box-shadow:none}article,.stock{break-inside:avoid}.sources{display:none}}'''
+    return '<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src \'none\'; style-src \'unsafe-inline\'; base-uri \'none\'; form-action \'none\'"><title>情绪周期综合看板 · ' + _text(a['title']) + '</title><style>' + css + '</style></head><body><main>' + body + '</main></body></html>'
 
 
 def main():

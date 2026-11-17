@@ -45,3 +45,17 @@ it('renders adjacent intervals and the wrap into ice without inventing progress 
   await i18n.changeLanguage('en-US')
   await waitFor(() => expect(screen.getByRole('img').getAttribute('aria-label')).toContain('Insufficient evidence'))
 })
+it('shows the exact missing data and waits for an explicit refresh', async () => {
+  vi.mocked(emotionApi.overview).mockResolvedValue({ ...state, last_run: {
+    id: 'missing-data', status: 'failed', error_code: 'overview_report_data_missing',
+    target_trade_date: '2026-11-13', created_at: state.server_time, finished_at: state.server_time,
+    base_revision: 0, model_label: null, publication_id: null,
+    events: [{ seq: 1, type: 'data_required', at: state.server_time, data: { missing: ['上一交易日涨跌停池与晋级统计'] } }],
+  } as NonNullable<SentimentOverviewState['last_run']> })
+  vi.mocked(emotionApi.refreshOverview).mockResolvedValue({ run: null, started: true })
+  render(<MemoryRouter><SentimentOverview inputVersion={0} onEvidence={() => {}} /></MemoryRouter>)
+  expect(await screen.findByText('上一交易日涨跌停池与晋级统计')).toBeTruthy()
+  expect(emotionApi.refreshOverview).not.toHaveBeenCalled()
+  fireEvent.click(screen.getByRole('button', { name: '更新市场判断' }))
+  await waitFor(() => expect(emotionApi.refreshOverview).toHaveBeenCalledWith(expect.objectContaining({ force: true })))
+})

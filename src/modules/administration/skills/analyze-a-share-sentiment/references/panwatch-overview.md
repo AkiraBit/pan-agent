@@ -13,7 +13,7 @@
 
 ## 模型字段
 
-`title`、`summary`、`direction`、`direction_reason`；`loss_relief` 与 `profit_diffusion` 分别包含 `state`、`explanation`、`evidence_ids`。方向枚举为 `improving/stable/deteriorating/mixed/insufficient`。无历史可比数据时不能把静态弱势说成“正在恶化”，两轴使用 `insufficient` 并说明当前水平。
+`title`、`summary`、`direction`、`direction_reason`；`loss_relief` 与 `profit_diffusion` 分别包含 `state`、`explanation`、`evidence_ids`。方向枚举为 `improving/stable/deteriorating/mixed/insufficient`。只有静态水平时不能写成变化；`report_context` 的跨日涨跌停、前日队列反馈和指数/板块日线也属于有效历史依据，不要求一定有本系统的昨日快照。
 
 `stage` 包含 `kind`、`stages`、`status`、`rationale`、`evidence_ids`。阶段顺序为：
 
@@ -40,7 +40,7 @@
 - P：使用此前交易日收盘后冻结的强势队列及其后续报价；首次运行、队列未成熟、报价不齐时缺失或部分可用。不是昨日涨停溢价，也不能当作可成交收益。
 - 长桥 `market_temperature` 和历史温度是供应商综合指标；只作背景，不按温度区间直接映射六阶段，也不视为G/A/P/R合成分数。
 - 分页目录与报价非原子采样，记录采集窗口、重复及缺失；不完整时收缩判断。筛选器金额字段的原始值与单位可能不一致，不据此汇总成交额。
-- 没有完整A/P、跨日比较或足够分板块覆盖时，阶段至多为候选/冲突，不输出 `supported`。缺口本身是数据质量证据，可作为反证引用。
+- 真实涨停池、队列反馈与跨日比较可由扶摇补充；仅有缺失或代理证据时，阶段至多为候选/冲突。缺口本身是数据质量证据，可作为反证引用。
 
 研究依据仍见 [参数与依据](parameters-and-evidence.md) 与 [首轮实证](study-2026-11.md)；这些结论不证明当前长桥代理指标的预测能力。
 
@@ -51,3 +51,9 @@
 `next_checks` 可附 `rule` 与 `invalidation_rule`（默认 null），字段与冻结协议见[综合结果页](result-page.md)。模型不能写入宿主 `report` 的验证状态、登记时点与修订记录。宿主的 `supplement` 提供扶摇专项证据；A 在完整事件池、有效汇总均存在时可为 observed，其他条件仍需分别核验。
 
 总览导出 `/sentiment-overview/report?format=html|json&run_id=...`，绑定实际发布 run。旧结果保留实际日期，不补造登记条件或跨日命中。
+
+## 1.3 结论与预案正文
+
+新分析必须填写 `decision`，其中 rhythm/assessment/cycle_note/short_term/index_context/structure/theme_verdict/today_strategy/buy_point_verdict 构成今日结论；tomorrow_title/tomorrow_expectation/boundaries/actions 构成明日预案；paths 恰好为 left/right 两条，候选来自 `report_context.candidates` 并逐一匹配 symbol/name。每只候选写身份、理由、关注条件、取消条件及 evidence_ids。confidence 仅为 low/medium/high。
+
+旧的 groups、supports、counters、limitations、next_checks 继续供后台与折叠详情使用，不作为正文骨架。正文不要出现工具状态、研究过程或一串证据链接。`report_context.ready=false` 时由宿主停止正式生成并报告需要补充的关键数据。

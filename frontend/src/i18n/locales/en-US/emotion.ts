@@ -2,6 +2,35 @@ import type { emotion as zh } from '../zh-CN/emotion'
 import type { TranslationShape } from '../../resource-types'
 export const emotion = {
   "overview": {
+  "decision": {
+    "dataNeeded": "The following data is needed before generating the report:",
+    "resumeHint": "After adding the data, select Refresh market analysis to continue.",
+
+    "title": "Sentiment cycle · dashboard",
+    "confidence": "Confidence",
+    "low": "Low",
+    "medium": "Medium",
+    "high": "High",
+    "conclusion": "① Conclusion",
+    "today": "Today",
+    "cycle_note": "Cycle position",
+    "short_term": "Short-term sentiment",
+    "index_context": "Indices and trends",
+    "structure": "Key changes",
+    "theme_verdict": "Sectors and support",
+    "today_strategy": "Today’s approach",
+    "buy_point_verdict": "Entry assessment",
+    "tomorrow": "② Next-session outlook",
+    "opportunities": "Opportunities",
+    "left": "Early entry",
+    "right": "Confirmation",
+    "trigger": "Trigger",
+    "cancel": "Cancel if",
+    "boundaries": "Scenario boundaries",
+    "actions": "Action plan",
+    "focus": "③ Candidate focus",
+    "sources": "Data sources and reasoning"
+},
   "report": {
     "preview": "Preview report page",
     "structure": "Limit events and relay structure",

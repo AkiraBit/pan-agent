@@ -9,6 +9,7 @@ import SentimentCycleChart from './SentimentCycleChart'
 import { EmotionCard, emotionStamp } from './EmotionBlocks'
 import SentimentReportDetails, { SentimentReportExport } from './SentimentReportDetails'
 import SentimentStructure from './SentimentStructure'
+import SentimentDecisionPage from './SentimentDecisionPage'
 
 const number = (v: number | null | undefined, suffix = '') => v == null ? '—' : formatNumber(v, { maximumFractionDigits: 2 }) + suffix
 
@@ -33,20 +34,24 @@ export default function SentimentOverview({ inputVersion, onEvidence }: { inputV
   }, [language, load])
   useEffect(() => { alive.current = true; void load(); const timer = window.setInterval(() => void load(), 5000); return () => { alive.current = false; sequence.current++; window.clearInterval(timer) } }, [load, inputVersion])
   useEffect(() => {
-    if (data?.stale && data.can_analyze && !data.active_run && !busy && !error &&
+    if (data?.stale && data.can_analyze && !data.active_run && !busy && !error && data.last_run?.error_code !== 'overview_report_data_missing' &&
         (!data.retry_after || data.retry_after <= data.server_time)) void refresh(false)
   }, [data, busy, error, refresh])
   const p = data?.overview, active = !!data?.active_run || busy
+  const needsData = data?.last_run?.error_code === 'overview_report_data_missing'
+  const missingData = data?.last_run?.events?.find(e => e.type === 'data_required')?.data.missing
   const evidenceTitle = (e: Evidence) => e.id.startsWith('overview:') ? t(`overview.evidence.${e.id.slice(9)}`, { defaultValue: e.title }) : e.title
   const refs = (ids: string[]) => <div className="flex flex-wrap gap-1 mt-2">{ids.map(id => { const e = p?.evidence.find(e => e.id === id); return e ? <Button key={id} variant="ghost" size="sm" className="h-auto px-2 py-1 text-xs text-primary whitespace-normal text-left" onClick={() => onEvidence({ ...e, title: evidenceTitle(e) })}>{evidenceTitle(e)}<ArrowUpRight className="w-3 h-3 ml-1 shrink-0" /></Button> : null })}</div>
   return <div className="space-y-5" data-testid="sentiment-overview">
     <div className="flex flex-wrap justify-between gap-3 items-center"><div><h2 className="font-medium">{t('overview.latest')}</h2><p className="mt-1 text-xs text-muted-foreground">{p ? `${p.trade_date} · ${t(p.intraday ? 'overview.intraday' : 'overview.closed')} · ${t('overview.provider')}` : t('overview.sourceHint')}</p></div><Button onClick={() => void refresh(true)} disabled={!data?.can_analyze || active}><RefreshCw className={`w-4 h-4 mr-2 ${active ? 'animate-spin motion-reduce:animate-none' : ''}`} />{active ? t('running') : t('overview.refresh')}</Button></div>
     {!data?.can_analyze && data && <div className="rounded-xl border p-4 text-sm space-y-3"><p>{t(data.skill_enabled ? 'overview.connectionNeeded' : 'overview.skillDisabled')}</p><Button variant="outline" size="sm" asChild><Link to="/integrations/mcp?tab=skills&skill=analyze-a-share-sentiment">{t('overview.configure')}</Link></Button></div>}
-    {(error || (data?.last_run && ['failed', 'interrupted'].includes(data.last_run.status) && !active)) && <div role="alert" className="rounded-xl border border-destructive/25 p-4 text-sm"><p>{t('overview.failed')}</p><p className="text-xs text-muted-foreground mt-2">{t('overview.failedHint')}</p><Button variant="ghost" size="sm" className="mt-2" onClick={() => void load()}>{t('retry')}</Button></div>}
+    {needsData && !active && <div role="alert" className="rounded-xl border p-4 text-sm"><p>{t('overview.decision.dataNeeded')}</p><ul className="list-disc pl-4 mt-2 leading-7">{Array.isArray(missingData) && missingData.filter((x): x is string => typeof x === 'string').map(s => <li key={s}>{s}</li>)}</ul><p className="text-xs text-muted-foreground mt-2">{t('overview.decision.resumeHint')}</p></div>}
+    {!needsData && (error || (data?.last_run && ['failed', 'interrupted'].includes(data.last_run.status) && !active)) && <div role="alert" className="rounded-xl border border-destructive/25 p-4 text-sm"><p>{t('overview.failed')}</p><p className="text-xs text-muted-foreground mt-2">{t('overview.failedHint')}</p><Button variant="ghost" size="sm" className="mt-2" onClick={() => void load()}>{t('retry')}</Button></div>}
     {active && <div role="status" className="rounded-xl border border-primary/20 bg-primary/5 p-4 text-sm flex gap-3 items-center"><Activity className="w-4 h-4 text-primary" /><span>{t('overview.running')}</span></div>}
     {p && data?.stale && <p role="status" className="text-xs text-muted-foreground rounded-xl border p-3">{t('overview.stale', { date: p.trade_date, time: emotionStamp(p.as_of) })}</p>}
     {!p && <section className="rounded-2xl border bg-card p-8"><h3 className="font-semibold">{t('overview.empty')}</h3><p className="text-sm leading-7 text-muted-foreground mt-3">{t('overview.emptyHint')}</p></section>}
-    {p && <>
+    {p?.analysis.decision && <SentimentDecisionPage overview={p} onEvidence={onEvidence} />}
+    {p && !p.analysis.decision && <>
       <section className="rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/5 to-card p-5 sm:p-6"><div className="flex flex-wrap items-center gap-2 text-xs"><span className="rounded-full border px-3 py-1 text-primary">{t(`overview.directions.${p.analysis.direction}`)}</span><span className="text-muted-foreground">{t('overview.asOf', { time: emotionStamp(p.as_of) })}</span></div><h2 className="text-xl sm:text-2xl font-semibold mt-4 leading-snug">{p.analysis.title}</h2><p className="text-sm leading-7 text-muted-foreground mt-3">{p.analysis.summary}</p><p className="text-xs leading-6 text-muted-foreground mt-3">{p.analysis.direction_reason}</p></section>
       <SentimentCycleChart position={p.analysis.stage} />
       <SentimentReportExport runId={p.run_id} />

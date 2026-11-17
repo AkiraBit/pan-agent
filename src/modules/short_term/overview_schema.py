@@ -68,6 +68,56 @@ class NextCheck(Contract):
         return self
 
 
+class FocusStock(Contract):
+    symbol: Text
+    name: Text
+    role: Text
+    reason: Text
+    trigger: Text
+    invalidation: Text
+    evidence_ids: list[Identity] = Field(min_length=1, max_length=6)
+
+
+class DecisionPath(Contract):
+    side: Literal['left', 'right']
+    title: Text
+    trigger: Text
+    invalidation: Text
+    action: Text
+    sectors: list[Text] = Field(max_length=4)
+    candidates: list[FocusStock] = Field(max_length=3)
+
+
+class DecisionBoundary(Contract):
+    topic: Text
+    strengthens: Text
+    invalidates: Text
+
+
+class DecisionPage(Contract):
+    confidence: Literal['low', 'medium', 'high']
+    rhythm: Text
+    assessment: Text
+    cycle_note: Text
+    short_term: Text
+    index_context: Text
+    structure: Text
+    theme_verdict: Text
+    today_strategy: Text
+    buy_point_verdict: Text
+    tomorrow_title: Text
+    tomorrow_expectation: Text
+    boundaries: list[DecisionBoundary] = Field(min_length=3, max_length=6)
+    actions: list[Text] = Field(min_length=2, max_length=5)
+    paths: list[DecisionPath] = Field(min_length=2, max_length=2)
+
+    @model_validator(mode='after')
+    def both_paths(self):
+        if {p.side for p in self.paths} != {'left', 'right'}:
+            raise ValueError('decision paths require left and right exactly once')
+        return self
+
+
 class OverviewAnalysis(Contract):
     title: Text
     summary: Text
@@ -81,6 +131,7 @@ class OverviewAnalysis(Contract):
     counters: list[Claim] = Field(min_length=1, max_length=6)
     next_checks: list[NextCheck] = Field(min_length=1, max_length=4)
     limitations: list[Text] = Field(min_length=1, max_length=8)
+    decision: DecisionPage | None = None
 
     @model_validator(mode='after')
     def four_groups(self):
