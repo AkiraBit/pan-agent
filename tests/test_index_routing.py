@@ -5,24 +5,27 @@ import src.platform.marketdata.collectors.kline_collector as kc
 import src.modules.market.api.market as mkt
 
 
-def test_get_index_klines_uses_marketdata(monkeypatch):
-    """get_index_klines 走 md.index_klines(同一 INDEX_SECID 语义),转换为 KlineData。"""
+def test_get_index_klines_switches_from_ftshare_to_fuyao_and_converts_bars(monkeypatch):
     from marketdata.types import Bar
+    from src.platform.marketdata import ftshare_market, fuyao_business, fuyao_native
 
-    captured: dict = {}
+    calls = []
 
-    class _MD:
-        def index_klines(self, code, *, market, days):
-            captured["code"] = code
-            captured["market"] = market
-            captured["days"] = days
-            return [Bar(date="2026-07-01", open=3180.0, close=3200.0, high=3210.0, low=3170.0, volume=1e8)]
+    def ftshare(code, days):
+        calls.append(("ftshare", code, days))
+        return []
 
-    monkeypatch.setattr(kc, "get_market_data", lambda: _MD())
+    def fuyao(code, days):
+        calls.append(("fuyao", code, days))
+        return [Bar(date="2026-07-01", open=3180.0, close=3200.0, high=3210.0, low=3170.0, volume=1e8)]
+
+    monkeypatch.setattr(fuyao_business, "providers", lambda kind, *, market, available: ["ftshare", "fuyao"])
+    monkeypatch.setattr(ftshare_market, "index_bars", ftshare)
+    monkeypatch.setattr(fuyao_native, "index_klines", fuyao)
 
     out = kc.get_index_klines("000001", kc.MarketCode.CN, days=120)
 
-    assert captured == {"code": "000001", "market": "CN", "days": 120}
+    assert calls == [("ftshare", "000001", 120), ("fuyao", "000001", 120)]
     assert len(out) == 1 and isinstance(out[0], kc.KlineData)
     assert out[0].date == "2026-07-01" and out[0].close == 3200.0
 

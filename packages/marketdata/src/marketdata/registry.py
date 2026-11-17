@@ -13,6 +13,10 @@ from __future__ import annotations
 
 from marketdata.vendors.capital_flow import EastmoneyCapitalFlowVendor, SinaCapitalFlowVendor
 from marketdata.vendors.eastmoney import EastmoneyQuoteVendor
+from marketdata.vendors.fuyao import (
+    FuyaoDividendVendor, FuyaoDragonTigerVendor, FuyaoFlashNewsVendor, FuyaoFundamentalsVendor,
+    FuyaoKlineVendor, FuyaoNewsVendor, FuyaoQuoteVendor,
+)
 from marketdata.vendors.events import EventsVendor
 from marketdata.vendors.fundamentals import EastmoneyFundamentalsVendor, TencentFundamentalsVendor
 from marketdata.vendors.flash_news import (
@@ -22,9 +26,7 @@ from marketdata.vendors.flash_news import (
 )
 from marketdata.vendors.kline import (
     EastmoneyKlineVendor,
-    StooqKlineVendor,
     TencentKlineVendor,
-    YahooKlineVendor,
 )
 from marketdata.vendors.market_flow import (
     EastmoneyDividendVendor,
@@ -35,60 +37,49 @@ from marketdata.vendors.market_flow import (
 from marketdata.vendors.news import (
     EastmoneyAnnNewsVendor,
     EastmoneyStockNewsVendor,
-    XueqiuNewsVendor,
 )
 from marketdata.vendors.northbound import HexinNorthboundVendor
 from marketdata.vendors.sina import SinaQuoteVendor
 from marketdata.vendors.tencent import TencentQuoteVendor
-from marketdata.vendors.yfinance import YFinanceQuoteVendor
-from marketdata.vendors.longbridge import (
-    LongbridgeQuoteVendor, LongbridgeKlineVendor, LongbridgeCapitalFlowVendor,
-    LongbridgeFundamentalsVendor, LongbridgeNewsVendor, LongbridgeEventsVendor, LongbridgeDividendVendor,
-)
 
-# 各数据类型 → {vendor name: vendor 类}。注意:vendor 的 import 本身是廉价的
-# (可选三方依赖如 yfinance 均在 fetch() 内部惰性 import),模块级导入不会引入重依赖。
+# 各数据类型 → {vendor name: vendor 类}。
 VENDOR_CLASSES_BY_TYPE: dict[str, dict[str, type]] = {
     "quote": {
-        "longbridge": LongbridgeQuoteVendor,
+        "fuyao": FuyaoQuoteVendor,
         "tencent": TencentQuoteVendor,
         "sina": SinaQuoteVendor,
         "eastmoney": EastmoneyQuoteVendor,
-        "yfinance": YFinanceQuoteVendor,
     },
     "kline": {
-        "longbridge": LongbridgeKlineVendor,
+        "fuyao": FuyaoKlineVendor,
         "tencent": TencentKlineVendor,
-        "stooq": StooqKlineVendor,
         "eastmoney": EastmoneyKlineVendor,
-        "yahoo": YahooKlineVendor,
     },
     "capital_flow": {
-        "longbridge": LongbridgeCapitalFlowVendor,
         "eastmoney": EastmoneyCapitalFlowVendor,
         "sina": SinaCapitalFlowVendor,
     },
     "events": {
-        "longbridge": LongbridgeEventsVendor,
         "eastmoney": EventsVendor,
     },
     "fundamentals": {
-        "longbridge": LongbridgeFundamentalsVendor,
+        "fuyao": FuyaoFundamentalsVendor,
         "tencent": TencentFundamentalsVendor,
         "eastmoney": EastmoneyFundamentalsVendor,
     },
     "flash_news": {
+        "fuyao": FuyaoFlashNewsVendor,
         "cls": ClsFlashNewsVendor,
         "sina": SinaFlashNewsVendor,
         "eastmoney": EastmoneyFlashNewsVendor,
     },
     "news": {
-        "longbridge": LongbridgeNewsVendor,
-        "xueqiu": XueqiuNewsVendor,
+        "fuyao": FuyaoNewsVendor,
         "eastmoney_news": EastmoneyStockNewsVendor,
         "eastmoney": EastmoneyAnnNewsVendor,
     },
     "dragon_tiger": {
+        "fuyao": FuyaoDragonTigerVendor,
         "eastmoney": EastmoneyDragonTigerVendor,
     },
     "margin": {
@@ -98,7 +89,7 @@ VENDOR_CLASSES_BY_TYPE: dict[str, dict[str, type]] = {
         "eastmoney": EastmoneyShareholdersVendor,
     },
     "dividend": {
-        "longbridge": LongbridgeDividendVendor,
+        "fuyao": FuyaoDividendVendor,
         "eastmoney": EastmoneyDividendVendor,
     },
     "northbound": {
@@ -112,7 +103,8 @@ PACKAGE_VENDORS_BY_TYPE: dict[str, frozenset[str]] = {
 }
 
 
-def build_vendors(datatype: str, longbridge_transport=None) -> dict[str, object]:
+def build_vendors(datatype: str, *, fuyao_api_key=None, fuyao_transport=None) -> dict[str, object]:
     """实例化某数据类型的全部 vendor,供 Engine 注入。未知 datatype 返回空字典。"""
-    return {name: cls(longbridge_transport) if name == 'longbridge' else cls()
+    args = {"fuyao": (fuyao_api_key if datatype in {"quote", "kline"} else fuyao_transport,)}
+    return {name: cls(*args.get(name, ()))
             for name, cls in VENDOR_CLASSES_BY_TYPE.get(datatype, {}).items()}

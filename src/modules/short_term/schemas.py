@@ -218,30 +218,3 @@ class ReviewDraft(Contract):
     next_day_focus: list[Text] = Field(min_length=1, max_length=10)
     memory_summary: Text
     open_questions: list[Text] = Field(min_length=1, max_length=12)
-
-
-class AuctionSettings(Contract):
-    enabled: bool = False
-    endpoint: str = Field(default='', max_length=2048)
-    api_key: str | None = Field(default=None, max_length=4096)
-    clear_api_key: bool = False
-    provider_name: str = Field(default='licensed_gateway', min_length=1, max_length=80)
-
-    @field_validator('endpoint')
-    @classmethod
-    def endpoint_url(cls, value):
-        from urllib.parse import urlparse
-        if not value:
-            return value
-        p = urlparse(value)
-        if p.username or p.password or p.query or p.fragment or not p.hostname:
-            raise ValueError('invalid auction endpoint')
-        if p.scheme != 'https' and not (p.scheme == 'http' and p.hostname in ('127.0.0.1', 'localhost', '::1')):
-            raise ValueError('HTTPS or loopback gateway required')
-        return value.rstrip('/')
-
-    @model_validator(mode='after')
-    def configured(self):
-        if self.enabled and not self.endpoint:
-            raise ValueError('enabled auction source requires endpoint')
-        return self

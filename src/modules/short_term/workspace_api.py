@@ -10,7 +10,7 @@ from .repository import EmotionRepository, WorkspaceError, run_dto
 from .schemas import ContextCreate, ContextUpdate, RunCreate, WorkspaceSettings
 from .service import emotion_runner
 from .lifecycle_repository import LifecycleRepository
-from .schemas import AuctionSettings, MonitorCommand, ReviewCreate
+from .schemas import MonitorCommand, ReviewCreate
 
 router = APIRouter()
 
@@ -125,11 +125,6 @@ def update_context(identity: str, body: ContextUpdate, db: Session = Depends(get
 @router.get('/auction-source')
 def auction_source(db: Session = Depends(get_db)):
     return LifecycleRepository(db).source_config()
-
-
-@router.put('/auction-source')
-def save_auction_source(body: AuctionSettings, db: Session = Depends(get_db)):
-    return LifecycleRepository(db).save_source(body)
 
 
 @router.get('/publications/{identity}/lifecycle')

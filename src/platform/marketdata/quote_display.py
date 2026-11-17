@@ -10,7 +10,9 @@ def daily_quote_fields(market: str, quote: dict | None, now: datetime | None = N
     local_now = now.astimezone(calendar._market_tz(code)) if now else calendar._now_in_market_tz(code)
     status = calendar.market_status(code, local_now)
     quote_date = (quote or {}).get("quote_date")
-    if status in ("closed", "pre_market", "unknown"):
+    if quote and quote.get("stale"):
+        daily_status = "stale"
+    elif status in ("closed", "pre_market", "unknown"):
         daily_status = status
     elif not quote or quote.get("current_price") is None:
         daily_status = "missing"

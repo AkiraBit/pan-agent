@@ -18,13 +18,6 @@ def test_eastmoney_kline_parses(monkeypatch):
     assert len(out) == 2 and out[1].high == 6.0
 
 
-def test_stooq_kline_parses(monkeypatch):
-    csv = "Date,Open,High,Low,Close,Volume\n2026-07-01,1,4,0.5,3,100\n2026-07-02,3,6,2,5,200\n"
-    monkeypatch.setattr(kv, "market_get", lambda *a, **k: csv)
-    out = kv.StooqKlineVendor().fetch([Symbol.parse("AAPL")], {})
-    assert len(out) == 2 and out[0].close == 3.0 and out[1].close == 5.0
-
-
 def test_tencent_us_kline_resolves_exchange_suffix(monkeypatch):
     """腾讯美股日K:裸符号只回退化数据(2根)→ 自动试 .OQ/.N 后缀并记忆命中,二次直达。"""
     import json as _j

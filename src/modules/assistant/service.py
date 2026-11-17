@@ -66,6 +66,8 @@ from .schemas import (
 )
 from .result_schemas import AssistantResult
 from .tool_descriptors import localized_tool_descriptors
+from .fuyao_tools import defer_fuyao_tools
+from .market_rest_tools import ftshare_tool_descriptors
 from .tool_adapters import execute_tool
 from .tools import build_panwatch_tool_registry
 
@@ -527,11 +529,11 @@ class AssistantService:
                         ToolResearchService(
                             tools,
                             selection_policy=ToolSelectionPolicy(max_write_tools=3),
-                            descriptors=list(
-                                localized_tool_descriptors(
-                                    self._report_language()
-                                )
-                            ),
+                            descriptors=[
+                                *localized_tool_descriptors(self._report_language()),
+                                *defer_fuyao_tools(tools),
+                                *ftshare_tool_descriptors(tools),
+                            ],
                         ),
                         mode="active",
                         include_write_tools=True,

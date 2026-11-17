@@ -11,19 +11,23 @@ import io
 import math
 import time
 from collections import OrderedDict
+from contextvars import ContextVar
 from datetime import datetime, timedelta
+from urllib.parse import urlsplit
 from zoneinfo import ZoneInfo
 
 import httpx
+
+from src.platform.marketdata.source_activation import paused_providers
+from src.platform.persistence.database import SessionLocal
 
 CN = ZoneInfo('Asia/Shanghai')
 NY = ZoneInfo('America/New_York')
 PROVIDERS = {
     'eastmoney': {'id': 'eastmoney', 'name': '东方财富', 'url': 'https://data.eastmoney.com/ztb/detail'},
     'sina': {'id': 'sina', 'name': '新浪财经', 'url': 'https://finance.sina.com.cn/'},
-    'tencent': {'id': 'tencent', 'name': '腾讯证券', 'url': 'https://gu.qq.com/'},
+    'tencent': {'id': 'tencent', 'name': '腾讯财经', 'url': 'https://gu.qq.com/'},
     'cffex': {'id': 'cffex', 'name': '中国金融期货交易所', 'url': 'http://www.cffex.com.cn/ccpm/'},
-    'yahoo': {'id': 'yahoo', 'name': 'Yahoo Finance', 'url': 'https://finance.yahoo.com/'},
     'baidu': {'id': 'baidu', 'name': '百度股市通', 'url': 'https://finance.baidu.com/calendar'},
 }
 ETF_CODES = ('510300','510310','510330','159919','510050','510500','159922','512100',
@@ -34,6 +38,9 @@ SECTORS = (('SOXX','半导体'),('IGV','软件'),('SKYY','云计算'),('CIBR','�
            ('XBI','生物科技'),('IHI','医疗器械'),('XLV','医疗保健'),('XLF','金融'),
            ('KRE','区域银行'),('XLK','科技'),('XLY','可选消费'),('XLP','必选消费'),
            ('XLE','能源'),('XLB','材料'),('XLI','工业'),('XLU','公用事业'))
+COMMODITIES = {'OIL': ('BRENT', '布伦特原油 CFD'), 'GC': ('XAU', '纽约黄金 CFD'), 'SI': ('XAG', '纽约白银 CFD')}
+REVIEW_DOMAINS = {'eastmoney.com': 'eastmoney', 'gtimg.cn': 'tencent', 'sina.cn': 'sina', 'sinajs.cn': 'sina'}
+_paused: ContextVar[frozenset[str]] = ContextVar('review_paused_providers', default=frozenset())
 _cache: OrderedDict[tuple, tuple[float, object]] = OrderedDict()
 _pending: dict[tuple, asyncio.Task] = {}
 _gate = asyncio.Semaphore(6)
@@ -64,6 +71,10 @@ def optional(value):
 
 
 async def get(url, params=None, *, ttl=30, raw=False):
+    host = urlsplit(url).hostname or ''
+    for domain, provider in REVIEW_DOMAINS.items():
+        if (host == domain or host.endswith('.' + domain)) and provider in _paused.get():
+            raise httpx.RequestError(f'{provider} is paused')
     key = (url, tuple(sorted((params or {}).items())), raw)
     cached = _cache.get(key)
     if cached and time.monotonic() - cached[0] < ttl:
@@ -72,7 +83,12 @@ async def get(url, params=None, *, ttl=30, raw=False):
     async def request():
         try:
             async with _gate:
-                async with httpx.AsyncClient(timeout=10, follow_redirects=False, headers={'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json,text/plain,*/*', **({'Referer': 'https://quote.eastmoney.com/'} if 'eastmoney.com/' in url else {})}) as client:
+                headers = {'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json,text/plain,*/*'}
+                if host.endswith('.eastmoney.com'):
+                    headers['Referer'] = 'https://quote.eastmoney.com/'
+                elif host == 'hq.sinajs.cn':
+                    headers['Referer'] = 'https://finance.sina.com.cn/'
+                async with httpx.AsyncClient(timeout=10, follow_redirects=False, headers=headers) as client:
                     response = await client.get(url, params=params)
                     response.raise_for_status()
                     value = response.content if raw else response.json()
@@ -89,20 +105,20 @@ async def get(url, params=None, *, ttl=30, raw=False):
 
 
 async def daily_bars(symbol):
-    try:
-        value = await get('https://quotes.sina.cn/cn/api/json_v2.php/CN_MarketDataService.getKLineData',
-                          {'symbol': symbol, 'scale': 240, 'ma': 'no', 'datalen': 60}, ttl=300)
-        if not isinstance(value, list) or not value:
-            raise ValueError('Missing Sina daily bars')
-        bars = [[r['day'][:10], r['open'], r['close']] for r in value]
-        for row in bars:
-            datetime.strptime(row[0], '%Y-%m-%d')
-            number(row[2])
-        return bars
-    except (httpx.HTTPError, ValueError, KeyError, TypeError, IndexError):
+    if 'sina' in _paused.get():
         value = await get('https://web.ifzq.gtimg.cn/appstock/app/fqkline/get',
                           {'param': f'{symbol},day,,,60,'}, ttl=300)
         return value['data'][symbol]['day']
+
+    value = await get('https://quotes.sina.cn/cn/api/json_v2.php/CN_MarketDataService.getKLineData',
+                      {'symbol': symbol, 'scale': 240, 'ma': 'no', 'datalen': 60}, ttl=300)
+    if not isinstance(value, list) or not value:
+        raise ValueError('Missing Sina daily bars')
+    bars = [[r['day'][:10], r['open'], r['close']] for r in value]
+    for row in bars:
+        datetime.strptime(row[0], '%Y-%m-%d')
+        number(row[2])
+    return bars
 
 
 async def trading_dates():
@@ -255,34 +271,29 @@ async def eastmoney_minute(code, day):
 
 
 async def minute(code, day):
-    for provider in (eastmoney_minute, tencent_minute):
-        try:
-            return await provider(code, day)
-        except (httpx.HTTPError, ValueError, KeyError, TypeError, IndexError):
-            if provider is tencent_minute:
-                raise
+    reader = tencent_minute if 'eastmoney' in _paused.get() else eastmoney_minute
+    return await reader(code, day)
 
 
 async def stock_line(code, day):
-    try:
+    if day == now().date().isoformat():
         return await minute(code, day)
-    except (httpx.HTTPError, ValueError, KeyError, TypeError, IndexError):
-        symbol = cn_symbol(code)
-        value = await get('https://ifzq.gtimg.cn/appstock/app/kline/mkline',
-                          {'param': f'{symbol},m5,,320'}, ttl=60)
-        data = value['data'][symbol]
-        rows = [r for r in data['m5'] if r[0][:8] == day.replace('-', '')]
-        if not rows:
-            raise ValueError('No five-minute prices for requested trading date')
-        # Derive the correct previous close even for historical intraday bars.
-        bars = await daily_bars(symbol)
-        index = next((i for i,r in enumerate(bars) if r[0] == day), 0)
-        if index < 1:
-            raise ValueError('Missing historical previous close')
-        previous = number(bars[index-1][2])
-        return {'date': day, 'code': code, 'interval': '5m', 'line': [
-            {'time': r[0][8:10]+':'+r[0][10:12], 'price': number(r[2]),
-             'change_percent': (number(r[2])/previous-1)*100} for r in rows], **provenance('tencent')}
+    symbol = cn_symbol(code)
+    value = await get('https://ifzq.gtimg.cn/appstock/app/kline/mkline',
+                      {'param': f'{symbol},m5,,320'}, ttl=60)
+    data = value['data'][symbol]
+    rows = [r for r in data['m5'] if r[0][:8] == day.replace('-', '')]
+    if not rows:
+        raise ValueError('No five-minute prices for requested trading date')
+    # Derive the correct previous close even for historical intraday bars.
+    bars = await daily_bars(symbol)
+    index = next((i for i,r in enumerate(bars) if r[0] == day), 0)
+    if index < 1:
+        raise ValueError('Missing historical previous close')
+    previous = number(bars[index-1][2])
+    return {'date': day, 'code': code, 'interval': '5m', 'line': [
+        {'time': r[0][8:10]+':'+r[0][10:12], 'price': number(r[2]),
+         'change_percent': (number(r[2])/previous-1)*100} for r in rows], **provenance('tencent')}
 
 
 async def etf_snapshot(day):
@@ -485,42 +496,64 @@ def parse_quotes(content):
     return output
 
 
-async def commodity(symbol, identifier, name):
-    value = await get(f'https://query1.finance.yahoo.com/v8/finance/chart/{symbol}', {'interval': '1d', 'range': '5d'}, ttl=60)
-    result = value['chart']['result'][0]
-    meta = result['meta']
-    price = number(meta['regularMarketPrice'])
-    change = optional(meta.get('regularMarketChangePercent'))
-    if change is None:
-        # chartPreviousClose is the start of range, NOT necessarily yesterday.
-        closes = [v for v in result['indicators']['quote'][0]['close'] if v is not None]
-        change = (price / number(closes[-2])-1)*100 if len(closes) >= 2 else None
-    return {'symbol': identifier, 'name': name, 'price': price, 'change_percent': change,
-            'quote_at': datetime.fromtimestamp(meta['regularMarketTime'], CN).isoformat(),
-            'url': f'https://finance.yahoo.com/quote/{symbol}/'}
+async def commodity_quotes():
+    raw = await get('https://hq.sinajs.cn/list=' + ','.join(f'hf_{code}' for code in COMMODITIES), raw=True, ttl=60)
+    quotes = {}
+    for line in raw.decode('gb18030').split(';'):
+        key, sep, payload = line.strip().partition('="')
+        if not sep or not key.startswith('var hq_str_hf_'):
+            continue
+        code = key.removeprefix('var hq_str_hf_')
+        if code not in COMMODITIES:
+            continue
+        fields = payload.rstrip('"').split(',')
+        try:
+            price = number(fields[0])
+            quote_at = datetime.strptime(f'{fields[12]} {fields[6]}', '%Y-%m-%d %H:%M:%S').replace(tzinfo=CN)
+        except (IndexError, ValueError):
+            continue
+        previous_close = optional(fields[7])
+        identifier, name = COMMODITIES[code]
+        quotes[identifier] = {'symbol': identifier, 'name': name, 'price': price,
+                              'change_percent': (price / previous_close - 1) * 100 if previous_close else None,
+                              'quote_at': quote_at.isoformat(),
+                              'url': f'https://finance.sina.com.cn/futures/quotes/{code}.shtml'}
+    return list(quotes.values())
 
 
 async def overseas():
     symbols = ['usDJI','usIXIC','usINX'] + ['us'+s for s,_ in SECTORS]
-    raw, *commodities = await asyncio.gather(
+    raw, commodities = await asyncio.gather(
         get('https://qt.gtimg.cn/q=' + ','.join(symbols), raw=True),
-        commodity('BZ=F','BRENT','布伦特原油期货'), commodity('GC=F','XAU','黄金期货'), commodity('SI=F','XAG','白银期货'),
+        commodity_quotes(),
         return_exceptions=True)
     quotes = {} if isinstance(raw, Exception) else parse_quotes(raw)
-    if not quotes and all(isinstance(c, Exception) for c in commodities):
+    commodities = [] if isinstance(commodities, Exception) else commodities
+    if not quotes and not commodities:
         raise ValueError('No overseas quotes')
     sectors = [{'id': symbol, 'name': name, 'symbol': symbol, 'regular': {'change_percent': quotes.get('us'+symbol,{}).get('change_percent')},
-                'quote_at': quotes.get('us'+symbol,{}).get('quote_at'), 'url': f'https://finance.yahoo.com/quote/{symbol}/'} for symbol,name in SECTORS]
+                'quote_at': quotes.get('us'+symbol,{}).get('quote_at'), 'url': f'https://gu.qq.com/us{symbol}'} for symbol,name in SECTORS]
     indices = [{'symbol': s, 'name': n, **quotes.get(s, {'price': None, 'change_percent': None}),
                 'url': f'https://gu.qq.com/{s}'} for s,n in [('usDJI','道琼斯'),('usIXIC','纳斯达克'),('usINX','标普500')]]
-    errors = {} if len(quotes) == len(symbols) and all(isinstance(c,dict) for c in commodities) else {'quotes': 'partial'}
-    return {'industry': {'meta': {'generated_at': max((q['quote_at'] for q in quotes.values()), default=None), 'stale': False},
+    errors = {} if len(quotes) == len(symbols) and len(commodities) == len(COMMODITIES) else {'quotes': 'partial'}
+    sources = (['tencent'] if quotes else []) + (['sina'] if commodities else [])
+    timestamps = [q['quote_at'] for q in quotes.values()] + [q['quote_at'] for q in commodities]
+    return {'industry': {'meta': {'generated_at': max(timestamps, key=datetime.fromisoformat), 'stale': False},
                          'sectors': sectors},
-            'indicators': {'commodities': {'items': [c for c in commodities if isinstance(c,dict)]}, 'groups': [{'title': '美股指数', 'items': indices}]},
-            'errors': errors, **provenance('tencent','yahoo', method='sector_etfs')}
+            'indicators': {'commodities': {'items': commodities}, 'groups': [{'title': '美股指数', 'items': indices}]},
+            'errors': errors, **provenance(*sources, method='sector_etfs')}
+
+
+def review_pauses():
+    with SessionLocal() as session:
+        return frozenset(paused_providers(session))
 
 
 async def fetch(resource, date=None):
-    if resource.startswith('minute/'):
-        return await stock_line(resource.split('/')[1], date)
-    return await {'board': lambda: board(date), 'dates': trading_dates, 'daily': daily, 'etf': etf, 'overseas': overseas}[resource]()
+    token = _paused.set(await asyncio.to_thread(review_pauses))
+    try:
+        if resource.startswith('minute/'):
+            return await stock_line(resource.split('/')[1], date)
+        return await {'board': lambda: board(date), 'dates': trading_dates, 'daily': daily, 'etf': etf, 'overseas': overseas}[resource]()
+    finally:
+        _paused.reset(token)

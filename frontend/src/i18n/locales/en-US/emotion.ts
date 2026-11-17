@@ -419,7 +419,7 @@ export const emotion = {
     "any": "Any",
     "actual": "Actual",
     "auction": "Auction feed",
-    "auctionHint": "Requires source-timed indicative price, matched and unmatched quantities. Without a licensed source conditions stay unknown; order-book quotes are not substitutes.",
+    "auctionHint": "Auction data comes from Tonghuashun. Availability depends on source settings and account permissions. Order-book quotes do not substitute for auction data.",
     "finalAuction": "Final match",
     "indicative": "Indicative match",
     "matched": "Matched shares",
@@ -438,7 +438,6 @@ export const emotion = {
     "nextDay": "Next-session focus",
     "reviewMemory": "Review memory read by this plan",
     "noReviewMemory": "No earlier postmarket review was read. Future plans automatically read the latest seven reviews.",
-    "gatewayHint": "Connect your licensed gateway using the auction.v1 response contract. See docs/auction-gateway.md. Other workflows remain available without it.",
     "enableSource": "Enable auction gateway",
     "provider": "Provider name",
     "endpoint": "Endpoint (HTTPS or loopback)",
@@ -476,7 +475,8 @@ export const emotion = {
   "auctionSides": {
     "buy": "Buy",
     "sell": "Sell",
-    "balanced": "Balanced"
+    "balanced": "Balanced",
+    "unknown": "Side unavailable"
   },
   "phases": {
     "auction": "Auction",

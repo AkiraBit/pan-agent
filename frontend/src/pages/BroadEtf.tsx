@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { ChevronDown, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react'
 import { Button } from '@panwatch/base-ui/components/ui/button'
@@ -68,6 +68,7 @@ function NationalTeam({ data, onDate, institution, code, onInstitution }: {
 
 export default function BroadEtf() {
   const { t } = useTranslation('etf')
+  const { t: researchT } = useTranslation('configuration')
   const [params, setParams] = useSearchParams()
   const date = params.get('date') || ''
   const view = params.get('view')
@@ -97,7 +98,7 @@ export default function BroadEtf() {
   const state = active === 'national' ? nationalState : boardState
   return <div className="etf-page">
     <div className="etf-page-heading"><div><h1>{t('title')}</h1>{isDaily && <span className="etf-status">{board?.date.slice(5).replace('-', '/')} {board && t(board.status === '盘中' ? 'trading' : 'closed')} {board && '·'} {board && t(board.shares_published ? 'published' : 'pending')}{(boardState.data?.stale || boardState.error) && ` · ${t('stale')}`}</span>}</div>
-      <div className="etf-date-controls">{isDaily && <><Button variant="ghost" size="icon" aria-label={t('previous')} disabled={index < 0 || index >= dates.length - 1 || boardState.loading} onClick={() => change('date', dates[index + 1])}><ChevronLeft size={16} /></Button><Select value={date || 'latest'} onValueChange={value => change('date', value === 'latest' ? '' : value)}><SelectTrigger aria-label={t('date')} className="h-8 w-36 border-0 shadow-none"><SelectValue placeholder={t('date')} /></SelectTrigger><SelectContent><SelectItem value="latest">{dates[0] || t('latest')}</SelectItem>{dates.map(day => <SelectItem key={day} value={day}>{day}</SelectItem>)}</SelectContent></Select><Button variant="ghost" size="icon" aria-label={t('next')} disabled={index <= 0 || boardState.loading} onClick={() => change('date', index === 1 ? '' : dates[index - 1])}><ChevronRight size={16} /></Button></>}
+      <div className="etf-date-controls"><Button asChild variant="outline" size="sm"><Link to="/market-data/etf_adjusted_history">{researchT('dataSources.types.etf_adjusted_history')}</Link></Button>{isDaily && <><Button variant="ghost" size="icon" aria-label={t('previous')} disabled={index < 0 || index >= dates.length - 1 || boardState.loading} onClick={() => change('date', dates[index + 1])}><ChevronLeft size={16} /></Button><Select value={date || 'latest'} onValueChange={value => change('date', value === 'latest' ? '' : value)}><SelectTrigger aria-label={t('date')} className="h-8 w-36 border-0 shadow-none"><SelectValue placeholder={t('date')} /></SelectTrigger><SelectContent><SelectItem value="latest">{dates[0] || t('latest')}</SelectItem>{dates.map(day => <SelectItem key={day} value={day}>{day}</SelectItem>)}</SelectContent></Select><Button variant="ghost" size="icon" aria-label={t('next')} disabled={index <= 0 || boardState.loading} onClick={() => change('date', index === 1 ? '' : dates[index - 1])}><ChevronRight size={16} /></Button></>}
         <Button variant="ghost" size="icon" aria-label={t('refresh')} onClick={retry}><RefreshCw size={14} className={isDaily && state.loading ? 'animate-spin' : ''} /></Button></div>
     </div>
     <Tabs value={active} onValueChange={value => change('view', value)} className="etf-tabs"><TabsList><TabsTrigger value="overview">{t('overview')}</TabsTrigger><TabsTrigger value="daily">{t('daily')}</TabsTrigger><TabsTrigger value="national">{t('national')}</TabsTrigger></TabsList></Tabs>

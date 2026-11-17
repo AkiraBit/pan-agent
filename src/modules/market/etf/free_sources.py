@@ -1,4 +1,4 @@
-"""Public exchange / fund / quote HTTP adapters. Never execute remote JavaScript.
+"""Public fund and quote HTTP adapters. Never execute remote JavaScript.
 
 All money is CNY, shares are fund units, dates are exchange-local business dates.
 A batch is validated before any of its rows can be committed.
@@ -11,26 +11,18 @@ import re
 from dataclasses import dataclass
 from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
-from xml.etree import ElementTree
 
 import httpx
 
 from . import sources
 
-SSE = 'https://query.sse.com.cn/commonQuery.do'
-SZSE = 'https://www.szse.cn/api/report/ShowReport/data'
 NAV = 'https://fund.eastmoney.com/pingzhongdata/{code}.js'
 PRICE = 'https://web.ifzq.gtimg.cn/appstock/app/fqkline/get'
 BENCHMARK_CODES = ('000001', '000300', '000688')
-PCF_SZ = 'https://reportdocs.static.szse.cn/files/text/ETFDown/pcf_{code}_{day}.xml'
-PCF_SH = 'https://query.sse.com.cn/etfDownload/downloadETF2Bulletin.do'
 SPECS = {
-    ('etf_shares', 'szse'): ('shares', '深交所 ETF 份额', ['159915', '159919']),
-    ('etf_shares', 'sse'): ('shares', '上交所 ETF 份额', ['510300', '510050']),
     ('etf_nav', 'eastmoney'): ('nav', '天天基金 ETF 净值', ['510300', '159915']),
+    ('etf_nav', 'fuyao'): ('nav', '同花顺基金净值', ['510300', '159915']),
     ('etf_history', 'tencent'): ('price', '腾讯 ETF 历史行情', ['510300', '159915']),
-    ('etf_pcf', 'szse'): ('pcf', '深交所 ETF 申赎清单', ['159915', '159845']),
-    ('etf_pcf', 'sse'): ('pcf', '上交所 ETF 申赎清单', ['510300', '510050']),
 }
 PARSER_VERSION = 'public-etf-v1'
 
@@ -146,80 +138,6 @@ class Client:
             raise InvalidData('invalid_json_response') from None
 
 
-def parse_szse(payload, requested_code, start, end, page):
-    if not isinstance(payload, list) or len(payload) != 1:
-        raise InvalidData('invalid_szse_envelope')
-    result = payload[0]
-    meta, raw = result.get('metadata', {}), result.get('data')
-    if result.get('error') or not isinstance(raw, list) or meta.get('pageno') != page:
-        raise InvalidData('invalid_szse_page')
-    if meta.get('cols', {}).get('current_size') != '基金规模<br>(万份)':
-        raise InvalidData('unexpected_share_unit')
-    total, pages = meta.get('recordcount'), meta.get('pagecount')
-    if type(total) is not int or type(pages) is not int or not 0 <= total <= 500 or not 0 <= pages <= 30:
-        raise InvalidData('invalid_szse_pagination')
-    rows = []
-    for item in raw:
-        actual_code, actual_day = code(item['fund_code']), day(item['size_date'])
-        if actual_code != requested_code or not start <= actual_day <= end:
-            raise InvalidData('unexpected_share_identity')
-        rows.append({'code': actual_code, 'date': actual_day,
-                     'shares': round(number(item['current_size'], positive=True) * 10000, 2)})
-    return rows, total, pages
-
-
-async def szse_shares(client, requested_code, start, end):
-    requested_code = code(requested_code)
-    if not requested_code.startswith('15') or (date.fromisoformat(end) - date.fromisoformat(start)).days > 179:
-        raise InvalidData('unsupported_szse_range')
-    rows, raw, page, expected = [], [], 1, None
-    while True:
-        params = {'SHOWTYPE': 'JSON', 'CATALOGID': 'scsj_fund_jjgm', 'jjlb': 'ETF',
-                  'txtDm': requested_code, 'txtStart': start, 'txtEnd': end, 'PAGENO': page}
-        payload = await client.json(SZSE, params, 'https://www.szse.cn/market/fund/volume/etf/index.html')
-        items, total, pages = parse_szse(payload, requested_code, start, end, page)
-        if expected is not None and expected != (total, pages):
-            raise InvalidData('changing_szse_pagination')
-        expected = (total, pages)
-        rows.extend(items); raw.append(payload)
-        if page >= pages:
-            break
-        if not items:
-            raise InvalidData('empty_szse_page')
-        page += 1
-    result = unique(rows)
-    if len(result) != total or len(result) != len(rows):
-        raise InvalidData('incomplete_szse_pagination')
-    return Batch('shares', 'szse', result, raw, SZSE, {'code': requested_code, 'start': start, 'end': end})
-
-
-def parse_sse(payload, requested_day, codes):
-    raw = payload.get('result')
-    if payload.get('fieldErrors') or payload.get('actionErrors') or not isinstance(raw, list):
-        raise InvalidData('invalid_sse_envelope')
-    # The endpoint also exposes total/page metadata; never accept a truncated universe.
-    total = payload.get('pageHelp', {}).get('total')
-    if total is not None and int(total) != len(raw):
-        raise InvalidData('incomplete_sse_pagination')
-    rows = []
-    for item in raw:
-        actual_day = day(item['STAT_DATE'])
-        if actual_day != requested_day:
-            raise InvalidData('unexpected_share_date')
-        actual_code = str(item['SEC_CODE']).strip()
-        if actual_code in codes:
-            rows.append({'code': code(actual_code), 'date': actual_day,
-                         'shares': round(number(item['TOT_VOL'], positive=True) * 10000, 2)})
-    return unique(rows)
-
-
-async def sse_shares(client, requested_day, codes):
-    params = {'sqlId': 'COMMON_SSE_ZQPZ_ETFZL_XXPL_ETFGM_SEARCH_L', 'STAT_DATE': requested_day,
-              'isPagination': 'true', 'pageHelp.pageSize': 10000, 'pageHelp.pageNo': 1}
-    raw = await client.json(SSE, params, 'https://www.sse.com.cn/')
-    return Batch('shares', 'sse', parse_sse(raw, requested_day, codes), raw, SSE, {'date': requested_day, 'codes': sorted(codes)})
-
-
 def parse_nav(body, requested_code, start, end):
     text = body.decode('utf-8-sig')
     marker = re.search(r'\bvar\s+Data_netWorthTrend\s*=\s*', text)
@@ -253,6 +171,26 @@ async def nav(client, requested_code, start, end):
     return Batch('nav', 'eastmoney', rows, {'Data_netWorthTrend': raw}, url, {'code': requested_code, 'start': start, 'end': end})
 
 
+async def fuyao_nav(requested_code, start, end):
+    from src.platform.marketdata import fuyao_business, fuyao_rest
+
+    requested_code = code(requested_code)
+    thscode = requested_code + (".SZ" if requested_code.startswith("15") else ".SH")
+    operation = "get_fund_performance_nav"
+    args = {"thscode": thscode, "range": "twoyear", "nav_type": "unit"}
+    payload = await fuyao_business.fetch(operation, args)
+    if not isinstance(payload, dict) or not isinstance(payload.get("item"), list):
+        raise InvalidData("invalid_nav_series")
+    rows = []
+    for item in payload["item"]:
+        stamp = number(item.get("nav_date"), positive=True)
+        actual_day = day(datetime.fromtimestamp(stamp / 1000, sources.CN).date())
+        if start <= actual_day <= end:
+            rows.append({"code": requested_code, "date": actual_day,
+                         "nav": number(item.get("unit_nav"), positive=True), "corporate_action": ""})
+    return Batch("nav", "fuyao", unique(rows), payload, fuyao_rest.OPERATIONS[operation]["docs_url"], args)
+
+
 def parse_prices(payload, symbol, start, end):
     if payload.get('code') != 0:
         raise InvalidData('price_provider_error')
@@ -282,56 +220,3 @@ async def prices(client, requested_code, start, end):
     params = {'param': f'{symbol},day,{start},{end},640,'}
     raw = await client.json(PRICE, params)
     return Batch('price', 'tencent', parse_prices(raw, symbol, start, end), raw, PRICE, {'code': requested_code, 'start': start, 'end': end})
-
-
-def parse_pcf(body, requested_code, expected_day=None):
-    if re.search(br'<!\s*(DOCTYPE|ENTITY)', body, re.I):
-        raise InvalidData('unsafe_xml_declaration')
-    try:
-        root = ElementTree.fromstring(body)
-    except ElementTree.ParseError:
-        raise InvalidData('invalid_pcf_xml') from None
-    # XML uses different names at the two exchanges; nested component IDs must
-    # never be confused with the root fund ID.
-    header = {x.tag.split('}')[-1]: (x.text or '').strip() for x in root if not list(x)}
-    def field(*names):
-        return next((header[x] for x in names if header.get(x)), None)
-    actual_code = field('SecurityID', 'FundInstrumentID', 'FundCode', 'ETFCode')
-    if code(actual_code) != requested_code:
-        raise InvalidData('unexpected_pcf_code')
-    trading_day = day(field('TradingDay', 'TradingDate'))
-    previous_day = day(field('PreTradingDay', 'PreTradingDate'))
-    if previous_day >= trading_day or (expected_day and trading_day != expected_day):
-        raise InvalidData('unexpected_pcf_date')
-    value = number(field('NAV', 'NAVperShare'), positive=True)
-    unit = number(field('CreationRedemptionUnit'), positive=True)
-    components = []
-    for element in root.iter():
-        if element.tag.split('}')[-1] in {'Component', 'Stock'}:
-            row = {x.tag.split('}')[-1]: (x.text or '').strip() for x in element}
-            identifier = row.get('InstrumentID', row.get('UnderlyingSecurityID', ''))
-            if not re.fullmatch(r'[A-Za-z0-9.]{1,20}', identifier):
-                raise InvalidData('invalid_pcf_component')
-            number(row.get('Quantity', row.get('ComponentShare')), nonnegative=True)
-            components.append(row)
-    if not components:
-        raise InvalidData('missing_pcf_components')
-    return {'code': requested_code, 'date': trading_day, 'nav_date': previous_day, 'nav': value,
-            'creation_redemption_unit': unit, 'components': components, 'header': header}
-
-
-async def pcf(client, provider, requested_code, requested_day=None):
-    requested_code = code(requested_code)
-    if provider == 'szse':
-        if not requested_code.startswith('15') or not requested_day:
-            raise InvalidData('unsupported_szse_pcf')
-        url = PCF_SZ.format(code=requested_code, day=requested_day.replace('-', ''))
-        body = await client.get(url)
-    else:
-        if not requested_code.startswith('5'):
-            raise InvalidData('unsupported_sse_pcf')
-        url = PCF_SH
-        body = await client.get(url, {'fundCode': requested_code}, 'https://www.sse.com.cn/')
-    row = parse_pcf(body, requested_code, requested_day if provider == 'szse' else None)
-    return Batch('pcf', provider, [row], body.decode('utf-8-sig'), url,
-                 {'code': requested_code, 'date': requested_day, 'mode': 'historical' if provider == 'szse' else 'latest'})

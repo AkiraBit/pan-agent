@@ -11,12 +11,24 @@ from __future__ import annotations
 import logging
 
 from marketdata import MarketData, Quote, SourceConfig
+from marketdata.registry import VENDOR_CLASSES_BY_TYPE
+from src.platform.marketdata.source_activation import active_source
+from . import call_order, ftshare_market, fuyao_business, fuyao_credentials, provider_credentials
 
 logger = logging.getLogger(__name__)
 
+# Existing readers for markets and data that do not have a verified FTShare/Fuyao pair.
+INDEPENDENT_PROVIDERS = {
+    "quote": ("tencent", "sina"), "kline": ("tencent", "eastmoney"),
+    "capital_flow": ("eastmoney", "sina"), "events": ("eastmoney",),
+    "flash_news": ("cls", "sina", "eastmoney", "fuyao"),
+    "fundamentals": ("tencent", "eastmoney", "fuyao"),
+    "dragon_tiger": ("eastmoney", "fuyao"), "dividend": ("eastmoney", "fuyao"),
+}
+
 
 class DbConfigProvider:
-    """ConfigProvider 端口实现:从 DataSource 表按 priority 读某类型的启用源。"""
+    """Resolve the host's routing policy without using stored priorities."""
 
     def _query_rows(self, datatype: str) -> list:
         from src.platform.persistence.database import SessionLocal
@@ -24,33 +36,48 @@ class DbConfigProvider:
 
         db = SessionLocal()
         try:
-            return (
+            rows = (
                 db.query(DataSource)
-                .filter(DataSource.type == datatype, DataSource.enabled == True)  # noqa: E712
-                .order_by(DataSource.priority)
+                .filter(DataSource.type.in_(call_order.types_for(datatype)), active_source())
+                .order_by(DataSource.id)
                 .all()
             )
+            if any(row.provider == fuyao_credentials.PROVIDER for row in rows) and (
+                not fuyao_credentials.configured(fuyao_credentials.read(db))
+            ):
+                rows = [row for row in rows if row.provider != fuyao_credentials.PROVIDER]
+            if any(row.provider == "ftshare" for row in rows) and not (
+                provider_credentials.configured(provider_credentials.read(db, "ftshare"))
+            ):
+                rows = [row for row in rows if row.provider != "ftshare"]
+            return rows
         finally:
             db.close()
 
     def sources_for(self, datatype: str, market: str | None) -> list[SourceConfig]:
-        rows = self._query_rows(datatype)
-        sources = []
-        for row in rows:
-            # 保留配置的主备链；单个环境的供应商故障应由 Engine 回退，不能永久排除。
-            sources.append(
-                SourceConfig(
-                    vendor=row.provider,
-                    priority=row.priority,
-                    enabled=True,
-                    config=row.config or {},
-                    supports_batch=bool(row.supports_batch),
-                )
-            )
-        return sources
+        adapters = dict(VENDOR_CLASSES_BY_TYPE.get(datatype, {}))
+        adapters.update(EXTRA_VENDORS.get(datatype, {}))
+        eligible = {}
+        fuyao_types = []
+        for row in self._query_rows(datatype):
+            adapter = adapters.get(row.provider)
+            if adapter and (market is None or not adapter.supports_markets or market in adapter.supports_markets):
+                eligible.setdefault(row.provider, row)
+                if row.provider == "fuyao":
+                    fuyao_types.append(row.type)
+        vendors = call_order.candidates(datatype, market, eligible, independent=INDEPENDENT_PROVIDERS.get(datatype, ()))
+        ranks = call_order.FALLBACK_PROVIDERS if call_order.uses_fallback(datatype, market) else ()
+        return [SourceConfig(vendor=vendor, priority=ranks.index(vendor) if ranks else 0,
+                             enabled=True, config={"enabled_operations": fuyao_types} if vendor == "fuyao"
+                             else eligible[vendor].config or {},
+                             supports_batch=bool(eligible[vendor].supports_batch)) for vendor in vendors]
 
 
 _md: MarketData | None = None
+EXTRA_VENDORS = {
+    "quote": {"ftshare": ftshare_market.FtshareQuoteVendor()},
+    "kline": {"ftshare": ftshare_market.FtshareKlineVendor()},
+}
 
 
 def get_market_data() -> MarketData:
@@ -62,8 +89,8 @@ def get_market_data() -> MarketData:
 
 
 def create_market_data(**kwargs):
-    from .longbridge import query
-    return MarketData(longbridge_transport=query, **kwargs)
+    return MarketData(fuyao_api_key=fuyao_credentials.get_api_key,
+                      fuyao_transport=fuyao_business.marketdata_read, extra_vendors=EXTRA_VENDORS, **kwargs)
 
 
 def reset_market_data() -> None:
@@ -96,10 +123,11 @@ def _quote_to_row(q: Quote) -> dict:
         "source_timestamp": q.source_timestamp.isoformat() if q.source_timestamp else None,
         "observed_at": q.timestamp.isoformat(),
         "source": q.source,
+        "stale": q.stale,
     }
 
 
-def md_quote_rows(symbols: list[str], market: str) -> list[dict]:
+def md_quote_rows(symbols: list[str], market: str, *, max_age_seconds=None, stale_if_error_seconds=0, trade_date=None) -> list[dict]:
     """批量报价,返回 list[dict](与旧 orchestrator 输出同形)。
 
     同步函数;async 调用方用 `await asyncio.to_thread(md_quote_rows, ...)`。
@@ -107,7 +135,9 @@ def md_quote_rows(symbols: list[str], market: str) -> list[dict]:
     syms = list(symbols)
     if not syms:
         return []
-    quotes = get_market_data().quotes(syms, market=market)
+    options = {} if max_age_seconds is None and not stale_if_error_seconds and trade_date is None else {
+        "max_age_seconds": max_age_seconds, "stale_if_error_seconds": stale_if_error_seconds, "trade_date": trade_date}
+    quotes = get_market_data().quotes(syms, market=market, **options)
     return [_quote_to_row(q) for q in quotes]
 
 
@@ -172,4 +202,4 @@ def md_stock_data(symbols: list[str], market: str) -> list:
         change_amount=q.change_amount or 0.0, volume=q.volume or 0.0,
         turnover=q.turnover or 0.0, open_price=q.open_price or 0.0,
         high_price=q.high_price or 0.0, low_price=q.low_price or 0.0,
-        prev_close=q.prev_close or 0.0) for q in quotes]
+        prev_close=q.prev_close or 0.0, source=q.source) for q in quotes]

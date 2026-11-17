@@ -7,8 +7,9 @@ from sqlalchemy import or_, update
 from sqlalchemy.exc import IntegrityError
 
 from marketdata.short_term import TZ
+from src.platform.marketdata import fuyao_business
 from src.platform.persistence.models import (EmotionMonitor, EmotionObservation, EmotionReview,
-                                            EmotionSourceSettings, EmotionRun)
+                                            EmotionRun)
 from .facts import utc_now, evidence
 from .repository import EmotionRepository, WorkspaceError
 from .verification import next_session
@@ -19,26 +20,9 @@ class LifecycleRepository:
         self.db = db
         self.base = EmotionRepository(db)
 
-    def source_config(self, *, private=False):
-        row = self.db.get(EmotionSourceSettings, 1)
-        config = deepcopy(row.config) if row else {}
-        if private:
-            return config
-        return {'enabled': config.get('enabled', False), 'endpoint': config.get('endpoint', ''),
-                'provider_name': config.get('provider_name', 'licensed_gateway'),
-                'has_api_key': bool(config.get('api_key')), 'schema_version': 'auction.v1'}
-
-    def save_source(self, body):
-        config = self.source_config(private=True)
-        new = body.model_dump(exclude={'clear_api_key','api_key'})
-        new['api_key'] = '' if body.clear_api_key else body.api_key if body.api_key is not None else config.get('api_key','')
-        row = self.db.get(EmotionSourceSettings, 1)
-        if not row:
-            row = EmotionSourceSettings(id=1)
-            self.db.add(row)
-        row.config = new
-        self.db.commit()
-        return self.source_config()
+    def source_config(self):
+        enabled = "get_a_share_auction_snapshot" in fuyao_business.active_operations(self.db)
+        return {"enabled": enabled, "provider_name": "fuyao"}
 
     def set_monitor(self, publication_id, enabled, *, now=None):
         now = now or utc_now()

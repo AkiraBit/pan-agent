@@ -154,8 +154,8 @@ class TestPremarketDedup(unittest.TestCase):
         self.assertEqual(len(lines_with_stock), 1)
         # 显示中文策略名 + 数量
         self.assertIn("趋势延续 等4个策略", body)
-        # 包含雪球链接
-        self.assertIn("xueqiu.com", body)
+        # 包含东方财富链接
+        self.assertIn("quote.eastmoney.com", body)
 
     def test_premarket_plan_no_signals(self):
         """盘前计划 — 空信号显示无候选"""
@@ -206,7 +206,7 @@ class TestMessageFormat(unittest.TestCase):
         self.assertIn("130.00", body)
         self.assertIn("100.0", body)  # rank_score
         self.assertIn("趋势延续", body)  # 中文策略名
-        self.assertIn("xueqiu.com", body)  # 股票链接
+        self.assertIn("quote.eastmoney.com", body)  # 股票链接
 
     def test_entry_message_no_signal(self):
         """建仓通知 — 无信号时不报错"""
@@ -246,7 +246,7 @@ class TestMessageFormat(unittest.TestCase):
         self.assertIn("113.00", body)
         self.assertIn("120.00", body)
         self.assertIn("3天", body)
-        self.assertIn("xueqiu.com", body)  # 股票链接
+        self.assertIn("quote.eastmoney.com", body)  # 股票链接
 
     def test_exit_message_loss(self):
         """平仓通知 — 亏损时显示负号和止损"""
@@ -321,23 +321,23 @@ class TestHelpers(unittest.TestCase):
 
     def test_stock_url_cn(self):
         """股票链接 — 深圳股票"""
-        url = stock_url("002837", "CN", platform="xueqiu")
-        self.assertIn("xueqiu.com/S/SZ002837", url)
+        url = stock_url("002837", "CN", platform="eastmoney")
+        self.assertIn("quote.eastmoney.com/sz002837.html", url)
 
     def test_stock_url_cn_sh(self):
         """股票链接 — 上海股票"""
-        url = stock_url("600519", "CN", platform="xueqiu")
-        self.assertIn("xueqiu.com/S/SH600519", url)
+        url = stock_url("600519", "CN", platform="eastmoney")
+        self.assertIn("quote.eastmoney.com/sh600519.html", url)
 
     def test_stock_url_us(self):
         """股票链接 — 美股"""
-        url = stock_url("AAPL", "US", platform="xueqiu")
-        self.assertEqual(url, "https://xueqiu.com/S/AAPL")
+        url = stock_url("AAPL", "US", platform="eastmoney")
+        self.assertEqual(url, "https://quote.eastmoney.com/us/AAPL.html")
 
     def test_stock_url_hk(self):
         """股票链接 — 港股"""
-        url = stock_url("00883", "HK", platform="xueqiu")
-        self.assertEqual(url, "https://xueqiu.com/S/00883")
+        url = stock_url("00883", "HK", platform="eastmoney")
+        self.assertEqual(url, "https://quote.eastmoney.com/hk/00883.html")
 
 
 if __name__ == "__main__":

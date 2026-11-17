@@ -1,4 +1,4 @@
-"""K线和技术指标采集器 - 基于腾讯 API（更稳定）"""
+"""K 线和技术指标采集器。"""
 
 from __future__ import annotations
 
@@ -84,11 +84,16 @@ def clear_kline_cache() -> None:
 
 
 def get_index_klines(index_code: str, market: MarketCode, days: int = 120) -> list[KlineData]:
-    """取大盘/指数日K:走 marketdata 包 index_klines(INDEX_SECID 显式映射,未映射如美股指数
-    → 空列表,fail-soft;见 packages/marketdata/src/marketdata/client.py)。
-    """
+    """A 股指数在 FTShare 与同花顺间主备；其他市场独立取数。"""
     try:
-        bars = get_market_data().index_klines(index_code, market=market.value, days=days)
+        from src.platform.marketdata import ftshare_market, fuyao_native
+        if market is MarketCode.CN:
+            loaders = {"ftshare": lambda: ftshare_market.index_bars(index_code, days),
+                       "fuyao": lambda: fuyao_native.index_klines(index_code, days)}
+        else:
+            loaders = {provider: lambda provider=provider: get_market_data().index_klines(
+                index_code, market=market.value, days=days, provider=provider) for provider in ("eastmoney", "tencent")}
+        bars = fuyao_native.first("index_kline", loaders, market=market.value) or []
     except Exception as e:
         logger.debug(f"指数K线获取失败 {index_code}: {e}")
         return []
@@ -108,6 +113,7 @@ class KlineData:
     high: float
     low: float
     volume: float
+    source: str = ""
 
 
 @dataclass
@@ -433,8 +439,7 @@ class KlineCollector:
                 _KLINE_CACHE[cache_key] = (now, len(klines), list(klines))
                 _FAIL_UNTIL.pop(cache_key, None)
             else:
-                # 空 或 拿到部分但不足 need(常见:HK 腾讯不足 + eastmoney 补全失败,
-                # 正缓存因 count<need 永不命中 → 每轮重打补全源刷屏)→ 固化冷却。
+                # 空或不足 need 时短暂冷却，以免重复拉取相同的范围。
                 # 部分结果仍缓存下来,冷却窗口内直接服务,避免反复联网。
                 if klines:
                     _KLINE_CACHE[cache_key] = (now, len(klines), list(klines))
@@ -454,15 +459,17 @@ class KlineCollector:
         return None
 
     def _fetch_all_sources(self, symbol: str, days: int) -> list[KlineData]:
-        """走 marketdata 包取数(不含缓存/合并逻辑):Engine 按 DataSource 优先级 +
-        min_count 取数(条数不足则换源/取最长,tencent → stooq(US) / eastmoney(CN/HK))。
-        """
-        need = (max(10, min(days, 30)) if self.market == MarketCode.US
-                else (max(120, int(days * 0.6)) if self.market in (MarketCode.CN, MarketCode.HK) else 1))
-        want = min(max(days, 3000), 20000) if self.market in (MarketCode.CN, MarketCode.HK) else days
+        """Use the requested depth so ordinary A-share charts fit FTShare's daily window."""
+        if self.market is MarketCode.CN:
+            need = days
+        elif self.market is MarketCode.HK:
+            need = max(120, int(days * 0.6))
+        else:
+            need = max(10, min(days, 30))
+        want = min(max(days, 3000), 20000) if self.market is MarketCode.HK else days
         bars = get_market_data().klines(symbol, market=self.market.value, days=want, min_count=need)
         return [KlineData(date=b.date, open=b.open, close=b.close, high=b.high,
-                          low=b.low, volume=b.volume) for b in bars]
+                          low=b.low, volume=b.volume, source=b.source) for b in bars]
 
     def get_technical_indicators(
         self, symbol: str = "", klines: list[KlineData] | None = None
@@ -711,6 +718,7 @@ class KlineCollector:
         return {
             # meta
             "timeframe": "1d",
+            "source": klines[-1].source,
             "computed_at": now,
             "asof": last_date,
             "period_start": klines[0].date,

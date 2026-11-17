@@ -85,6 +85,7 @@ class StockData:
     low_price: float
     prev_close: float
     timestamp: datetime = field(default_factory=datetime.now)
+    source: str = ""
 
 
 @dataclass

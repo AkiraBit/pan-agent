@@ -164,31 +164,36 @@ def local_day_bounds(market, d: date | datetime | None = None) -> tuple[datetime
             datetime.combine(day + timedelta(days=1), time.min, tz).astimezone(timezone.utc))
 
 
-def upcoming_calendar(market, *, days: int = 14, start_date: date | None = None) -> dict:
+def upcoming_calendar(market, *, days: int = 14, start_date: date | None = None,
+                      provided_days: set[date] | None = None, source: str = "exchange") -> dict:
     code = _to_market_code(market)
+    from src.platform.marketdata.models import MARKETS
     now = _now_in_market_tz(code)
     rows = []
     for offset in range(days):
         day = (start_date or now.date()) + timedelta(days=offset)
-        known = calendar_known(code, day)
-        opened = is_trading_day(code, day)
+        known = provided_days is not None or (source == "exchange" and calendar_known(code, day))
+        opened = day in provided_days if provided_days is not None else (known and is_trading_day(code, day))
+        sessions = (MARKETS[code].sessions if opened else []) if provided_days is not None else (
+            trading_sessions(code, day) if known else [])
         reason = ("unpublished" if not known else "weekend" if day.weekday() >= 5
                   else "holiday" if not opened else "early_close" if (code.value, day) in EARLY_CLOSES
                   else "trading")
         rows.append({"date": day.isoformat(), "is_trading_day": opened if known else None,
-                     "reason": reason, "sessions": [f"{s.start:%H:%M}-{s.end:%H:%M}" for s in trading_sessions(code, day)],
+                     "reason": reason, "sessions": [f"{s.start:%H:%M}-{s.end:%H:%M}" for s in sessions],
                      "session_times": [{"open": datetime.combine(day, s.start, _market_tz(code)).isoformat(),
                                         "close": datetime.combine(day, s.end, _market_tz(code)).isoformat()}
-                                       for s in trading_sessions(code, day)]})
+                                       for s in sessions]})
     next_open = None
     for offset in range(370):
         day = now.date() + timedelta(days=offset)
-        openings = [datetime.combine(day, session.start, _market_tz(code))
-                    for session in trading_sessions(code, day)]
+        sessions = (MARKETS[code].sessions if day in provided_days else []) if provided_days is not None else (
+            trading_sessions(code, day) if source == "exchange" else [])
+        openings = [datetime.combine(day, session.start, _market_tz(code)) for session in sessions]
         next_open = next((opening for opening in openings if opening > now), None)
         if next_open is not None:
             break
     return {"market": code.value, "timezone": str(_market_tz(code)),
-            "local_date": now.date().isoformat(), "local_time": now.strftime("%H:%M"), "status": market_status(code, now), "source": "exchange",
+            "local_date": now.date().isoformat(), "local_time": now.strftime("%H:%M"), "status": market_status(code, now) if source != "unknown" else "unknown", "source": source,
             "covered_years": sorted(year for (m, year) in HOLIDAYS if m == code.value),
             "next_open": next_open.isoformat() if next_open else None, "days": rows}

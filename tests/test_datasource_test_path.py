@@ -77,7 +77,7 @@ class TestKlineSourceTestPath(unittest.IsolatedAsyncioTestCase):
         with mock.patch("marketdata.MarketData.klines", fake_klines):
             manager = DataCollectorManager()
             source = _make_source(
-                type="kline", provider="stooq", test_symbols=["AAPL", "APPL"]
+                type="kline", provider="tencent", test_symbols=["AAPL", "APPL"]
             )
             result = await manager._test_kline_source(source, source.test_symbols)
 
@@ -98,19 +98,15 @@ class TestKlineSourceTestPath(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(DEFAULT_TEST_SYMBOLS, ("600519", "601127", "00700", "00386", "AAPL", "NVDA"))
 
     def test_all_symbol_based_seed_tests_use_balanced_defaults(self):
-        """所有带股票代码的内置数据源测试都应使用三市场各两条默认样本。"""
+        """内置源的测试样本应覆盖各自支持的市场。"""
         from server import DATA_SOURCE_SEEDS
         from src.modules.market.data_collector import DEFAULT_TEST_SYMBOLS
 
         for seed in DATA_SOURCE_SEEDS:
-            if seed["provider"] == "longbridge":
-                # ETF-only and HK/US-only endpoints need matching test universes.
-                from marketdata import Symbol
-                symbols = seed["test_symbols"]
-                assert symbols and len(symbols) == len(set(symbols))
-                markets = {Symbol.parse(code).market.value for code in symbols}
-                expected = {"CN"} if seed["type"] == "etf_turnover" else {"HK", "US"} if seed["type"] in {"events", "dividend"} else {"CN", "HK", "US"}
-                self.assertEqual(markets, expected)
+            if seed["provider"] == "fuyao":
+                from src.platform.marketdata import fuyao_rest
+                operation = fuyao_rest.operation_for(seed["type"])
+                fuyao_rest.saved_params(operation, seed["config"])
             elif seed["type"].startswith('etf_'):
                 from src.modules.market.etf.free_sources import code
                 self.assertTrue(seed['test_symbols'])
@@ -129,7 +125,7 @@ class TestKlineSourceTestPath(unittest.IsolatedAsyncioTestCase):
 
         with mock.patch("marketdata.MarketData.klines", lambda *args, **kwargs: [fixed_bar]):
             manager = DataCollectorManager()
-            source = _make_source(type="kline", provider="stooq", test_symbols=[])
+            source = _make_source(type="kline", provider="tencent", test_symbols=[])
             result = await manager.test_source(source)
 
         self.assertEqual(

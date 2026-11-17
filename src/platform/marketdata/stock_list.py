@@ -505,6 +505,18 @@ def _realtime_search(query: str, market: str = "", limit: int = 20) -> list[dict
 
 
 def search_stocks(query: str, market: str = "", limit: int = 20) -> list[dict]:
+    from src.platform.marketdata import fuyao_native
+
+    q = query.strip()
+    if not q:
+        return []
+    return fuyao_native.first("stock_search", {
+        "eastmoney": lambda: _public_search_stocks(q, market, limit),
+        "fuyao": lambda: fuyao_native.search(q, market.upper(), limit),
+    }) or []
+
+
+def _public_search_stocks(query: str, market: str = "", limit: int = 20) -> list[dict]:
     """搜索股票 - 优先使用实时搜索，失败则使用缓存"""
     q = query.strip()
     if not q:

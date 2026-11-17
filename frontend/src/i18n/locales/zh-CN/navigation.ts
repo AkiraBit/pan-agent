@@ -14,6 +14,7 @@ export const navigation = {
     evaluations: '验证中心',
     history: '历史',
     dataSources: '数据源',
+    researchData: '市场研究',
     mcp: 'MCP & 技能',
     settings: '设置',
   },

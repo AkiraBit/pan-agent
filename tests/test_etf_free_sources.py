@@ -19,21 +19,6 @@ def sz_page(page=1, total=2, pages=2, date='2026-11-12', value='1,234.56'):
              'data': [{'size_date': date, 'fund_code': '159915  ', 'current_size': value}]}]
 
 
-@pytest.mark.anyio
-async def test_szse_all_pages_units_trim_and_duplicate_page_rejection():
-    client = AsyncMock()
-    client.json.side_effect = [sz_page(), sz_page(2, date='2026-11-13')]
-    batch = await adapters.szse_shares(client, '159915', '2026-11-01', '2026-11-13')
-    assert len(batch.rows) == 2 and batch.rows[0]['shares'] == 12345600
-    assert client.json.call_args_list[1].args[1]['PAGENO'] == 2
-    client.json.side_effect = [sz_page(), sz_page(2)]
-    with pytest.raises(adapters.InvalidData, match='pagination'):
-        await adapters.szse_shares(client, '159915', '2026-11-01', '2026-11-13')
-    bad = sz_page(); bad[0]['metadata']['cols']['current_size'] = '基金规模(亿份)'
-    with pytest.raises(adapters.InvalidData, match='unit'):
-        adapters.parse_szse(bad, '159915', '2026-11-01', '2026-11-13', 1)
-
-
 @pytest.mark.parametrize('value', [None, True, 'NaN', 'Infinity', '1,23.4', '-2', '1e20'])
 def test_reject_invalid_numeric_values(value):
     with pytest.raises(adapters.InvalidData):
@@ -59,24 +44,6 @@ def test_prices_require_raw_ohlc_and_exact_range():
     payload['data']['sh510300']['day'][0][3] = '3'
     with pytest.raises(adapters.InvalidData, match='ohlc'):
         adapters.parse_prices(payload, 'sh510300', '2026-11-13', '2026-11-13')
-
-
-def test_pcf_xml_nav_is_previous_day_and_entities_rejected():
-    body = b'''<PCFFile xmlns="urn:test"><SecurityID>159915</SecurityID><TradingDay>20261113</TradingDay><PreTradingDay>20261112</PreTradingDay><NAV>3.2</NAV><CreationRedemptionUnit>1000000</CreationRedemptionUnit><Components><Component><UnderlyingSecurityID>300001</UnderlyingSecurityID><ComponentShare>1200</ComponentShare></Component></Components></PCFFile>'''
-    row = adapters.parse_pcf(body, '159915', '2026-11-13')
-    assert row['nav_date'] == '2026-11-12' and len(row['components']) == 1
-    with pytest.raises(adapters.InvalidData, match='unsafe'):
-        adapters.parse_pcf(b'<!DOCTYPE x [<!ENTITY x SYSTEM "file:///etc/passwd">]>' + body, '159915')
-    with pytest.raises(adapters.InvalidData, match='date'):
-        adapters.parse_pcf(body, '159915', '2026-11-12')
-
-
-def test_sse_partial_universe_cannot_silently_pass():
-    raw = {'result': [{'STAT_DATE': '2026-11-13', 'SEC_CODE': '510300', 'TOT_VOL': '1,000'}], 'pageHelp': {'total': 2}}
-    with pytest.raises(adapters.InvalidData, match='pagination'):
-        adapters.parse_sse(raw, '2026-11-13', {'510300'})
-    raw['pageHelp']['total'] = 1
-    assert adapters.parse_sse(raw, '2026-11-13', {'510300'})[0]['shares'] == 10000000
 
 
 def put(resource, provider, rows, key=None):
@@ -195,20 +162,17 @@ async def test_transport_retries_throttle_and_live_disable(monkeypatch):
         await client.get('https://example.test')
 
 
-def test_source_registration_and_observation_api(database, board):
+def test_retired_exchange_jobs_are_not_registered(database):
     from server import DATA_SOURCE_SEEDS
-    from src.modules.administration.api.datasources import collection_state, source_observations
     pairs = {(s['type'], s['provider']) for s in DATA_SOURCE_SEEDS}
-    assert set(adapters.SPECS) <= pairs
+    assert (set(adapters.SPECS) - {("etf_nav", "fuyao")}) <= pairs
+    assert ("fuyao:get_fund_performance_nav", "fuyao") in pairs
+    assert not ({"etf_shares", "etf_pcf"} & {kind for kind, _ in pairs})
     with database() as db:
-        source = DataSource(name='SSE', type='etf_shares', provider='sse', enabled=True)
-        db.add(source); db.commit(); sid = source.id
-    seed_inputs()
-    with database() as db:
-        result = source_observations(sid, before_id=None, limit=20, db=db)
-        assert all(r['source'] == 'sse' and r['resource'] == 'shares' for r in result['items'])
-        state = collection_state(sid, limit=20, db=db)
-        assert state['observations'] == 3 and state['pending_retries'] == 0
+        db.add(DataSource(name="Legacy shares", type="etf_shares", provider="sse", enabled=True))
+        db.commit()
+    assert not store.enabled("etf_shares", "sse")
+    assert store.settings() == []
 
 
 def test_shares_can_fill_from_primary_prices_without_tencent(database, board):

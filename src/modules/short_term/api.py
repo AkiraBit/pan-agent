@@ -10,7 +10,8 @@ from datetime import datetime, timedelta, timezone, time as wall_time
 from dataclasses import asdict
 
 from fastapi import APIRouter, HTTPException, Query
-from marketdata.short_term import POOLS, TZ, limit_pool, quotes
+from marketdata.short_term import POOLS, TZ, quotes
+from .market_sources import limit_pool
 
 from src.modules.short_term.analysis import analyze, phase_at, reference_day
 from src.modules.short_term.speculation import candidate_concepts, relay_observation, theme_observation, trend_candidates, trend_structure

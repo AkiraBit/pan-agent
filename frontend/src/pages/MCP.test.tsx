@@ -1,11 +1,12 @@
 import { StrictMode } from 'react'
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { MemoryRouter } from 'react-router-dom'
 import { ConfirmProvider } from '@panwatch/base-ui/components/ui/confirm-dialog'
 import { fetchAPI } from '@panwatch/api/client'
 import i18n from '@/i18n'
 import MCPPage from './MCP'
+import DataProvidersSettings from '@/components/integrations/DataProvidersSettings'
 
 vi.mock('@panwatch/api/client', () => ({ fetchAPI: vi.fn() }))
 const request = vi.mocked(fetchAPI)
@@ -24,6 +25,80 @@ function mount(path = '/integrations/mcp') {
 }
 beforeEach(() => { request.mockReset(); sessionStorage.clear() })
 afterEach(() => { cleanup(); vi.restoreAllMocks() })
+
+describe('Fuyao connection', () => {
+  const endpoint = '/mcp-connections/fuyao'
+  const service = { id: 'a-share', endpoint: 'https://fuyao.aicubes.cn/mcp/a-share', enabled: false, checked_at: null, tools: [] }
+
+  it('links to the shared settings card and blocks MCP testing without a key', async () => {
+    request.mockResolvedValue({ configured: false, services: [service] })
+    mount('/integrations/mcp?provider=fuyao')
+    expect((await screen.findByRole('link', { name: '配置同花顺 API Key' })).getAttribute('href')).toBe('/settings#sec-data-providers')
+    expect((await screen.findByRole('button', { name: '检测连接' })).hasAttribute('disabled')).toBe(true)
+    expect(screen.getByRole('switch').hasAttribute('disabled')).toBe(true)
+  })
+
+  it('tests the selected service before enabling it for the assistant', async () => {
+    request.mockResolvedValue({ configured: true, services: [service] })
+    mount('/integrations/mcp?provider=fuyao')
+    const test = await screen.findByRole('button', { name: '检测连接' })
+    const enable = screen.getByRole('switch')
+    expect(enable.hasAttribute('disabled')).toBe(true)
+    const discovered = { ...service, checked_at: 1794670000, tools: [{ name: 'get_a_share_prices_snapshot', title: '行情快照' }] }
+    request.mockResolvedValueOnce({ configured: true, services: [discovered] })
+    fireEvent.click(test)
+    await screen.findByText('查看查询工具（1）')
+    expect(request).toHaveBeenLastCalledWith(endpoint + '/a-share/test', expect.objectContaining({ method: 'POST' }))
+    request.mockResolvedValueOnce({ configured: true, services: [{ ...discovered, enabled: true }] })
+    fireEvent.click(enable)
+    await waitFor(() => expect(enable.getAttribute('aria-checked')).toBe('true'))
+    expect(request).toHaveBeenLastCalledWith(endpoint + '/a-share', expect.objectContaining({ method: 'PUT', body: '{"enabled":true}' }))
+  })
+})
+
+describe('data provider settings', () => {
+  it('adds a key, displays its masked value, and clears it from the edit dialog', async () => {
+    request.mockResolvedValue({ configured: false, masked_key: null })
+    render(<ConfirmProvider labels={{ title: '确认', confirm: '确定', cancel: '取消' }}><DataProvidersSettings /></ConfirmProvider>)
+    const card = within(screen.getByRole('region', { name: 'FTShare' }))
+    const path = '/settings/data-providers/ftshare'
+    fireEvent.click(await card.findByRole('button', { name: '添加 FTShare API Key' }))
+    const add = within(await screen.findByRole('dialog', { name: '添加 FTShare API Key' }))
+    const input = add.getByLabelText('API Key', { exact: true }) as HTMLInputElement
+    expect(input.type).toBe('password')
+    request.mockResolvedValueOnce({ configured: true, masked_key: 'ftshare_sk_V****Lm10' })
+    fireEvent.change(input, { target: { value: ' ftshare_sk_V.not-a-real-key.Lm10 ' } })
+    fireEvent.click(add.getByRole('button', { name: '保存' }))
+    await card.findByText('ftshare_sk_V****Lm10')
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(request).toHaveBeenLastCalledWith(path, { method: 'PUT', body: '{"api_key":"ftshare_sk_V.not-a-real-key.Lm10"}' })
+    fireEvent.click(card.getByRole('button', { name: '修改 FTShare API Key' }))
+    const edit = within(await screen.findByRole('dialog', { name: '修改 FTShare API Key' }))
+    expect((edit.getByLabelText('API Key', { exact: true }) as HTMLInputElement).value).toBe('')
+    fireEvent.click(edit.getByRole('button', { name: '清除 Key' }))
+    request.mockResolvedValueOnce({ configured: false, masked_key: null })
+    fireEvent.click(await screen.findByRole('button', { name: '确定' }))
+    await card.findByText('未保存')
+    expect(card.queryByText('ftshare_sk_V****Lm10')).toBeNull()
+    expect(request).toHaveBeenLastCalledWith(path, { method: 'DELETE' })
+  })
+
+  it('discards a canceled replacement for an existing key', async () => {
+    request.mockImplementation(async (path) => path.endsWith('/fuyao')
+      ? { configured: true, masked_key: 'fixt****9876' } : { configured: false, masked_key: null })
+    render(<DataProvidersSettings />)
+    const card = within(screen.getByRole('region', { name: '同花顺（扶摇）' }))
+    await card.findByText('fixt****9876')
+    const pencil = card.getByRole('button', { name: '修改 同花顺（扶摇） API Key' })
+    fireEvent.click(pencil)
+    const edit = within(await screen.findByRole('dialog'))
+    fireEvent.change(edit.getByLabelText('API Key', { exact: true }), { target: { value: 'not-saved' } })
+    fireEvent.click(edit.getByRole('button', { name: '取消' }))
+    fireEvent.click(pencil)
+    expect((within(await screen.findByRole('dialog')).getByLabelText('API Key', { exact: true }) as HTMLInputElement).value).toBe('')
+    expect(request.mock.calls.some(([, options]) => options?.method === 'PUT')).toBe(false)
+  })
+})
 
 describe('built-in MCP connections', () => {
   it('switches an authorized node without reauthorization and keeps the account and enable state', async () => {

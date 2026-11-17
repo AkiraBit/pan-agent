@@ -143,8 +143,7 @@ def _fetch_cn(sym: Symbol) -> Fundamentals | None:
 
 
 def _hk_secucode(code: str) -> str:
-    """HK SECUCODE:补零到 5 位 + .HK(参考 symbol.py to_yfinance 的补零惯例,该处补 4 位是 yfinance
-    专用格式,SECUCODE 按东财 F10 惯例补 5 位)。"""
+    """东财 F10 的 HK SECUCODE 补零到 5 位，并追加 .HK。"""
     if code.isdigit():
         return f"{int(code):05d}.HK"
     return f"{code}.HK"

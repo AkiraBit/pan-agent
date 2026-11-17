@@ -76,7 +76,7 @@ def test_batch_quotes_overlap_deduplicate_and_preserve_partial_results(monkeypat
     from src.modules.market.api import quotes
     barrier = threading.Barrier(3)
     calls = []
-    def collect(symbols, market):
+    def collect(symbols, market, **options):
         calls.append((market, symbols))
         barrier.wait(timeout=5)
         if market == "HK":

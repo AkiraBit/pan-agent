@@ -1,0 +1,3194 @@
+{
+  "source": "https://fuyao.aicubes.cn/openapi/financial-api.openapi.json",
+  "version": "1.0.0",
+  "sha256": "8ea30003913160a1df7c360b442be8bcec6c890e024f663ab9b670126ed2bb40",
+  "operations": [
+    {
+      "id": "get_news_article_detail",
+      "method": "GET",
+      "path": "/api/news/article/detail",
+      "group": "news",
+      "summary": "资讯详情",
+      "description": "仅返回可对外提供的资讯。正文保留 HTML；展示时按内容安全策略处理。不存在或不可提供时返回业务错误。",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/news-article-detail",
+      "parameters": [
+        {
+          "name": "client_type",
+          "required": true,
+          "description": "客户端类型：WEB、WEB_ENCRYPTED、PC、PC_LIST，不区分大小写。",
+          "type": "string",
+          "example": "WEB"
+        },
+        {
+          "name": "encoded_seq",
+          "required": true,
+          "description": "密文资讯标识。",
+          "type": "string",
+          "example": "example-encoded-id"
+        }
+      ]
+    },
+    {
+      "id": "get_news_notice_detail",
+      "method": "GET",
+      "path": "/api/news/notice/detail",
+      "group": "news",
+      "summary": "公告详情与解读",
+      "description": "返回公告基本信息及结构化解读。report_period、summary、monthly_report_interpretation 可能为 null。公告序号由调用方提供。",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/news-notice-detail",
+      "parameters": [
+        {
+          "name": "seq",
+          "required": true,
+          "description": "不透明序号；快讯首屏传字符串0。",
+          "type": "string",
+          "example": "example-notice-id"
+        }
+      ]
+    },
+    {
+      "id": "get_news_topic_hot_list",
+      "method": "GET",
+      "path": "/api/news/topic/hot-list",
+      "group": "news",
+      "summary": "热门深度专题",
+      "description": "按热门栏目查询专题，tab_id 由调用方提供。默认且最多 10 条，next_cursor 用于继续查询，has_more 表示是否还有下一页。时间字符串保持原格式。",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/news-topics",
+      "parameters": [
+        {
+          "name": "tab_id",
+          "required": true,
+          "description": "热门专题栏目ID。",
+          "type": "integer",
+          "example": 1
+        },
+        {
+          "name": "cursor",
+          "required": false,
+          "description": "分页游标，后续查询原样回传。",
+          "type": "string"
+        },
+        {
+          "name": "limit",
+          "required": false,
+          "description": "每页条数，范围1至10。",
+          "type": "integer",
+          "default": 10
+        },
+        {
+          "name": "important_only",
+          "required": false,
+          "description": "是否只查询重要内容。",
+          "type": "boolean",
+          "default": false
+        }
+      ]
+    },
+    {
+      "id": "get_news_anomaly_analysis",
+      "method": "GET",
+      "path": "/api/news/anomaly/analysis",
+      "group": "news",
+      "summary": "日期范围异动解读",
+      "description": "查询日期范围异动解读。指定标的最多返回 365 天范围，全量最多 30 天；超范围由数据提供方向结束日期截取，was_truncated 表示截断。四个时间字段保留原值，单位及标的编码格式待核实。空列表也可能表示服务降级，不能据此断言期间没有异动。",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/news-anomaly-analysis",
+      "parameters": [
+        {
+          "name": "begin_date",
+          "required": true,
+          "description": "开始日期，格式yyyy-MM-dd。",
+          "type": "string",
+          "example": "2026-10-01"
+        },
+        {
+          "name": "end_date",
+          "required": true,
+          "description": "结束日期，格式yyyy-MM-dd。",
+          "type": "string",
+          "example": "2026-10-15"
+        },
+        {
+          "name": "thscode",
+          "required": false,
+          "description": "按上游要求提供的同花顺标的编码，格式待核实；省略查询全量。",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "id": "get_news_stock_timeline_list",
+      "method": "GET",
+      "path": "/api/news/stock/timeline-list",
+      "group": "news",
+      "summary": "个股分时新闻",
+      "description": "使用完整同花顺代码 thscode 查询。首屏 offset=first，后续原样回传 offset；size 省略时使用数据提供方行为。jump_url 保留原值，不保证可用于资讯详情查询。",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/news-stock-timeline",
+      "parameters": [
+        {
+          "name": "thscode",
+          "required": true,
+          "description": "完整同花顺代码，例如300033.SZ。",
+          "type": "string",
+          "example": "300033.SZ"
+        },
+        {
+          "name": "offset",
+          "required": true,
+          "description": "分页偏移量，首屏first；后续原样回传。",
+          "type": "string",
+          "example": "first"
+        },
+        {
+          "name": "size",
+          "required": false,
+          "description": "每页条数，范围1至100；省略使用上游行为。",
+          "type": "integer"
+        }
+      ]
+    },
+    {
+      "id": "get_a_share_calendar_trading_days",
+      "method": "GET",
+      "path": "/api/a-share/calendar/trading-days",
+      "group": "a-share",
+      "summary": "交易日历",
+      "description": "查询指定闭区间的 A 股交易日，单次最多十个自然年。起止日期均省略时，查询 [今日 - 1 年, 今日]（Asia/Shanghai 自然日）。",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/calendar",
+      "parameters": [
+        {
+          "name": "start_date",
+          "required": false,
+          "description": "开始日期，yyyyMMdd，包含当天；与 end_date 成对提供。",
+          "type": "string"
+        },
+        {
+          "name": "end_date",
+          "required": false,
+          "description": "结束日期，yyyyMMdd，包含当天；最多十个自然年。",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "id": "get_a_share_corporate_actions_adjustment_factors",
+      "method": "GET",
+      "path": "/api/a-share/corporate-actions/adjustment-factors",
+      "group": "a-share",
+      "summary": "除复权数据",
+      "description": "获取单只标的的 A 股复权因子事件流。每次请求仅一个 thscode。",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/corporate-actions",
+      "parameters": [
+        {
+          "name": "thscode",
+          "required": true,
+          "description": "单只标的 thscode，不接受逗号。",
+          "type": "string",
+          "example": "600519.SH"
+        },
+        {
+          "name": "from",
+          "required": false,
+          "description": "事件起始日，格式 YYYY-MM-DD。",
+          "type": "string"
+        },
+        {
+          "name": "to",
+          "required": false,
+          "description": "事件截止日，格式 YYYY-MM-DD。",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "id": "get_a_share_special_data_dragon_tiger_list",
+      "method": "GET",
+      "path": "/api/a-share/special-data/dragon-tiger-list",
+      "group": "a-share",
+      "summary": "龙虎榜数据",
+      "description": "按交易日返回龙虎榜首页整体榜单。省略 date 时，若今天是交易日则默认取上一个交易日；若今天不是交易日，则默认取今天之前最近一个交易日。 显式传入非交易日会返回参数错误，不自动回退。",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/dragon-tiger-data",
+      "parameters": [
+        {
+          "name": "board_type",
+          "required": false,
+          "description": "榜单类型：all 全部 / org 机构榜 / hot_money 游资榜。",
+          "type": "string",
+          "default": "all",
+          "enum": [
+            "all",
+            "org",
+            "hot_money"
+          ]
+        },
+        {
+          "name": "date",
+          "required": false,
+          "description": "目标交易日，格式 yyyy-MM-dd；只支持一年内数据。显式传入非交易日返回 code=1002。",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "id": "get_a_share_financials_indicators",
+      "method": "GET",
+      "path": "/api/a-share/financials/indicators",
+      "group": "a-share",
+      "summary": "财务指标数据",
+      "description": "GET /api/a-share/financials/indicators",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/financial-indicators",
+      "parameters": [
+        {
+          "name": "thscode",
+          "required": true,
+          "description": "单只标的 thscode，含交易所后缀，如 300033.SZ。",
+          "type": "string",
+          "example": "300033.SZ"
+        },
+        {
+          "name": "report",
+          "required": true,
+          "description": "报告期，示例 2025-1；格式见上方通用约定。",
+          "type": "string",
+          "example": "2025-1"
+        }
+      ]
+    },
+    {
+      "id": "get_fund_companies_detail",
+      "method": "GET",
+      "path": "/api/fund/companies/detail",
+      "group": "fund",
+      "summary": "基金公司详情",
+      "description": "按基金公司 ID 查询公司名称、类型、成立日期、基金数量与规模",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/fund-company",
+      "parameters": [
+        {
+          "name": "company_id",
+          "required": true,
+          "description": "基金公司 ID，可从基金基本资料的 company_id 获取。",
+          "type": "string",
+          "example": "00089990"
+        }
+      ]
+    },
+    {
+      "id": "get_fund_corporate_actions_dividends",
+      "method": "GET",
+      "path": "/api/fund/corporate-actions/dividends",
+      "group": "fund",
+      "summary": "基金分红记录",
+      "description": "查询单只基金的历史分红与权益登记日期",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/fund-corporate-actions",
+      "parameters": [
+        {
+          "name": "thscode",
+          "required": true,
+          "description": "完整基金 thscode。",
+          "type": "string",
+          "example": "510300.SH"
+        }
+      ]
+    },
+    {
+      "id": "get_fund_diagnostics_detail",
+      "method": "GET",
+      "path": "/api/fund/diagnostics/detail",
+      "group": "fund",
+      "summary": "基金诊断详情",
+      "description": "查询基金诊断维度、同类对比、概率区间与韧性指标",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/fund-diagnostics",
+      "parameters": [
+        {
+          "name": "thscode",
+          "required": true,
+          "description": "完整基金 thscode。",
+          "type": "string",
+          "example": "510300.SH"
+        }
+      ]
+    },
+    {
+      "id": "get_fund_portfolio_holdings",
+      "method": "GET",
+      "path": "/api/fund/portfolio/holdings",
+      "group": "fund",
+      "summary": "基金重仓持仓",
+      "description": "查询基金定期披露的股票、债券与基金持仓及汇总指标",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/fund-holdings",
+      "parameters": [
+        {
+          "name": "thscode",
+          "required": true,
+          "description": "完整基金 thscode，必须保留市场后缀，如 025480.OF。",
+          "type": "string",
+          "example": "025480.OF"
+        }
+      ]
+    },
+    {
+      "id": "get_fund_news_article_list",
+      "method": "GET",
+      "path": "/api/fund/news/article-list",
+      "group": "fund",
+      "summary": "基金资讯列表",
+      "description": "查询单只基金的资讯文章并使用游标分页",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/fund-news",
+      "parameters": [
+        {
+          "name": "thscode",
+          "required": true,
+          "description": "完整基金 thscode。",
+          "type": "string",
+          "example": "510300.SH"
+        },
+        {
+          "name": "limit",
+          "required": false,
+          "description": "返回条数。",
+          "type": "integer",
+          "example": 20
+        },
+        {
+          "name": "offset",
+          "required": false,
+          "description": "不透明翻页游标；下一页应原样回传上一页的 data.offset。",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "id": "get_fund_offerings_list",
+      "method": "GET",
+      "path": "/api/fund/offerings/list",
+      "group": "fund",
+      "summary": "基金募集列表",
+      "description": "查询当前募集或即将募集的新发基金",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/fund-offerings",
+      "parameters": [
+        {
+          "name": "subscribe",
+          "required": true,
+          "description": "active（当前募集）或 upcoming（即将募集）。",
+          "type": "string",
+          "enum": [
+            "active",
+            "upcoming"
+          ],
+          "example": "active"
+        }
+      ]
+    },
+    {
+      "id": "get_fund_profile_detail",
+      "method": "GET",
+      "path": "/api/fund/profile/detail",
+      "group": "fund",
+      "summary": "基金基本资料",
+      "description": "查询基金名称、规模、净值、管理人与基金经理等基本资料",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/fund-profile",
+      "parameters": [
+        {
+          "name": "thscode",
+          "required": true,
+          "description": "完整基金 thscode，必须保留市场后缀，如 025480.OF / 510300.SH。",
+          "type": "string",
+          "example": "025480.OF"
+        }
+      ]
+    },
+    {
+      "id": "get_futures_calendar_trading_schedule",
+      "method": "GET",
+      "path": "/api/futures/calendar/trading-schedule",
+      "group": "futures",
+      "summary": "期货交易日",
+      "description": "查询期货合约在日期范围内的交易日及对应交易时间安排",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/futures-calendar",
+      "parameters": [
+        {
+          "name": "thscode",
+          "required": true,
+          "description": "期货合约完整同花顺代码。",
+          "type": "string",
+          "example": "CU2601.SHF"
+        },
+        {
+          "name": "start_date",
+          "required": true,
+          "description": "开始日期，格式 yyyy-MM-dd。",
+          "type": "string",
+          "example": "2026-01-09"
+        },
+        {
+          "name": "end_date",
+          "required": true,
+          "description": "结束日期，不早于开始日期。",
+          "type": "string",
+          "example": "2026-01-09"
+        }
+      ]
+    },
+    {
+      "id": "get_futures_calendar_session_timeline",
+      "method": "GET",
+      "path": "/api/futures/calendar/session-timeline",
+      "group": "futures",
+      "summary": "期货交易时间轴",
+      "description": "查询期货合约最近交易日交易时间轴",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/futures-session-timeline",
+      "parameters": [
+        {
+          "name": "thscode",
+          "required": true,
+          "description": "期货合约完整同花顺代码。",
+          "type": "string",
+          "example": "CU2601.SHF"
+        }
+      ]
+    },
+    {
+      "id": "get_futures_varieties_list",
+      "method": "GET",
+      "path": "/api/futures/varieties/list",
+      "group": "futures",
+      "summary": "期货品种资料",
+      "description": "查询期货品种基础资料",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/futures-varieties",
+      "parameters": []
+    },
+    {
+      "id": "get_futures_variety_plates_list",
+      "method": "GET",
+      "path": "/api/futures/variety-plates/list",
+      "group": "futures",
+      "summary": "期货品种板块",
+      "description": "查询期货品种所属板块",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/futures-variety-plates",
+      "parameters": []
+    },
+    {
+      "id": "get_futures_warehouse_receipts_historical",
+      "method": "GET",
+      "path": "/api/futures/warehouse-receipts/historical",
+      "group": "futures",
+      "summary": "期货历史仓单",
+      "description": "查询期货合约的历史仓单数据",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/futures-warehouse-receipts",
+      "parameters": [
+        {
+          "name": "thscode",
+          "required": true,
+          "description": "期货合约完整同花顺代码。",
+          "type": "string",
+          "example": "CU2601.SHF"
+        },
+        {
+          "name": "start_date",
+          "required": true,
+          "description": "开始日期，格式 yyyy-MM-dd。",
+          "type": "string",
+          "example": "2026-09-01"
+        },
+        {
+          "name": "end_date",
+          "required": true,
+          "description": "结束日期，不早于开始日期。",
+          "type": "string",
+          "example": "2026-09-10"
+        }
+      ]
+    },
+    {
+      "id": "get_options_calendar_session_timeline",
+      "method": "GET",
+      "path": "/api/options/calendar/session-timeline",
+      "group": "options",
+      "summary": "期权交易时间轴",
+      "description": "查询期权合约最近交易日交易时间轴",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/options-session-timeline",
+      "parameters": [
+        {
+          "name": "thscode",
+          "required": true,
+          "description": "期权合约完整同花顺代码。",
+          "type": "string",
+          "example": "IO2601-C-4000.CFE"
+        }
+      ]
+    },
+    {
+      "id": "get_options_varieties_list",
+      "method": "GET",
+      "path": "/api/options/varieties/list",
+      "group": "options",
+      "summary": "期权品种资料",
+      "description": "查询期权品种基础资料",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/options-varieties",
+      "parameters": []
+    },
+    {
+      "id": "get_meta_tickers_list",
+      "method": "GET",
+      "path": "/api/meta/tickers/list",
+      "group": "meta",
+      "summary": "标的列表获取",
+      "description": "批量获取代码表，支持按资产类型过滤。采用 offset / limit 分页， 调用方循环递增 offset 直到 item.length < limit 即可取尽。",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/ticker-list",
+      "parameters": [
+        {
+          "name": "asset_type",
+          "required": false,
+          "description": "规范化资产类型，支持单值或逗号分隔多值；省略时返回全部类型。",
+          "type": "string",
+          "example": "a-share"
+        },
+        {
+          "name": "limit",
+          "required": false,
+          "description": "单页条数，最大 10000。",
+          "type": "integer",
+          "default": 1000,
+          "example": 1000
+        },
+        {
+          "name": "offset",
+          "required": false,
+          "description": "分页偏移。",
+          "type": "integer",
+          "default": 0,
+          "example": 0
+        }
+      ]
+    },
+    {
+      "id": "get_meta_tickers_search",
+      "method": "GET",
+      "path": "/api/meta/tickers/search",
+      "group": "meta",
+      "summary": "标的检索",
+      "description": "按关键词（thscode / ticker / 中英文名称）跨市场消歧，支持子串匹配。",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/ticker-search",
+      "parameters": [
+        {
+          "name": "q",
+          "required": true,
+          "description": "搜索关键词：完整 thscode、ticker 代码或中英文名称（支持子串匹配）。",
+          "type": "string",
+          "example": "平安"
+        },
+        {
+          "name": "exchange",
+          "required": false,
+          "description": "交易所过滤；支持证券交易所与 CFFEX、SHFE、INE、DCE、CZCE、GFEX、SSE、SZSE。",
+          "type": "string"
+        },
+        {
+          "name": "asset_type",
+          "required": false,
+          "description": "规范化资产类型，支持单值或逗号分隔多值；完整枚举见下方。",
+          "type": "string"
+        },
+        {
+          "name": "limit",
+          "required": false,
+          "description": "返回上限，最大 50。",
+          "type": "integer",
+          "default": 10,
+          "example": 20
+        }
+      ]
+    },
+    {
+      "id": "get_a_share_valuations_snapshot",
+      "method": "GET",
+      "path": "/api/a-share/valuations/snapshot",
+      "group": "a-share",
+      "summary": "估值数据",
+      "description": "GET /api/a-share/valuations/snapshot",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/valuations",
+      "parameters": [
+        {
+          "name": "thscodes",
+          "required": true,
+          "description": "英文逗号分隔的 A 股 thscode 列表，如 600519.SH,000001.SZ；每项必须为六位数字加 .SH、.SZ 或 .BJ。",
+          "type": "string",
+          "example": "600519.SH,000001.SZ"
+        }
+      ]
+    },
+    {
+      "id": "get_a_share_special_data_limit_up_statistics",
+      "method": "GET",
+      "path": "/api/a-share/special-data/limit-up-statistics",
+      "group": "a-share",
+      "summary": "涨停强度与晋级统计",
+      "description": "查询封板率、涨停打开家数、页面板数档位及精确连板家数。二、三、四和五板以上的晋级率为页面档位口径；五板以上为合并档位，精确家数仅包含实际返回的板数。",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/limit-up-statistics",
+      "parameters": [
+        {
+          "name": "date",
+          "required": false,
+          "description": "查询日期，YYYY-MM-DD；默认日期与有效范围见接口说明；省略使用当天或最近交易日，范围为一年",
+          "type": "string",
+          "example": "2026-10-12"
+        }
+      ]
+    },
+    {
+      "id": "get_a_share_special_data_dragon_tiger_stock_institution",
+      "method": "GET",
+      "path": "/api/a-share/special-data/dragon-tiger-stock-institution",
+      "group": "a-share",
+      "summary": "个股机构交易详情",
+      "description": "按股票和交易日查询机构买入、卖出、净买入金额，以及机构数量、比例和营业部身份。同一股票的一日与三日上榜区间分别保留；省略区间参数时返回实际记录。",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/dragon-tiger-institution",
+      "parameters": [
+        {
+          "name": "thscode",
+          "required": true,
+          "description": "单个A股标准代码",
+          "type": "string",
+          "example": "301052.SZ"
+        },
+        {
+          "name": "date",
+          "required": false,
+          "description": "查询日期，YYYY-MM-DD；默认日期与有效范围见接口说明；省略使用最近已完成交易日，查询范围为一年",
+          "type": "string",
+          "example": "2026-10-12"
+        },
+        {
+          "name": "range_days",
+          "required": false,
+          "description": "上榜区间，1或3；省略返回两类实际记录",
+          "type": "integer"
+        }
+      ]
+    },
+    {
+      "id": "get_a_share_special_data_abnormal_monitor_list",
+      "method": "GET",
+      "path": "/api/a-share/special-data/abnormal-monitor-list",
+      "group": "a-share",
+      "summary": "异动股票",
+      "description": "查询当前或历史异动监控记录。开始和结束日期保留原监控区间，结束日期可为空；类型码 1、2 对应严重异动，其余为重点监控。 成功响应中的代码与名称可能为null或空字符串，字段键和全部记录保留；分页信息按实际源返回。",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/abnormal-monitor",
+      "parameters": [
+        {
+          "name": "state",
+          "required": false,
+          "description": "current或history",
+          "type": "string",
+          "default": "current",
+          "example": "current"
+        },
+        {
+          "name": "page",
+          "required": false,
+          "description": "从1开始的页码",
+          "type": "integer",
+          "default": 1,
+          "example": 1
+        },
+        {
+          "name": "size",
+          "required": false,
+          "description": "每页1至30条，默认30",
+          "type": "integer",
+          "default": 30,
+          "example": 30
+        }
+      ]
+    },
+    {
+      "id": "get_a_share_ipo_calendar_list",
+      "method": "GET",
+      "path": "/api/a-share/ipo/calendar-list",
+      "group": "a-share",
+      "summary": "新股发行与申购",
+      "description": "按沪深或京市及待申购、可申购、待上市阶段查询股票发行记录。股票代码与申购代码分别提供，上市日期和发行价未确定时为 null。",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/a-share-ipo",
+      "parameters": [
+        {
+          "name": "market",
+          "required": true,
+          "description": "适用市场：sh_sz/bj",
+          "type": "string",
+          "example": "bj"
+        },
+        {
+          "name": "status",
+          "required": true,
+          "description": "发行阶段：upcoming/subscribable/awaiting_listing",
+          "type": "string",
+          "example": "subscribable"
+        }
+      ]
+    },
+    {
+      "id": "get_news_flash_list",
+      "method": "GET",
+      "path": "/api/news/flash/list",
+      "group": "news",
+      "summary": "快讯列表",
+      "description": "首屏 seq 传字符串 0。后续传入约定序号；单次数量及翻页边界以数据提供方为准。快讯 id、seq 为字符串，tags.id 为整数。",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/news-flash#快讯列表",
+      "parameters": [
+        {
+          "name": "tag_id",
+          "required": true,
+          "description": "快讯栏目ID。",
+          "type": "integer",
+          "example": 21103
+        },
+        {
+          "name": "seq",
+          "required": true,
+          "description": "不透明序号；快讯首屏传字符串0。",
+          "type": "string",
+          "example": "0"
+        }
+      ]
+    },
+    {
+      "id": "get_news_flash_refresh",
+      "method": "GET",
+      "path": "/api/news/flash/refresh",
+      "group": "news",
+      "summary": "快讯刷新",
+      "description": "传入已知最新 seq 和创建时间。create_time_ms 为毫秒值，须能整除 1000；调用方按业务需要处理重复记录。",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/news-flash#快讯刷新",
+      "parameters": [
+        {
+          "name": "tag_id",
+          "required": true,
+          "description": "快讯栏目ID。",
+          "type": "integer",
+          "example": 21103
+        },
+        {
+          "name": "seq",
+          "required": true,
+          "description": "不透明序号；快讯首屏传字符串0。",
+          "type": "string",
+          "example": "667642844"
+        },
+        {
+          "name": "create_time_ms",
+          "required": true,
+          "description": "客户端已知快讯创建时间，毫秒值须能整除1000。",
+          "type": "integer",
+          "example": 1788868800000
+        }
+      ]
+    },
+    {
+      "id": "get_a_share_index_catalog_ths_index_list",
+      "method": "GET",
+      "path": "/api/a-share-index/catalog/ths-index-list",
+      "group": "a-share-index",
+      "summary": "同花顺指数列表",
+      "description": "按 tag（概念 / 区域 / 特色 / 行业）列出同花顺指数清单，单 tag 一次性全量返回， 无分页参数。",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/a-share-index#同花顺指数列表",
+      "parameters": [
+        {
+          "name": "tag",
+          "required": false,
+          "description": "标签白名单：cn_concept(A 股概念) / region(区域指数) / tszs(特色指数) / industry(行业指数)。大小写不敏感。",
+          "type": "string",
+          "default": "cn_concept",
+          "example": "cn_concept"
+        }
+      ]
+    },
+    {
+      "id": "get_a_share_index_constituents_ths_stock_list",
+      "method": "GET",
+      "path": "/api/a-share-index/constituents/ths-stock-list",
+      "group": "a-share-index",
+      "summary": "同花顺指数成分股",
+      "description": "按单个指数 thscode 返回当前成分股清单。 支持同花顺板块指数（如 886042.TI）与标准指数（如沪深 300 000300.SH / 399300.SZ）。",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/a-share-index#同花顺指数成分股",
+      "parameters": [
+        {
+          "name": "thscode",
+          "required": true,
+          "description": "指数 thscode，形如 {ticker}.{suffix}。入参会被 trim().toUpperCase() 标准化；不接受逗号，单次仅支持一个指数。",
+          "type": "string",
+          "example": "{ticker}.{suffix}"
+        }
+      ]
+    },
+    {
+      "id": "get_a_share_index_prices_snapshot",
+      "method": "GET",
+      "path": "/api/a-share-index/prices/snapshot",
+      "group": "a-share-index",
+      "summary": "指数行情快照",
+      "description": "按 thscodes 批量获取指数最新行情。与 A 股行情快照不同，本接口必须传 thscodes， 不支持空入参枚举全指数；limit / offset 仅为签名对齐保留，对当前接口无效。",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/a-share-index#指数行情快照",
+      "parameters": [
+        {
+          "name": "thscodes",
+          "required": true,
+          "description": "逗号分隔的指数 thscode 列表，如 000001.SH,399001.SZ,886042.TI,881101.TI。",
+          "type": "string",
+          "example": "000001.SH,399001.SZ,886042.TI,881101.TI"
+        },
+        {
+          "name": "limit",
+          "required": false,
+          "description": "与 A 股行情快照签名对齐，对本接口无效。",
+          "type": "integer"
+        },
+        {
+          "name": "offset",
+          "required": false,
+          "description": "与 A 股行情快照签名对齐，对本接口无效。",
+          "type": "integer"
+        }
+      ]
+    },
+    {
+      "id": "get_a_share_index_prices_historical",
+      "method": "GET",
+      "path": "/api/a-share-index/prices/historical",
+      "group": "a-share-index",
+      "summary": "指数历史 K 线",
+      "description": "获取单只指数的历史 K 线序列。每次请求仅支持一个 thscode，只支持 start / end 时间区间模式， 目前仅支持查询近 5 个自然年的数据，下界以查询日（Asia/Shanghai）向前滚动 5 年的当地零点计算。指数无复权语义，因此没有 adjust 参数；本接口也没有 offset 参数。",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/a-share-index#指数历史-k-线",
+      "parameters": [
+        {
+          "name": "thscode",
+          "required": true,
+          "description": "单只指数 thscode，不接受逗号。",
+          "type": "string",
+          "example": "000001.SH"
+        },
+        {
+          "name": "interval",
+          "required": true,
+          "description": "K 线周期，当前仅支持 1d（日线）。",
+          "type": "string",
+          "default": "1d",
+          "enum": [
+            "1d"
+          ],
+          "example": "1d"
+        },
+        {
+          "name": "start",
+          "required": true,
+          "description": "起始时间，毫秒 Unix 时间戳。",
+          "type": "integer",
+          "example": 1716105600000,
+          "encoding": "date-ms",
+          "example_days_ago": 30
+        },
+        {
+          "name": "end",
+          "required": true,
+          "description": "结束时间，毫秒 Unix 时间戳；必须不早于 start，且查询区间需落在近 5 年的数据范围内。",
+          "type": "integer",
+          "example": 1747641600000,
+          "encoding": "date-ms",
+          "example_days_ago": 0
+        }
+      ]
+    },
+    {
+      "id": "get_a_share_index_constituents_ths_index_list_by_stock",
+      "method": "GET",
+      "path": "/api/a-share-index/constituents/ths-index-list-by-stock",
+      "group": "a-share-index",
+      "summary": "个股反查对应行业/板块",
+      "description": "按个股查询当前对应的概念、行业、地域、特色板块，支持单只及批量。每只个股返回一个分组，无匹配也保留空列表。",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/a-share-index#stock-sector-memberships",
+      "parameters": [
+        {
+          "name": "thscode",
+          "required": true,
+          "description": "1 至 100 个完整个股代码，以英文逗号分隔，如 000713.SZ,600519.SH；上限按去重前数量计算。",
+          "type": "string",
+          "example": "000713.SZ,600519.SH"
+        },
+        {
+          "name": "type",
+          "required": false,
+          "description": "单一分类：cn_concept / industry / region / tszs，分别为概念、行业、地域、特色；大小写敏感。",
+          "type": "string",
+          "enum": [
+            "cn_concept",
+            "industry",
+            "region",
+            "tszs"
+          ],
+          "example": "industry"
+        }
+      ]
+    },
+    {
+      "id": "get_a_share_index_prices_historical_batch",
+      "method": "GET",
+      "path": "/api/a-share-index/prices/historical-batch",
+      "group": "a-share-index",
+      "summary": "指数批量历史 K 线",
+      "description": "在同一时间窗口比较交易所指数、同花顺概念或行业指数。单次最多 10 个代码，仅支持日线 1d；查询范围为近 5 个自然年，下界以本次查询日（Asia/Shanghai）向前滚动 5 年的当地零点计算。例如查询日为 2026-11-03，下界为 2021-11-03 零点；并非任意两个历史日期间的 5 年跨度。 这是原生批量查询接口；所有代码共用查询条件。去除代码首尾空白、按现有代码格式规范化后去重，按首次出现顺序返回。上限先按原始代码项数检查，重复代码仍占用请求额度。",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/a-share-index#historical-batch",
+      "parameters": [
+        {
+          "name": "thscodes",
+          "required": true,
+          "description": "英文逗号分隔的完整代码，如 000001.SH,399001.SZ；最多 10 个，按去重前数量计数。",
+          "type": "string",
+          "example": "000001.SH,399001.SZ"
+        },
+        {
+          "name": "interval",
+          "required": true,
+          "description": "K 线周期，当前仅支持 1d（日线）。",
+          "type": "string",
+          "enum": [
+            "1d"
+          ],
+          "example": "1d"
+        },
+        {
+          "name": "start",
+          "required": true,
+          "description": "起始时间，毫秒 Unix 时间戳；须为非负毫秒时间戳。",
+          "type": "integer",
+          "minimum": 0,
+          "example": 1735660800000,
+          "encoding": "date-ms",
+          "example_days_ago": 30
+        },
+        {
+          "name": "end",
+          "required": true,
+          "description": "结束时间，毫秒 Unix 时间戳；必须不早于 start，且查询区间需落在近 5 年的数据范围内；须为非负毫秒时间戳。",
+          "type": "integer",
+          "minimum": 0,
+          "example": 1767196800000,
+          "encoding": "date-ms",
+          "example_days_ago": 0
+        }
+      ]
+    },
+    {
+      "id": "get_a_share_special_data_anomaly_analysis_list",
+      "method": "GET",
+      "path": "/api/a-share/special-data/anomaly-analysis-list",
+      "group": "a-share",
+      "summary": "个股异动原因列表",
+      "description": "查询当日个股异动原因，可选按异动标签过滤；不传 tag_codes 时返回全部当日记录。 该接口仅提供 REST API，不同步为 MCP 工具。",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/anomaly-analysis#个股异动原因列表",
+      "parameters": [
+        {
+          "name": "tag_codes",
+          "required": false,
+          "description": "异动标签，逗号分隔，多个值为 OR 关系；大小写不敏感，重复值自动去重。合法值见下方标签表。",
+          "type": "string",
+          "example": "LIMIT_UP,SHARP_FALL"
+        }
+      ]
+    },
+    {
+      "id": "get_a_share_special_data_anomaly_analysis_stock",
+      "method": "GET",
+      "path": "/api/a-share/special-data/anomaly-analysis-stock",
+      "group": "a-share",
+      "summary": "按股票查询个股异动原因",
+      "description": "按同花顺代码批量查询当日个股异动原因，按请求代码首次出现顺序返回匹配记录；格式合法但当日无异动的代码会被忽略。",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/anomaly-analysis#按股票查询个股异动原因",
+      "parameters": [
+        {
+          "name": "thscodes",
+          "required": true,
+          "description": "逗号分隔的同花顺代码列表，支持 SH / SZ / BJ 后缀，大小写不敏感；去重前最多 50 个 token。",
+          "type": "string",
+          "example": "600519.SH,000001.SZ"
+        }
+      ]
+    },
+    {
+      "id": "get_a_share_auction_snapshot",
+      "method": "GET",
+      "path": "/api/a-share/auction/snapshot",
+      "group": "a-share",
+      "summary": "A股集合竞价快照",
+      "description": "查询 A 股集合竞价快照与短线风向标竞价基准",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/auction#a股集合竞价快照",
+      "parameters": [
+        {
+          "name": "thscodes",
+          "required": true,
+          "description": "一个或多个 A 股 thscode，使用英文逗号分隔；单次请求当前最多 100 个，按分隔后的原始 token 数在去重前校验。服务端按请求顺序去重返回。",
+          "type": "string",
+          "example": "600519.SH,000001.SZ"
+        },
+        {
+          "name": "stage",
+          "required": false,
+          "description": "live（实时阶段）或 final（终态）。",
+          "type": "string",
+          "default": "final",
+          "enum": [
+            "live",
+            "final"
+          ],
+          "example": "final"
+        }
+      ]
+    },
+    {
+      "id": "get_a_share_auction_short_term_benchmark",
+      "method": "GET",
+      "path": "/api/a-share/auction/short-term-benchmark",
+      "group": "a-share",
+      "summary": "短线风向标竞价基准",
+      "description": "查询 A 股集合竞价快照与短线风向标竞价基准",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/auction#短线风向标竞价基准",
+      "parameters": [
+        {
+          "name": "date",
+          "required": false,
+          "description": "查询日期，格式 yyyy-MM-dd；缺失或传入空字符串时使用 Asia/Shanghai 当日，显式指定非交易日时不自动回退。",
+          "type": "string",
+          "example": "2026-08-14"
+        }
+      ]
+    },
+    {
+      "id": "get_a_share_financials_income_statements",
+      "method": "GET",
+      "path": "/api/a-share/financials/income-statements",
+      "group": "a-share",
+      "summary": "利润表",
+      "description": "A 股整体合并利润表多期序列。取数模式与参数见上文。",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/financials#利润表",
+      "parameters": [
+        {
+          "name": "thscode",
+          "required": true,
+          "description": "单只标的 thscode，不接受逗号；含交易所后缀。",
+          "type": "string",
+          "example": "600519.SH"
+        },
+        {
+          "name": "period",
+          "required": true,
+          "description": "annual（仅 Q4 报告期）/ quarterly（每个季度末）。",
+          "type": "string",
+          "default": "annual",
+          "enum": [
+            "annual",
+            "quarterly"
+          ],
+          "example": "annual"
+        },
+        {
+          "name": "limit",
+          "required": false,
+          "description": "最近 N 期模式，范围 [1, 20]；与 start / end 互斥。",
+          "type": "integer",
+          "default": 4,
+          "example": 3
+        },
+        {
+          "name": "start",
+          "required": false,
+          "description": "时间区间模式起始毫秒戳，需与 end 同传。",
+          "type": "integer",
+          "encoding": "date-ms"
+        },
+        {
+          "name": "end",
+          "required": false,
+          "description": "时间区间模式结束毫秒戳，需满足 end >= start。",
+          "type": "integer",
+          "encoding": "date-ms"
+        }
+      ]
+    },
+    {
+      "id": "get_a_share_financials_balance_sheets",
+      "method": "GET",
+      "path": "/api/a-share/financials/balance-sheets",
+      "group": "a-share",
+      "summary": "资产负债表",
+      "description": "A 股整体合并资产负债表多期序列。取数模式与参数同利润表。",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/financials#资产负债表",
+      "parameters": [
+        {
+          "name": "thscode",
+          "required": true,
+          "description": "单只标的 thscode，不接受逗号；含交易所后缀。",
+          "type": "string",
+          "example": "000858.SZ"
+        },
+        {
+          "name": "period",
+          "required": true,
+          "description": "annual（仅 Q4 报告期）/ quarterly（每个季度末）。",
+          "type": "string",
+          "default": "annual",
+          "enum": [
+            "annual",
+            "quarterly"
+          ],
+          "example": "quarterly"
+        },
+        {
+          "name": "limit",
+          "required": false,
+          "description": "最近 N 期模式，范围 [1, 20]；与 start / end 互斥。",
+          "type": "integer",
+          "default": 4
+        },
+        {
+          "name": "start",
+          "required": false,
+          "description": "时间区间模式起始毫秒戳，需与 end 同传。",
+          "type": "integer",
+          "encoding": "date-ms"
+        },
+        {
+          "name": "end",
+          "required": false,
+          "description": "时间区间模式结束毫秒戳，需满足 end >= start。",
+          "type": "integer",
+          "encoding": "date-ms"
+        }
+      ]
+    },
+    {
+      "id": "get_a_share_financials_cash_flow_statements",
+      "method": "GET",
+      "path": "/api/a-share/financials/cash-flow-statements",
+      "group": "a-share",
+      "summary": "现金流量表",
+      "description": "A 股整体合并现金流量表多期序列。取数模式与参数同利润表。",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/financials#现金流量表",
+      "parameters": [
+        {
+          "name": "thscode",
+          "required": true,
+          "description": "单只标的 thscode，不接受逗号；含交易所后缀。",
+          "type": "string",
+          "example": "600519.SH"
+        },
+        {
+          "name": "period",
+          "required": true,
+          "description": "annual（仅 Q4 报告期）/ quarterly（每个季度末）。",
+          "type": "string",
+          "default": "annual",
+          "enum": [
+            "annual",
+            "quarterly"
+          ],
+          "example": "annual"
+        },
+        {
+          "name": "limit",
+          "required": false,
+          "description": "最近 N 期模式，范围 [1, 20]；与 start / end 互斥。",
+          "type": "integer",
+          "default": 4
+        },
+        {
+          "name": "start",
+          "required": false,
+          "description": "时间区间模式起始毫秒戳，需与 end 同传。",
+          "type": "integer",
+          "example": 1577808000000,
+          "encoding": "date-ms"
+        },
+        {
+          "name": "end",
+          "required": false,
+          "description": "时间区间模式结束毫秒戳，需满足 end >= start。",
+          "type": "integer",
+          "example": 1735574400000,
+          "encoding": "date-ms"
+        }
+      ]
+    },
+    {
+      "id": "get_a_share_financials_income_statements_batch",
+      "method": "GET",
+      "path": "/api/a-share/financials/income-statements-batch",
+      "group": "a-share",
+      "summary": "批量利润表",
+      "description": "对比多只 A 股的整体合并利润表，单次最多 10 个代码。所有标的共用报告期和取数模式：annual / quarterly；最近 N 期的 limit 默认 4、范围 1 至 20；或同时提供 start / end 查询不超过 10 个自然年的区间。两种模式互斥，半开区间或区间与 limit 混用返回 1004。 这是原生批量查询接口；所有代码共用查询条件。去除代码首尾空白、按现有代码格式规范化后去重，按首次出现顺序返回。上限先按原始代码项数检查，重复代码仍占用请求额度。",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/financials#income-statements-batch",
+      "parameters": [
+        {
+          "name": "thscodes",
+          "required": true,
+          "description": "英文逗号分隔的完整代码，如 600519.SH,000858.SZ；最多 10 个，按去重前数量计数。",
+          "type": "string",
+          "example": "600519.SH,000858.SZ"
+        },
+        {
+          "name": "period",
+          "required": true,
+          "description": "annual（仅 Q4 报告期）/ quarterly（每个季度末）。",
+          "type": "string",
+          "enum": [
+            "annual",
+            "quarterly"
+          ],
+          "example": "annual"
+        },
+        {
+          "name": "limit",
+          "required": false,
+          "description": "最近 N 期模式，范围 [1, 20]；与 start / end 互斥。",
+          "type": "integer",
+          "default": 4,
+          "minimum": 1,
+          "maximum": 20,
+          "example": 4
+        },
+        {
+          "name": "start",
+          "required": false,
+          "description": "时间区间模式起始毫秒戳，需与 end 同传；须为非负毫秒时间戳。",
+          "type": "integer",
+          "minimum": 0,
+          "encoding": "date-ms"
+        },
+        {
+          "name": "end",
+          "required": false,
+          "description": "时间区间模式结束毫秒戳，需满足 end >= start；须为非负毫秒时间戳。",
+          "type": "integer",
+          "minimum": 0,
+          "encoding": "date-ms"
+        }
+      ]
+    },
+    {
+      "id": "get_a_share_financials_balance_sheets_batch",
+      "method": "GET",
+      "path": "/api/a-share/financials/balance-sheets-batch",
+      "group": "a-share",
+      "summary": "批量资产负债表",
+      "description": "对比多只 A 股的整体合并资产负债表，单次最多 10 个代码。所有标的共用报告期和取数模式：annual / quarterly；最近 N 期的 limit 默认 4、范围 1 至 20；或同时提供 start / end 查询不超过 10 个自然年的区间。两种模式互斥，半开区间或区间与 limit 混用返回 1004。 这是原生批量查询接口；所有代码共用查询条件。去除代码首尾空白、按现有代码格式规范化后去重，按首次出现顺序返回。上限先按原始代码项数检查，重复代码仍占用请求额度。",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/financials#balance-sheets-batch",
+      "parameters": [
+        {
+          "name": "thscodes",
+          "required": true,
+          "description": "英文逗号分隔的完整代码，如 600519.SH,000858.SZ；最多 10 个，按去重前数量计数。",
+          "type": "string",
+          "example": "600519.SH,000858.SZ"
+        },
+        {
+          "name": "period",
+          "required": true,
+          "description": "annual（仅 Q4 报告期）/ quarterly（每个季度末）。",
+          "type": "string",
+          "enum": [
+            "annual",
+            "quarterly"
+          ],
+          "example": "annual"
+        },
+        {
+          "name": "limit",
+          "required": false,
+          "description": "最近 N 期模式，范围 [1, 20]；与 start / end 互斥。",
+          "type": "integer",
+          "default": 4,
+          "minimum": 1,
+          "maximum": 20,
+          "example": 4
+        },
+        {
+          "name": "start",
+          "required": false,
+          "description": "时间区间模式起始毫秒戳，需与 end 同传；须为非负毫秒时间戳。",
+          "type": "integer",
+          "minimum": 0,
+          "encoding": "date-ms"
+        },
+        {
+          "name": "end",
+          "required": false,
+          "description": "时间区间模式结束毫秒戳，需满足 end >= start；须为非负毫秒时间戳。",
+          "type": "integer",
+          "minimum": 0,
+          "encoding": "date-ms"
+        }
+      ]
+    },
+    {
+      "id": "get_a_share_financials_cash_flow_statements_batch",
+      "method": "GET",
+      "path": "/api/a-share/financials/cash-flow-statements-batch",
+      "group": "a-share",
+      "summary": "批量现金流量表",
+      "description": "对比多只 A 股的整体合并现金流量表，单次最多 10 个代码。所有标的共用报告期和取数模式：annual / quarterly；最近 N 期的 limit 默认 4、范围 1 至 20；或同时提供 start / end 查询不超过 10 个自然年的区间。两种模式互斥，半开区间或区间与 limit 混用返回 1004。 这是原生批量查询接口；所有代码共用查询条件。去除代码首尾空白、按现有代码格式规范化后去重，按首次出现顺序返回。上限先按原始代码项数检查，重复代码仍占用请求额度。",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/financials#cash-flow-statements-batch",
+      "parameters": [
+        {
+          "name": "thscodes",
+          "required": true,
+          "description": "英文逗号分隔的完整代码，如 600519.SH,000858.SZ；最多 10 个，按去重前数量计数。",
+          "type": "string",
+          "example": "600519.SH,000858.SZ"
+        },
+        {
+          "name": "period",
+          "required": true,
+          "description": "annual（仅 Q4 报告期）/ quarterly（每个季度末）。",
+          "type": "string",
+          "enum": [
+            "annual",
+            "quarterly"
+          ],
+          "example": "annual"
+        },
+        {
+          "name": "limit",
+          "required": false,
+          "description": "最近 N 期模式，范围 [1, 20]；与 start / end 互斥。",
+          "type": "integer",
+          "default": 4,
+          "minimum": 1,
+          "maximum": 20,
+          "example": 4
+        },
+        {
+          "name": "start",
+          "required": false,
+          "description": "时间区间模式起始毫秒戳，需与 end 同传；须为非负毫秒时间戳。",
+          "type": "integer",
+          "minimum": 0,
+          "encoding": "date-ms"
+        },
+        {
+          "name": "end",
+          "required": false,
+          "description": "时间区间模式结束毫秒戳，需满足 end >= start；须为非负毫秒时间戳。",
+          "type": "integer",
+          "minimum": 0,
+          "encoding": "date-ms"
+        }
+      ]
+    },
+    {
+      "id": "get_fund_backtest_result",
+      "method": "GET",
+      "path": "/api/fund/backtest/result",
+      "group": "fund",
+      "summary": "基金在线回测",
+      "description": "执行基金在线回测并查询可用指标",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/fund-backtest#基金在线回测",
+      "parameters": [
+        {
+          "name": "thscode",
+          "required": true,
+          "description": "含市场后缀的完整基金代码，例如 000001.OF。",
+          "type": "string",
+          "example": "000001.OF"
+        },
+        {
+          "name": "buy_conditions",
+          "required": true,
+          "description": "买入条件 JSON 字符串，必须是对象或数组。",
+          "type": "string",
+          "example": "{\"indicator_code\":\"rsi_pct\",\"operator\":\">\",\"value\":0.5}"
+        },
+        {
+          "name": "sell_conditions",
+          "required": true,
+          "description": "卖出条件 JSON 字符串，必须是对象或数组。",
+          "type": "string",
+          "example": "{\"indicator_code\":\"rsi_pct\",\"operator\":\"<\",\"value\":0.3}"
+        },
+        {
+          "name": "buy_frequency_type",
+          "required": true,
+          "description": "买入频率，具体值由上游判定。",
+          "type": "string",
+          "example": "WEEKLY"
+        },
+        {
+          "name": "max_buy_times",
+          "required": true,
+          "description": "最大买入次数。",
+          "type": "number",
+          "example": 5
+        },
+        {
+          "name": "per_buy_amount",
+          "required": true,
+          "description": "每次买入金额。",
+          "type": "number",
+          "example": 100
+        }
+      ]
+    },
+    {
+      "id": "get_fund_backtest_indicators",
+      "method": "GET",
+      "path": "/api/fund/backtest/indicators",
+      "group": "fund",
+      "summary": "基金回测可用指标",
+      "description": "执行基金在线回测并查询可用指标",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/fund-backtest#基金回测可用指标",
+      "parameters": []
+    },
+    {
+      "id": "get_fund_financials_indicators",
+      "method": "GET",
+      "path": "/api/fund/financials/indicators",
+      "group": "fund",
+      "summary": "基金财务指标",
+      "description": "查询基金财务指标、利润表与资产负债表",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/fund-financials#基金财务指标",
+      "parameters": [
+        {
+          "name": "thscode",
+          "required": true,
+          "description": "完整基金 thscode，必须保留市场后缀。",
+          "type": "string",
+          "example": "510300.SH"
+        }
+      ]
+    },
+    {
+      "id": "get_fund_financials_income_statements",
+      "method": "GET",
+      "path": "/api/fund/financials/income-statements",
+      "group": "fund",
+      "summary": "基金利润表",
+      "description": "查询基金财务指标、利润表与资产负债表",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/fund-financials#基金利润表",
+      "parameters": [
+        {
+          "name": "thscode",
+          "required": true,
+          "description": "完整基金 thscode，必须保留市场后缀。",
+          "type": "string",
+          "example": "510300.SH"
+        }
+      ]
+    },
+    {
+      "id": "get_fund_financials_balance_sheets",
+      "method": "GET",
+      "path": "/api/fund/financials/balance-sheets",
+      "group": "fund",
+      "summary": "基金资产负债表",
+      "description": "查询基金财务指标、利润表与资产负债表",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/fund-financials#基金资产负债表",
+      "parameters": [
+        {
+          "name": "thscode",
+          "required": true,
+          "description": "完整基金 thscode，必须保留市场后缀。",
+          "type": "string",
+          "example": "510300.SH"
+        }
+      ]
+    },
+    {
+      "id": "get_fund_holders_detail",
+      "method": "GET",
+      "path": "/api/fund/holders/detail",
+      "group": "fund",
+      "summary": "基金持有人结构",
+      "description": "查询基金持有人结构与前十大持有人",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/fund-holders#基金持有人结构",
+      "parameters": [
+        {
+          "name": "thscode",
+          "required": true,
+          "description": "完整基金 thscode，必须保留市场后缀。",
+          "type": "string",
+          "example": "161725.SZ"
+        },
+        {
+          "name": "merge_scope",
+          "required": false,
+          "description": "all（分别返回合并/独立份额的最新记录）/ merged（A/C 等份额合并披露）/ separate（当前份额独立披露）。",
+          "type": "string",
+          "default": "all",
+          "enum": [
+            "all",
+            "merged",
+            "separate"
+          ],
+          "example": "all"
+        }
+      ]
+    },
+    {
+      "id": "get_fund_holders_top",
+      "method": "GET",
+      "path": "/api/fund/holders/top",
+      "group": "fund",
+      "summary": "基金前十大持有人",
+      "description": "查询基金持有人结构与前十大持有人",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/fund-holders#基金前十大持有人",
+      "parameters": [
+        {
+          "name": "thscode",
+          "required": true,
+          "description": "完整基金 thscode。",
+          "type": "string",
+          "example": "510300.SH"
+        },
+        {
+          "name": "limit",
+          "required": false,
+          "description": "返回条数，最大为 10。",
+          "type": "integer",
+          "example": 10
+        }
+      ]
+    },
+    {
+      "id": "get_fund_managers_investment_style",
+      "method": "GET",
+      "path": "/api/fund/managers/investment-style",
+      "group": "fund",
+      "summary": "投资风格",
+      "description": "查询基金经理投资风格、业绩、从业经历与详情",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/fund-managers#投资风格",
+      "parameters": [
+        {
+          "name": "manager_id",
+          "required": true,
+          "description": "基金经理 ID。",
+          "type": "string",
+          "example": "H000200384"
+        }
+      ]
+    },
+    {
+      "id": "get_fund_managers_performance",
+      "method": "GET",
+      "path": "/api/fund/managers/performance",
+      "group": "fund",
+      "summary": "基金经理业绩",
+      "description": "查询基金经理投资风格、业绩、从业经历与详情",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/fund-managers#基金经理业绩",
+      "parameters": [
+        {
+          "name": "manager_id",
+          "required": true,
+          "description": "基金经理 ID。",
+          "type": "string",
+          "example": "H000200384"
+        },
+        {
+          "name": "range",
+          "required": true,
+          "description": "month / tmonth / year / nowyear / now。",
+          "type": "string",
+          "enum": [
+            "month",
+            "tmonth",
+            "year",
+            "nowyear",
+            "now"
+          ],
+          "example": "year"
+        }
+      ]
+    },
+    {
+      "id": "get_fund_managers_experience",
+      "method": "GET",
+      "path": "/api/fund/managers/experience",
+      "group": "fund",
+      "summary": "从业经历",
+      "description": "查询基金经理投资风格、业绩、从业经历与详情",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/fund-managers#从业经历",
+      "parameters": [
+        {
+          "name": "manager_id",
+          "required": true,
+          "description": "基金经理 ID。",
+          "type": "string",
+          "example": "H000200384"
+        }
+      ]
+    },
+    {
+      "id": "get_fund_managers_detail",
+      "method": "GET",
+      "path": "/api/fund/managers/detail",
+      "group": "fund",
+      "summary": "基金经理详情",
+      "description": "查询基金经理投资风格、业绩、从业经历与详情",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/fund-managers#基金经理详情",
+      "parameters": [
+        {
+          "name": "manager_id",
+          "required": true,
+          "description": "基金经理 ID。",
+          "type": "string",
+          "example": "H000200384"
+        }
+      ]
+    },
+    {
+      "id": "get_fund_market_snapshot",
+      "method": "GET",
+      "path": "/api/fund/market/snapshot",
+      "group": "fund",
+      "summary": "场内基金行情快照",
+      "description": "支持 ETF 和 LOF，thscode 可传单个代码或英文逗号分隔的多个代码，每次最多 100 个原始代码项。规范化后稳定去重，一次请求返回平铺行情记录。未知、不支持或缺报价的项目省略。",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/fund-market#场内基金行情快照",
+      "parameters": [
+        {
+          "name": "thscode",
+          "required": true,
+          "description": "1 至 100 个完整 ETF/LOF 代码，英文逗号分隔，如 510300.SH,161725.SZ；先检查原始项数，再去除首尾空白、转大写并稳定去重。",
+          "type": "string",
+          "example": "510300.SH,161725.SZ"
+        }
+      ]
+    },
+    {
+      "id": "get_fund_market_historical",
+      "method": "GET",
+      "path": "/api/fund/market/historical",
+      "group": "fund",
+      "summary": "场内基金历史日线行情",
+      "description": "仅支持 ETF；单次只允许一个 thscode，查询窗口最长 5 个自然年。价格数据采用前复权口径；实际行情可获取范围为近 5 年。",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/fund-market#场内基金历史日线行情",
+      "parameters": [
+        {
+          "name": "thscode",
+          "required": true,
+          "description": "单只 ETF 的完整 thscode，必须保留市场后缀；不接受逗号分隔的多个值。",
+          "type": "string",
+          "example": "510300.SH"
+        },
+        {
+          "name": "interval",
+          "required": false,
+          "description": "K 线周期，当前仅支持 1d（日线）。",
+          "type": "string",
+          "default": "1d",
+          "enum": [
+            "1d"
+          ],
+          "example": "1d"
+        },
+        {
+          "name": "start",
+          "required": true,
+          "description": "起始时间，毫秒级 Unix 时间戳。",
+          "type": "integer",
+          "example": 1626451200000,
+          "encoding": "date-ms",
+          "example_days_ago": 30
+        },
+        {
+          "name": "end",
+          "required": true,
+          "description": "结束时间，毫秒级 Unix 时间戳；必须不早于 start，且窗口最长 5 个自然年。",
+          "type": "integer",
+          "example": 1784217600000,
+          "encoding": "date-ms",
+          "example_days_ago": 0
+        }
+      ]
+    },
+    {
+      "id": "get_fund_market_historical_batch",
+      "method": "GET",
+      "path": "/api/fund/market/historical-batch",
+      "group": "fund",
+      "summary": "场内基金批量历史日线行情",
+      "description": "比较多只 ETF 的前复权历史日线，单次最多 10 个代码，仅支持 1d。查询窗口最长 5 个自然年，可获取的实际行情为近 5 年；较早数据可能为空，5 年窗口上限并不保证任意历史年份均有行情。 这是原生批量查询接口；所有代码共用查询条件。去除代码首尾空白、按现有代码格式规范化后去重，按首次出现顺序返回。上限先按原始代码项数检查，重复代码仍占用请求额度。",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/fund-market#historical-batch",
+      "parameters": [
+        {
+          "name": "thscodes",
+          "required": true,
+          "description": "英文逗号分隔的完整代码，如 510300.SH,159915.SZ；最多 10 个，按去重前数量计数。",
+          "type": "string",
+          "example": "510300.SH,159915.SZ"
+        },
+        {
+          "name": "interval",
+          "required": false,
+          "description": "K 线周期，当前仅支持 1d（日线）。",
+          "type": "string",
+          "default": "1d",
+          "enum": [
+            "1d"
+          ],
+          "example": "1d"
+        },
+        {
+          "name": "start",
+          "required": true,
+          "description": "起始时间，毫秒级 Unix 时间戳；须为非负毫秒时间戳。",
+          "type": "integer",
+          "minimum": 0,
+          "example": 1735660800000,
+          "encoding": "date-ms",
+          "example_days_ago": 30
+        },
+        {
+          "name": "end",
+          "required": true,
+          "description": "结束时间，毫秒级 Unix 时间戳；必须不早于 start，且窗口最长 5 个自然年；须为非负毫秒时间戳。",
+          "type": "integer",
+          "minimum": 0,
+          "example": 1767196800000,
+          "encoding": "date-ms",
+          "example_days_ago": 0
+        }
+      ]
+    },
+    {
+      "id": "get_fund_performance_nav",
+      "method": "GET",
+      "path": "/api/fund/performance/nav",
+      "group": "fund",
+      "summary": "基金净值",
+      "description": "查询基金净值、区间收益、净值波动、趋势强弱、估值百分位与最大回撤",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/fund-performance#基金净值",
+      "parameters": [
+        {
+          "name": "thscode",
+          "required": true,
+          "description": "完整基金 thscode，必须保留市场后缀。",
+          "type": "string",
+          "example": "510300.SH"
+        },
+        {
+          "name": "range",
+          "required": false,
+          "description": "week / month / tmonth / hyear / year / twoyear / tyear / fyear。",
+          "type": "string",
+          "enum": [
+            "week",
+            "month",
+            "tmonth",
+            "hyear",
+            "year",
+            "twoyear",
+            "tyear",
+            "fyear"
+          ],
+          "example": "year"
+        },
+        {
+          "name": "nav_type",
+          "required": false,
+          "description": "unit（单位净值）/ adj（复权净值）/ unit,adj（同时返回）。",
+          "type": "string",
+          "default": "unit,adj",
+          "enum": [
+            "unit",
+            "adj",
+            "unit,adj"
+          ],
+          "example": "unit"
+        }
+      ]
+    },
+    {
+      "id": "get_fund_performance_returns",
+      "method": "GET",
+      "path": "/api/fund/performance/returns",
+      "group": "fund",
+      "summary": "基金区间收益",
+      "description": "查询基金净值、区间收益、净值波动、趋势强弱、估值百分位与最大回撤",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/fund-performance#基金区间收益",
+      "parameters": [
+        {
+          "name": "thscode",
+          "required": true,
+          "description": "完整基金 thscode，必须保留市场后缀。",
+          "type": "string",
+          "example": "510300.SH"
+        }
+      ]
+    },
+    {
+      "id": "get_fund_performance_indicators_historical",
+      "method": "GET",
+      "path": "/api/fund/performance/indicators-historical",
+      "group": "fund",
+      "summary": "基金历史业绩指标",
+      "description": "查询基金净值、区间收益、净值波动、趋势强弱、估值百分位与最大回撤",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/fund-performance#基金历史业绩指标",
+      "parameters": [
+        {
+          "name": "thscode",
+          "required": true,
+          "description": "完整基金 thscode。",
+          "type": "string",
+          "example": "510300.SH"
+        },
+        {
+          "name": "start",
+          "required": true,
+          "description": "起始时间，毫秒 Unix 时间戳。",
+          "type": "integer",
+          "example": 1735689600000,
+          "encoding": "date-ms",
+          "example_days_ago": 30
+        },
+        {
+          "name": "end",
+          "required": true,
+          "description": "结束时间，毫秒 Unix 时间戳。",
+          "type": "integer",
+          "example": 1767225599000,
+          "encoding": "date-ms",
+          "example_days_ago": 0
+        }
+      ]
+    },
+    {
+      "id": "get_fund_performance_drawdowns",
+      "method": "GET",
+      "path": "/api/fund/performance/drawdowns",
+      "group": "fund",
+      "summary": "基金最大回撤",
+      "description": "查询基金净值、区间收益、净值波动、趋势强弱、估值百分位与最大回撤",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/fund-performance#基金最大回撤",
+      "parameters": [
+        {
+          "name": "thscode",
+          "required": true,
+          "description": "完整基金 thscode。",
+          "type": "string",
+          "example": "510300.SH"
+        }
+      ]
+    },
+    {
+      "id": "get_fund_portfolio_stock_history",
+      "method": "GET",
+      "path": "/api/fund/portfolio/stock-history",
+      "group": "fund",
+      "summary": "基金历史股票持仓",
+      "description": "查询基金历史股票债券持仓、报告期、资产配置与行业配置",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/fund-portfolio#基金历史股票持仓",
+      "parameters": [
+        {
+          "name": "thscode",
+          "required": true,
+          "description": "完整基金 thscode。",
+          "type": "string",
+          "example": "510300.SH"
+        },
+        {
+          "name": "report_type",
+          "required": true,
+          "description": "报告类型。",
+          "type": "string",
+          "example": "quarter"
+        },
+        {
+          "name": "end_date",
+          "required": true,
+          "description": "报告截止日期，格式 yyyy-MM-dd。",
+          "type": "string",
+          "example": "2026-06-30"
+        }
+      ]
+    },
+    {
+      "id": "get_fund_portfolio_bond_history",
+      "method": "GET",
+      "path": "/api/fund/portfolio/bond-history",
+      "group": "fund",
+      "summary": "基金历史债券持仓",
+      "description": "查询基金历史股票债券持仓、报告期、资产配置与行业配置",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/fund-portfolio#基金历史债券持仓",
+      "parameters": [
+        {
+          "name": "thscode",
+          "required": true,
+          "description": "完整基金 thscode。",
+          "type": "string",
+          "example": "510300.SH"
+        },
+        {
+          "name": "report_type",
+          "required": true,
+          "description": "报告类型。",
+          "type": "string",
+          "example": "quarter"
+        },
+        {
+          "name": "end_date",
+          "required": true,
+          "description": "报告截止日期，格式 yyyy-MM-dd。",
+          "type": "string",
+          "example": "2026-06-30"
+        }
+      ]
+    },
+    {
+      "id": "get_fund_portfolio_stock_report_dates",
+      "method": "GET",
+      "path": "/api/fund/portfolio/stock-report-dates",
+      "group": "fund",
+      "summary": "基金股票持仓报告日期",
+      "description": "查询基金历史股票债券持仓、报告期、资产配置与行业配置",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/fund-portfolio#基金股票持仓报告日期",
+      "parameters": [
+        {
+          "name": "thscode",
+          "required": true,
+          "description": "完整基金 thscode。",
+          "type": "string",
+          "example": "510300.SH"
+        },
+        {
+          "name": "report_type",
+          "required": false,
+          "description": "报告类型。",
+          "type": "string",
+          "example": "quarter"
+        }
+      ]
+    },
+    {
+      "id": "get_fund_portfolio_bond_report_dates",
+      "method": "GET",
+      "path": "/api/fund/portfolio/bond-report-dates",
+      "group": "fund",
+      "summary": "基金债券持仓报告日期",
+      "description": "查询基金历史股票债券持仓、报告期、资产配置与行业配置",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/fund-portfolio#基金债券持仓报告日期",
+      "parameters": [
+        {
+          "name": "thscode",
+          "required": true,
+          "description": "完整基金 thscode。",
+          "type": "string",
+          "example": "510300.SH"
+        },
+        {
+          "name": "report_type",
+          "required": false,
+          "description": "报告类型。",
+          "type": "string",
+          "example": "quarter"
+        }
+      ]
+    },
+    {
+      "id": "get_fund_portfolio_asset_allocation",
+      "method": "GET",
+      "path": "/api/fund/portfolio/asset-allocation",
+      "group": "fund",
+      "summary": "基金资产配置",
+      "description": "查询基金历史股票债券持仓、报告期、资产配置与行业配置",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/fund-portfolio#基金资产配置",
+      "parameters": [
+        {
+          "name": "thscode",
+          "required": true,
+          "description": "完整基金 thscode。",
+          "type": "string",
+          "example": "510300.SH"
+        }
+      ]
+    },
+    {
+      "id": "get_fund_portfolio_industry_allocation",
+      "method": "GET",
+      "path": "/api/fund/portfolio/industry-allocation",
+      "group": "fund",
+      "summary": "基金行业配置",
+      "description": "查询基金历史股票债券持仓、报告期、资产配置与行业配置",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/fund-portfolio#基金行业配置",
+      "parameters": [
+        {
+          "name": "thscode",
+          "required": true,
+          "description": "完整基金 thscode。",
+          "type": "string",
+          "example": "510300.SH"
+        }
+      ]
+    },
+    {
+      "id": "get_fund_quota_summary",
+      "method": "GET",
+      "path": "/api/fund/quota/summary",
+      "group": "fund",
+      "summary": "QDII额度汇总",
+      "description": "查询QDII分类额度汇总与基金列表",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/fund-quota#qdii额度汇总",
+      "parameters": [
+        {
+          "name": "tab",
+          "required": true,
+          "description": "分类数组 JSON 字符串，例如 [\"nazhi100\"]；数组元素：nazhi100（纳指100）、meigukeji（美股科技）、biaopu（标普）、yatai（亚太）、ouzhou（欧洲）。",
+          "type": "string",
+          "example": "[\"nazhi100\"]"
+        }
+      ]
+    },
+    {
+      "id": "get_fund_quota_list",
+      "method": "GET",
+      "path": "/api/fund/quota/list",
+      "group": "fund",
+      "summary": "QDII额度列表",
+      "description": "查询QDII分类额度汇总与基金列表",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/fund-quota#qdii额度列表",
+      "parameters": [
+        {
+          "name": "tab",
+          "required": true,
+          "description": "分类数组 JSON 字符串，例如 [\"remen\"]；数组元素：remen（热门）、meiguo（美国）、yatai（亚太）、ouzhou（欧洲）。",
+          "type": "string",
+          "example": "[\"remen\"]"
+        },
+        {
+          "name": "buy",
+          "required": false,
+          "description": "可购状态过滤；省略时不向上游注入默认值。",
+          "type": "boolean",
+          "example": true
+        }
+      ]
+    },
+    {
+      "id": "get_futures_basis_main_continuous_latest",
+      "method": "GET",
+      "path": "/api/futures/basis/main-continuous-latest",
+      "group": "futures",
+      "summary": "期货主连最新基差",
+      "description": "查询期货主连最新基差与历史基差",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/futures-basis#basis-main-continuous-latest",
+      "parameters": []
+    },
+    {
+      "id": "get_futures_basis_historical",
+      "method": "GET",
+      "path": "/api/futures/basis/historical",
+      "group": "futures",
+      "summary": "期货历史基差",
+      "description": "查询期货主连最新基差与历史基差",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/futures-basis#basis-historical",
+      "parameters": [
+        {
+          "name": "thscode",
+          "required": true,
+          "description": "期货合约完整同花顺代码。",
+          "type": "string",
+          "example": "CU2601.SHF"
+        },
+        {
+          "name": "spot_indicator_id",
+          "required": false,
+          "description": "可选现货指标 ID；省略时使用上游默认口径。",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "id": "get_futures_contracts_main_continuous_list",
+      "method": "GET",
+      "path": "/api/futures/contracts/main-continuous-list",
+      "group": "futures",
+      "summary": "期货主连资料",
+      "description": "查询期货主连、主力、次主力与商品指数合约资料",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/futures-contracts-extended#futures-main-continuous",
+      "parameters": []
+    },
+    {
+      "id": "get_futures_contracts_main_list",
+      "method": "GET",
+      "path": "/api/futures/contracts/main-list",
+      "group": "futures",
+      "summary": "期货主力合约",
+      "description": "查询期货主连、主力、次主力与商品指数合约资料",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/futures-contracts-extended#futures-main-contracts",
+      "parameters": []
+    },
+    {
+      "id": "get_futures_contracts_secondary_main_list",
+      "method": "GET",
+      "path": "/api/futures/contracts/secondary-main-list",
+      "group": "futures",
+      "summary": "期货次主力合约",
+      "description": "查询期货主连、主力、次主力与商品指数合约资料",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/futures-contracts-extended#futures-secondary-main-contracts",
+      "parameters": []
+    },
+    {
+      "id": "get_futures_contracts_commodity_index_list",
+      "method": "GET",
+      "path": "/api/futures/contracts/commodity-index-list",
+      "group": "futures",
+      "summary": "商品指数合约列表",
+      "description": "查询期货主连、主力、次主力与商品指数合约资料",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/futures-contracts-extended#futures-commodity-indexes",
+      "parameters": []
+    },
+    {
+      "id": "get_futures_positions_variety_daily",
+      "method": "GET",
+      "path": "/api/futures/positions/variety-daily",
+      "group": "futures",
+      "summary": "期货品种日持仓",
+      "description": "查询期货品种、公司与合约维度的持仓数据",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/futures-positions#positions-variety-daily",
+      "parameters": [
+        {
+          "name": "date",
+          "required": true,
+          "description": "交易日期，格式 yyyy-MM-dd。",
+          "type": "string",
+          "example": "2026-09-10"
+        }
+      ]
+    },
+    {
+      "id": "get_futures_positions_company_variety_daily",
+      "method": "GET",
+      "path": "/api/futures/positions/company-variety-daily",
+      "group": "futures",
+      "summary": "期货公司品种日持仓",
+      "description": "查询期货品种、公司与合约维度的持仓数据",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/futures-positions#positions-company-variety-daily",
+      "parameters": [
+        {
+          "name": "date",
+          "required": true,
+          "description": "交易日期，格式 yyyy-MM-dd。",
+          "type": "string",
+          "example": "2026-09-10"
+        },
+        {
+          "name": "varieties",
+          "required": true,
+          "description": "1～5 个逗号分隔的大写期货品种代码。",
+          "type": "string",
+          "example": "CU,AU"
+        }
+      ]
+    },
+    {
+      "id": "get_futures_positions_contract_daily",
+      "method": "GET",
+      "path": "/api/futures/positions/contract-daily",
+      "group": "futures",
+      "summary": "期货公司合约日持仓",
+      "description": "查询期货品种、公司与合约维度的持仓数据",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/futures-positions#positions-contract-daily",
+      "parameters": [
+        {
+          "name": "thscode",
+          "required": true,
+          "description": "期货合约完整同花顺代码。",
+          "type": "string",
+          "example": "CU2601.SHF"
+        },
+        {
+          "name": "variety",
+          "required": true,
+          "description": "大写品种代码，须与 thscode 所属品种一致。",
+          "type": "string",
+          "example": "CU"
+        },
+        {
+          "name": "date",
+          "required": true,
+          "description": "交易日期，格式 yyyy-MM-dd。",
+          "type": "string",
+          "example": "2026-09-10"
+        }
+      ]
+    },
+    {
+      "id": "get_futures_positions_contract_historical",
+      "method": "GET",
+      "path": "/api/futures/positions/contract-historical",
+      "group": "futures",
+      "summary": "期货公司合约历史持仓",
+      "description": "查询期货品种、公司与合约维度的持仓数据",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/futures-positions#positions-contract-historical",
+      "parameters": [
+        {
+          "name": "thscode",
+          "required": true,
+          "description": "期货合约完整同花顺代码。",
+          "type": "string",
+          "example": "CU2601.SHF"
+        },
+        {
+          "name": "variety",
+          "required": true,
+          "description": "大写品种代码，须与合约一致。",
+          "type": "string",
+          "example": "CU"
+        },
+        {
+          "name": "company",
+          "required": true,
+          "description": "期货公司名称。",
+          "type": "string",
+          "example": "示例期货"
+        },
+        {
+          "name": "start_date",
+          "required": true,
+          "description": "开始日期；须位于调用日前一年内，结束日固定为调用日。",
+          "type": "string",
+          "example": "2026-01-01"
+        }
+      ]
+    },
+    {
+      "id": "get_futures_positions_company_list",
+      "method": "GET",
+      "path": "/api/futures/positions/company-list",
+      "group": "futures",
+      "summary": "期货公司列表",
+      "description": "查询期货品种、公司与合约维度的持仓数据",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/futures-positions#positions-company-list",
+      "parameters": []
+    },
+    {
+      "id": "get_futures_prices_intraday",
+      "method": "GET",
+      "path": "/api/futures/prices/intraday",
+      "group": "futures",
+      "summary": "期货分时",
+      "description": "查询期货合约及期货商品指数分时与 K 线行情",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/futures-prices#prices-intraday",
+      "parameters": [
+        {
+          "name": "thscode",
+          "required": true,
+          "description": "期货合约或期货商品指数完整同花顺代码。",
+          "type": "string",
+          "example": "CU2601.SHF"
+        },
+        {
+          "name": "session",
+          "required": false,
+          "description": "行情阶段：pre_market-盘前、intraday-盘中、post_market-盘后；省略时使用 intraday。",
+          "type": "string",
+          "enum": [
+            "pre_market",
+            "intraday",
+            "post_market"
+          ],
+          "example": "intraday"
+        },
+        {
+          "name": "trade_date",
+          "required": false,
+          "description": "端外仅允许 0；AI 客户端内可传 0 或合法历史交易日 yyyyMMdd。",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "id": "get_futures_prices_daily",
+      "method": "GET",
+      "path": "/api/futures/prices/daily",
+      "group": "futures",
+      "summary": "期货K线",
+      "description": "查询期货合约及期货商品指数分时与 K 线行情",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/futures-prices#prices-daily",
+      "parameters": [
+        {
+          "name": "thscode",
+          "required": true,
+          "description": "期货合约或期货商品指数完整同花顺代码。",
+          "type": "string",
+          "example": "CU2601.SHF"
+        },
+        {
+          "name": "start",
+          "required": false,
+          "description": "与 end 成对提供的正毫秒时间戳；两者均省略时查询最近 100 根。",
+          "type": "integer",
+          "encoding": "date-ms"
+        },
+        {
+          "name": "end",
+          "required": false,
+          "description": "与 start 成对提供，且不早于 start。",
+          "type": "integer"
+        },
+        {
+          "name": "time_period",
+          "required": false,
+          "description": "端外仅允许 day_1；AI 客户端内可使用 min_1、min_10、hour_1、day_1、week_1、month_1、quarter_1、year_1。",
+          "type": "string",
+          "enum": [
+            "day_1",
+            "min_1",
+            "min_10",
+            "hour_1",
+            "week_1",
+            "month_1",
+            "quarter_1",
+            "year_1"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "get_futures_contracts_detail",
+      "method": "GET",
+      "path": "/api/futures/contracts/detail",
+      "group": "futures",
+      "summary": "期货合约详情",
+      "description": "查询期货合约详情与合约基础信息列表",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/futures-reference#contracts-detail",
+      "parameters": [
+        {
+          "name": "thscode",
+          "required": true,
+          "description": "期货合约完整同花顺代码。",
+          "type": "string",
+          "example": "CU2601.SHF"
+        }
+      ]
+    },
+    {
+      "id": "get_futures_contracts_list",
+      "method": "GET",
+      "path": "/api/futures/contracts/list",
+      "group": "futures",
+      "summary": "期货合约基础信息列表",
+      "description": "从完整期货目录快照分页获取合约基础信息，适合批量同步或按目录筛选前的本地索引。",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/futures-reference#contracts-list",
+      "parameters": [
+        {
+          "name": "limit",
+          "required": false,
+          "description": "单页条数，范围 1-1000。",
+          "type": "integer",
+          "default": 100,
+          "example": 100
+        },
+        {
+          "name": "offset",
+          "required": false,
+          "description": "分页偏移，最小为 0。",
+          "type": "integer",
+          "default": 0,
+          "example": 0
+        }
+      ]
+    },
+    {
+      "id": "get_a_share_special_data_skyrocket_list",
+      "method": "GET",
+      "path": "/api/a-share/special-data/skyrocket-list",
+      "group": "a-share",
+      "summary": "飙升榜",
+      "description": "查询 A 股热度排名飙升榜，默认30条、可选最多100条。period=day 返回日榜，period=hour 返回小时榜；省略 period 时默认返回日榜。",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/hot-list-data#飙升榜",
+      "parameters": [
+        {
+          "name": "period",
+          "required": false,
+          "description": "榜单周期：day 日榜 / hour 小时榜。",
+          "type": "string",
+          "default": "day",
+          "enum": [
+            "day",
+            "hour"
+          ],
+          "example": "hour"
+        },
+        {
+          "name": "limit",
+          "required": false,
+          "description": "返回1至100条，不足时按实际条数。",
+          "type": "integer",
+          "default": 30
+        }
+      ]
+    },
+    {
+      "id": "get_a_share_special_data_hot_stock_list",
+      "method": "GET",
+      "path": "/api/a-share/special-data/hot-stock-list",
+      "group": "a-share",
+      "summary": "A股热股榜单",
+      "description": "查询 A 股热股榜单，默认30条、可选最多100条。period=day 返回 24 小时级别榜单，period=hour 返回小时级别榜单；省略 period 时默认返回 24 小时级别榜单。",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/hot-list-data#a股热股榜单",
+      "parameters": [
+        {
+          "name": "period",
+          "required": false,
+          "description": "榜单周期：day 24 小时级别 / hour 小时级别。",
+          "type": "string",
+          "default": "day",
+          "enum": [
+            "day",
+            "hour"
+          ],
+          "example": "day"
+        },
+        {
+          "name": "limit",
+          "required": false,
+          "description": "返回1至100条，不足时按实际条数。",
+          "type": "integer",
+          "default": 30
+        }
+      ]
+    },
+    {
+      "id": "get_a_share_special_data_hot_stock_list_history",
+      "method": "GET",
+      "path": "/api/a-share/special-data/hot-stock-list-history",
+      "group": "a-share",
+      "summary": "历史热股排行",
+      "description": "按自然日返回历史热股榜排行。日期参数为 date=yyyy-MM-dd，按北京时间自然日查询。",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/hot-list-data#历史热股排行",
+      "parameters": [
+        {
+          "name": "date",
+          "required": true,
+          "description": "目标自然日，格式 yyyy-MM-dd；只支持一年内数据。",
+          "type": "string",
+          "example": "2026-06-21"
+        }
+      ]
+    },
+    {
+      "id": "get_a_share_special_data_hot_stock_rank_trend",
+      "method": "GET",
+      "path": "/api/a-share/special-data/hot-stock-rank-trend",
+      "group": "a-share",
+      "summary": "个股排名走势",
+      "description": "查询单只 A 股在一段自然日窗口内的热榜排名走势。窗口和日期都限制在一年内，返回点位与上游日线序列对齐。 该接口返回的是走势点位，不做 Top30 截断。",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/hot-list-data#个股排名走势",
+      "parameters": [
+        {
+          "name": "thscode",
+          "required": true,
+          "description": "单只 A 股标的，含交易所后缀，例如 300034.SZ。",
+          "type": "string",
+          "example": "300034.SZ"
+        },
+        {
+          "name": "start_date",
+          "required": true,
+          "description": "起始自然日，格式 yyyy-MM-dd。",
+          "type": "string",
+          "example": "2026-06-21"
+        },
+        {
+          "name": "end_date",
+          "required": true,
+          "description": "结束自然日，格式 yyyy-MM-dd；需大于等于 start_date。",
+          "type": "string",
+          "example": "2026-07-01"
+        }
+      ]
+    },
+    {
+      "id": "get_a_share_special_data_limit_up_pool",
+      "method": "GET",
+      "path": "/api/a-share/special-data/limit-up-pool",
+      "group": "a-share",
+      "summary": "涨停股票池",
+      "description": "按交易日返回 A 股涨停 / 连板股票池，后端固定取全部连板与 main,chinext,ssestar,north 四类板块，支持分页与排序。 返回字段聚焦涨停语义（涨停时间、原因、连板天数、封单额等），不含资金流 / 行业 / 分时预览等通用字段。",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/limit-up-data#涨停股票池",
+      "parameters": [
+        {
+          "name": "date_ms",
+          "required": false,
+          "description": "查询交易日 Unix 毫秒戳（Asia/Shanghai 00:00:00）；省略时回退到服务端当前自然日。",
+          "type": "integer",
+          "encoding": "date-ms"
+        },
+        {
+          "name": "page",
+          "required": false,
+          "description": "页码，必须 >= 1。",
+          "type": "integer",
+          "default": 1,
+          "example": 1
+        },
+        {
+          "name": "size",
+          "required": false,
+          "description": "分页大小，取值范围 1 到 200。",
+          "type": "integer",
+          "default": 50,
+          "example": 50
+        },
+        {
+          "name": "sort_field",
+          "required": false,
+          "description": "排序字段：last_price / continue_day_cnt / seal_money / limit_up_time。",
+          "type": "string",
+          "default": "last_price",
+          "enum": [
+            "last_price",
+            "continue_day_cnt",
+            "seal_money",
+            "limit_up_time"
+          ],
+          "example": "limit_up_time"
+        },
+        {
+          "name": "sort_dir",
+          "required": false,
+          "description": "排序方向：asc / desc。",
+          "type": "string",
+          "default": "desc",
+          "enum": [
+            "asc",
+            "desc"
+          ],
+          "example": "desc"
+        }
+      ]
+    },
+    {
+      "id": "get_a_share_special_data_limit_down_pool",
+      "method": "GET",
+      "path": "/api/a-share/special-data/limit-down-pool",
+      "group": "a-share",
+      "summary": "跌停股票池",
+      "description": "按交易日返回 A 股跌停股票池，首次与最后跌停时间统一为上海时区 HH:mm。",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/limit-up-data#跌停股票池",
+      "parameters": [
+        {
+          "name": "date_ms",
+          "required": false,
+          "description": "交易日的上海时区零点毫秒时间戳。",
+          "type": "integer",
+          "encoding": "date-ms"
+        },
+        {
+          "name": "page",
+          "required": false,
+          "description": "页码，从 1 开始。",
+          "type": "integer",
+          "default": 1,
+          "example": 1
+        },
+        {
+          "name": "size",
+          "required": false,
+          "description": "单页条数，范围 1..200。",
+          "type": "integer",
+          "default": 50,
+          "example": 50
+        },
+        {
+          "name": "sort_field",
+          "required": false,
+          "description": "last_limit_time / first_limit_time / last_price / price_change_ratio_pct / turnover_ratio_pct。",
+          "type": "string",
+          "default": "last_limit_time",
+          "enum": [
+            "last_limit_time",
+            "first_limit_time",
+            "last_price",
+            "price_change_ratio_pct",
+            "turnover_ratio_pct"
+          ],
+          "example": "last_limit_time"
+        },
+        {
+          "name": "sort_dir",
+          "required": false,
+          "description": "asc / desc。",
+          "type": "string",
+          "default": "desc",
+          "enum": [
+            "asc",
+            "desc"
+          ],
+          "example": "desc"
+        }
+      ]
+    },
+    {
+      "id": "get_a_share_special_data_limit_break_pool",
+      "method": "GET",
+      "path": "/api/a-share/special-data/limit-break-pool",
+      "group": "a-share",
+      "summary": "炸板股票池",
+      "description": "按交易日返回 A 股涨停炸板股票池；接口直接消费炸板集合，不在服务端生成或归因。",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/limit-up-data#炸板股票池",
+      "parameters": [
+        {
+          "name": "date_ms",
+          "required": false,
+          "description": "交易日的上海时区零点毫秒时间戳。",
+          "type": "integer",
+          "encoding": "date-ms"
+        },
+        {
+          "name": "page",
+          "required": false,
+          "description": "页码，从 1 开始。",
+          "type": "integer",
+          "default": 1,
+          "example": 1
+        },
+        {
+          "name": "size",
+          "required": false,
+          "description": "单页条数，范围 1..200。",
+          "type": "integer",
+          "default": 50,
+          "example": 50
+        },
+        {
+          "name": "sort_field",
+          "required": false,
+          "description": "price_change_ratio_pct / open_times / last_price / turnover_ratio_pct / turnover。",
+          "type": "string",
+          "default": "price_change_ratio_pct",
+          "enum": [
+            "price_change_ratio_pct",
+            "open_times",
+            "last_price",
+            "turnover_ratio_pct",
+            "turnover"
+          ],
+          "example": "open_times"
+        },
+        {
+          "name": "sort_dir",
+          "required": false,
+          "description": "asc / desc。",
+          "type": "string",
+          "default": "desc",
+          "enum": [
+            "asc",
+            "desc"
+          ],
+          "example": "desc"
+        }
+      ]
+    },
+    {
+      "id": "get_a_share_special_data_limit_up_ladder",
+      "method": "GET",
+      "path": "/api/a-share/special-data/limit-up-ladder",
+      "group": "a-share",
+      "summary": "连板天梯",
+      "description": "返回 A 股近 30 个交易日的连板梯队矩阵（按日期 -> 6 个板 -> 股票列表），用于近期连板分布、次日晋级追踪等分析。 无入参；返回近 30 个交易日，各板位完整返回股票列表。",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/limit-up-data#连板天梯",
+      "parameters": []
+    },
+    {
+      "id": "get_options_prices_intraday",
+      "method": "GET",
+      "path": "/api/options/prices/intraday",
+      "group": "options",
+      "summary": "期权分时",
+      "description": "查询期权合约分时与 K 线行情",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/options-prices#prices-intraday",
+      "parameters": [
+        {
+          "name": "thscode",
+          "required": true,
+          "description": "期权合约完整同花顺代码。",
+          "type": "string",
+          "example": "IO2601-C-4000.CFE"
+        },
+        {
+          "name": "session",
+          "required": false,
+          "description": "行情阶段：pre_market-盘前、intraday-盘中、post_market-盘后；省略时使用 intraday。",
+          "type": "string",
+          "enum": [
+            "pre_market",
+            "intraday",
+            "post_market"
+          ],
+          "example": "intraday"
+        },
+        {
+          "name": "trade_date",
+          "required": false,
+          "description": "端外仅允许 0；AI 客户端内可传 0 或合法历史交易日 yyyyMMdd。",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "id": "get_options_prices_daily",
+      "method": "GET",
+      "path": "/api/options/prices/daily",
+      "group": "options",
+      "summary": "期权K线",
+      "description": "查询期权合约分时与 K 线行情",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/options-prices#prices-daily",
+      "parameters": [
+        {
+          "name": "thscode",
+          "required": true,
+          "description": "期权合约完整同花顺代码。",
+          "type": "string",
+          "example": "IO2601-C-4000.CFE"
+        },
+        {
+          "name": "start",
+          "required": false,
+          "description": "与 end 成对提供的正毫秒时间戳；两者均省略时查询最近 100 根。",
+          "type": "integer",
+          "encoding": "date-ms"
+        },
+        {
+          "name": "end",
+          "required": false,
+          "description": "与 start 成对提供的正毫秒时间戳，且不早于 start。",
+          "type": "integer",
+          "encoding": "date-ms"
+        },
+        {
+          "name": "time_period",
+          "required": false,
+          "description": "端外仅允许 day_1；AI 客户端内可使用 min_1、min_10、hour_1、day_1、week_1、month_1、quarter_1、year_1。",
+          "type": "string",
+          "enum": [
+            "day_1",
+            "min_1",
+            "min_10",
+            "hour_1",
+            "week_1",
+            "month_1",
+            "quarter_1",
+            "year_1"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "get_options_contracts_detail",
+      "method": "GET",
+      "path": "/api/options/contracts/detail",
+      "group": "options",
+      "summary": "期权合约详情",
+      "description": "查询期权合约详情与合约基础信息列表",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/options-reference#contracts-detail",
+      "parameters": [
+        {
+          "name": "thscode",
+          "required": true,
+          "description": "期权合约完整同花顺代码。",
+          "type": "string",
+          "example": "IO2601-C-4000.CFE"
+        }
+      ]
+    },
+    {
+      "id": "get_options_contracts_list",
+      "method": "GET",
+      "path": "/api/options/contracts/list",
+      "group": "options",
+      "summary": "期权合约基础信息列表",
+      "description": "从完整期权目录快照分页获取合约基础信息。",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/options-reference#contracts-list",
+      "parameters": [
+        {
+          "name": "limit",
+          "required": false,
+          "description": "单页条数，范围 1-1000。",
+          "type": "integer",
+          "default": 100,
+          "example": 100
+        },
+        {
+          "name": "offset",
+          "required": false,
+          "description": "分页偏移，最小为 0。",
+          "type": "integer",
+          "default": 0,
+          "example": 0
+        }
+      ]
+    },
+    {
+      "id": "get_a_share_prices_snapshot",
+      "method": "GET",
+      "path": "/api/a-share/prices/snapshot",
+      "group": "a-share",
+      "summary": "行情快照",
+      "description": "获取 A 股行情快照。thscodes 显式传入（逗号分隔）时按入参顺序批量取数、不分页； 省略时遍历完整 A 股代码表（按 thscode 升序），并按 limit / offset 分页。",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/prices#行情快照",
+      "parameters": [
+        {
+          "name": "thscodes",
+          "required": false,
+          "description": "逗号分隔的 thscode 列表，如 600519.SH,000001.SZ。给定时忽略分页参数。",
+          "type": "string",
+          "example": "600519.SH,000001.SZ"
+        },
+        {
+          "name": "limit",
+          "required": false,
+          "description": "分页大小，仅在 thscodes 省略时生效。",
+          "type": "integer",
+          "default": 100
+        },
+        {
+          "name": "offset",
+          "required": false,
+          "description": "分页偏移，仅在 thscodes 省略时生效。",
+          "type": "integer",
+          "default": 0
+        }
+      ]
+    },
+    {
+      "id": "get_a_share_prices_historical",
+      "method": "GET",
+      "path": "/api/a-share/prices/historical",
+      "group": "a-share",
+      "summary": "历史 K 线",
+      "description": "获取单只标的的 A 股历史 K 线序列。接口层强约束：每次请求仅一个 thscode， 且 [start, end] 窗口跨度不超过 10 年。",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/prices#历史-k-线",
+      "parameters": [
+        {
+          "name": "thscode",
+          "required": true,
+          "description": "单只标的 thscode，不接受逗号。多标的使用本页批量历史 K 线接口。",
+          "type": "string",
+          "example": "600519.SH"
+        },
+        {
+          "name": "interval",
+          "required": true,
+          "description": "K 线周期，当前仅支持 1d(日线)。",
+          "type": "string",
+          "default": "1d",
+          "enum": [
+            "1d"
+          ],
+          "example": "1d"
+        },
+        {
+          "name": "start",
+          "required": true,
+          "description": "起始时间，毫秒 Unix 时间戳。缺失返回 code=1001。",
+          "type": "integer",
+          "example": 1716105600000,
+          "encoding": "date-ms",
+          "example_days_ago": 30
+        },
+        {
+          "name": "end",
+          "required": true,
+          "description": "结束时间，毫秒 Unix 时间戳。end - start 超过 10 年返回 code=1003。",
+          "type": "integer",
+          "example": 1747641600000,
+          "encoding": "date-ms",
+          "example_days_ago": 0
+        },
+        {
+          "name": "adjust",
+          "required": false,
+          "description": "复权方式：none / forward(前复权) / backward(后复权)。",
+          "type": "string",
+          "default": "forward",
+          "enum": [
+            "none",
+            "forward",
+            "backward"
+          ],
+          "example": "forward"
+        }
+      ]
+    },
+    {
+      "id": "get_a_share_prices_historical_batch",
+      "method": "GET",
+      "path": "/api/a-share/prices/historical-batch",
+      "group": "a-share",
+      "summary": "批量历史 K 线",
+      "description": "在同一时间窗口比较多只 A 股的历史走势。单次最多 10 个代码，支持 1d / 1w / 1mo，窗口跨度最长 10 个自然年；复权方式为 forward / none / backward，默认 forward。 这是原生批量查询接口；所有代码共用查询条件。去除代码首尾空白、按现有代码格式规范化后去重，按首次出现顺序返回。上限先按原始代码项数检查，重复代码仍占用请求额度。",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/prices#historical-batch",
+      "parameters": [
+        {
+          "name": "thscodes",
+          "required": true,
+          "description": "英文逗号分隔的完整代码，如 600519.SH,000001.SZ；最多 10 个，按去重前数量计数。",
+          "type": "string",
+          "example": "600519.SH,000001.SZ"
+        },
+        {
+          "name": "interval",
+          "required": true,
+          "description": "K 线周期：1d（日线）/ 1w（周线）/ 1mo（月线）。",
+          "type": "string",
+          "enum": [
+            "1d",
+            "1w",
+            "1mo"
+          ],
+          "example": "1d"
+        },
+        {
+          "name": "start",
+          "required": true,
+          "description": "起始时间，毫秒 Unix 时间戳。缺失返回 code=1001；须为非负毫秒时间戳。",
+          "type": "integer",
+          "minimum": 0,
+          "example": 1735660800000,
+          "encoding": "date-ms",
+          "example_days_ago": 30
+        },
+        {
+          "name": "end",
+          "required": true,
+          "description": "结束时间，毫秒 Unix 时间戳。end - start 超过 10 年返回 code=1003；须为非负毫秒时间戳。",
+          "type": "integer",
+          "minimum": 0,
+          "example": 1767196800000,
+          "encoding": "date-ms",
+          "example_days_ago": 0
+        },
+        {
+          "name": "adjust",
+          "required": false,
+          "description": "复权方式：none / forward(前复权) / backward(后复权)。",
+          "type": "string",
+          "default": "forward",
+          "enum": [
+            "none",
+            "forward",
+            "backward"
+          ],
+          "example": "forward"
+        }
+      ]
+    },
+    {
+      "id": "get_a_share_special_data_dragon_tiger_department_classic_record",
+      "method": "GET",
+      "path": "/api/a-share/special-data/dragon-tiger-department-classic-record",
+      "group": "a-share",
+      "summary": "营业部经典战绩",
+      "description": "查询营业部身份及一条代表战绩。无代表战绩时，classic_record 为 null。",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/dragon-tiger-department#营业部经典战绩",
+      "parameters": [
+        {
+          "name": "department_id",
+          "required": true,
+          "description": "营业部业务标识",
+          "type": "string",
+          "example": "Q1218139C1"
+        }
+      ]
+    },
+    {
+      "id": "get_a_share_special_data_dragon_tiger_department_history",
+      "method": "GET",
+      "path": "/api/a-share/special-data/dragon-tiger-department-history",
+      "group": "a-share",
+      "summary": "营业部历史上榜记录",
+      "description": "分页查询营业部上榜股票，支持净买入金额档位和排序；同股不同上榜记录分别保留。",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/dragon-tiger-department#营业部历史上榜记录",
+      "parameters": [
+        {
+          "name": "department_id",
+          "required": true,
+          "description": "营业部业务标识",
+          "type": "string",
+          "example": "Q1218139C1"
+        },
+        {
+          "name": "page",
+          "required": false,
+          "description": "从1开始的页码",
+          "type": "integer",
+          "default": 1,
+          "example": 1
+        },
+        {
+          "name": "size",
+          "required": false,
+          "description": "每页1至30条，默认30",
+          "type": "integer",
+          "default": 30,
+          "example": 30
+        },
+        {
+          "name": "min_net_buy_amount",
+          "required": false,
+          "description": "净买入金额档位：5000000/30000000/50000000/100000000，单位元",
+          "type": "integer"
+        },
+        {
+          "name": "sort_field",
+          "required": false,
+          "description": "排序字段：trade_date/change_ratio/net_buy_amount",
+          "type": "string",
+          "default": "trade_date"
+        },
+        {
+          "name": "sort_dir",
+          "required": false,
+          "description": "asc或desc",
+          "type": "string",
+          "default": "desc"
+        }
+      ]
+    },
+    {
+      "id": "get_a_share_special_data_auction_stock_opportunities",
+      "method": "GET",
+      "path": "/api/a-share/special-data/auction-stock-opportunities",
+      "group": "a-share",
+      "summary": "集合竞价个股机会筛选",
+      "description": "筛选实时或历史集合竞价机会，一个股票可包含多条机会记录。涨幅为小数比例，数量保持返回尺度；数量单位尚未定义。说明和评级保留原值，关联板块保留 JSON 或 null。",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/auction-opportunities#集合竞价个股机会筛选",
+      "parameters": [
+        {
+          "name": "date",
+          "required": false,
+          "description": "查询日期，YYYY-MM-DD；默认日期与有效范围见接口说明；须属于可用日期集合",
+          "type": "string",
+          "example": "2026-10-12"
+        },
+        {
+          "name": "warn_types",
+          "required": false,
+          "description": "逗号分隔的机会类型码；省略查询全部；当前类型为68710/68711/68712/68713/68714/68715/68716/68717/68718/68719/68720/68721/68722/68723/68724/68725/68726/68727",
+          "type": "string",
+          "example": "68710"
+        },
+        {
+          "name": "market",
+          "required": false,
+          "description": "适用市场：a_share/sh_sz_main/sh_a/sz_a/gem/star",
+          "type": "string",
+          "default": "a_share"
+        },
+        {
+          "name": "exclude_st",
+          "required": false,
+          "description": "是否排除ST股票，默认false",
+          "type": "boolean",
+          "default": false
+        },
+        {
+          "name": "thscodes",
+          "required": false,
+          "description": "逗号分隔A股标准代码，最多50个token",
+          "type": "string"
+        },
+        {
+          "name": "sort_by",
+          "required": false,
+          "description": "warn_time或warn_type",
+          "type": "string",
+          "default": "warn_time"
+        },
+        {
+          "name": "sort_order",
+          "required": false,
+          "description": "desc或asc",
+          "type": "string",
+          "default": "desc"
+        },
+        {
+          "name": "page",
+          "required": false,
+          "description": "从1开始的页码",
+          "type": "integer",
+          "default": 1,
+          "example": 1
+        },
+        {
+          "name": "size",
+          "required": false,
+          "description": "每页1至20条，默认20",
+          "type": "integer",
+          "default": 20,
+          "example": 20
+        }
+      ]
+    },
+    {
+      "id": "get_a_share_special_data_auction_opportunity_dates",
+      "method": "GET",
+      "path": "/api/a-share/special-data/auction-opportunity-dates",
+      "group": "a-share",
+      "summary": "集合竞价可选交易日期",
+      "description": "查询集合竞价可用交易日期。日期按升序返回，实际保留范围由日期集合决定。",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/auction-opportunities#集合竞价可选交易日期",
+      "parameters": []
+    },
+    {
+      "id": "get_hk_share_ipo_application_list",
+      "method": "GET",
+      "path": "/api/hk-share/ipo/application-list",
+      "group": "hk-share",
+      "summary": "港股新股递表记录",
+      "description": "分页查询港股公司递表记录，保留同一公司的重复申请。页码从 1 开始，每页 50 条；总数未知时为 null，以 has_next 判断后续页。",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/hk-share-ipo#港股新股递表记录",
+      "parameters": [
+        {
+          "name": "page",
+          "required": false,
+          "description": "从1开始的页码",
+          "type": "integer",
+          "default": 1,
+          "example": 1
+        }
+      ]
+    },
+    {
+      "id": "get_hk_share_ipo_calendar_list",
+      "method": "GET",
+      "path": "/api/hk-share/ipo/calendar-list",
+      "group": "hk-share",
+      "summary": "港股认购与待上市日历",
+      "description": "查询港股可认购或待上市列表。issue_code 是发行记录标识，正式证券代码未确定时为 null；价格区间、每手股数与入场费详情由发行详情接口查询。截止日期为公共招股日期。",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/hk-share-ipo#港股认购与待上市日历",
+      "parameters": [
+        {
+          "name": "status",
+          "required": true,
+          "description": "发行阶段：subscribable/awaiting_listing",
+          "type": "string",
+          "example": "subscribable"
+        }
+      ]
+    },
+    {
+      "id": "get_hk_share_ipo_issue_detail",
+      "method": "GET",
+      "path": "/api/hk-share/ipo/issue-detail",
+      "group": "hk-share",
+      "summary": "港股新股发行详情",
+      "description": "按发行记录标识查询港股招股价格区间、每手股数与入场费。金额币种为港元，区间和费用为空时保留 null，本接口不表示该发行记录当前可认购。",
+      "docs_url": "https://fuyao.aicubes.cn/docs/api-reference/hk-share-ipo#港股新股发行详情",
+      "parameters": [
+        {
+          "name": "issue_code",
+          "required": true,
+          "description": "日历中的发行记录标识，最多32字符",
+          "type": "string",
+          "example": "HK2636"
+        }
+      ]
+    }
+  ]
+}

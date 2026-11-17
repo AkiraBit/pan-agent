@@ -2,25 +2,28 @@
 from src.platform.marketdata.models import MarketCode
 
 
-def test_get_index_klines_passes_correct_code_and_market(monkeypatch):
-    """沪深300/恒生等指数应把对应 index_code/market/days 原样透传给 marketdata 包的
-    index_klines(secid 映射规则已内聚进 marketdata 包,见
-    packages/marketdata/src/marketdata/client.py + packages/marketdata/tests/test_index_methods.py)。
-    """
+def test_get_index_klines_routes_cn_to_ftshare_and_hk_to_tencent(monkeypatch):
+    from src.platform.marketdata import ftshare_market, fuyao_business
     from src.platform.marketdata.collectors import kline_collector
 
-    captured: dict[str, tuple] = {}
+    calls = []
+
+    def ftshare(code, days):
+        calls.append(("ftshare", code, days))
+        return []
 
     class _MD:
-        def index_klines(self, code, *, market, days):
-            captured[code] = (market, days)
+        def index_klines(self, code, *, market, days, provider):
+            calls.append((provider, code, days, market))
             return []
 
+    monkeypatch.setattr(ftshare_market, "index_bars", ftshare)
+    monkeypatch.setattr(fuyao_business, "providers", lambda kind, *, market, available:
+                        ["ftshare"] if market == "CN" else ["tencent"])
     monkeypatch.setattr(kline_collector, "get_market_data", lambda: _MD())
     kline_collector.get_index_klines("000300", MarketCode.CN, days=120)
     kline_collector.get_index_klines("HSI", MarketCode.HK, days=120)
-    assert captured["000300"] == ("CN", 120)
-    assert captured["HSI"] == ("HK", 120)
+    assert calls == [("ftshare", "000300", 120), ("tencent", "HSI", 120, "HK")]
 
 
 def test_get_index_klines_unknown_returns_empty():

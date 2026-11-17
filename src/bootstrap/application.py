@@ -8,14 +8,14 @@ HTTP 中间件、认证依赖和各模块 router；具体业务规则仍由 ``mo
 from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
-from src.modules.administration import longbridge_mcp
-from src.platform.marketdata.longbridge import configure_remote
 
 from src.modules.administration.api import (
     auth,
     builtin_skills,
     channels,
     datasources,
+    ftshare_rest,
+    fuyao_rest,
     health,
     logs,
     mcp,
@@ -40,6 +40,7 @@ from src.modules.market.api import (
     news,
     price_alerts,
     review,
+    research_data,
     quotes,
     stocks,
 )
@@ -56,8 +57,6 @@ from src.modules.short_term import workspace_api as emotion_api
 from src.modules.short_term.service import emotion_runner
 from src.modules.strategy.api import factors
 from src.web.response import ResponseWrapperMiddleware
-
-configure_remote(lambda db, tool, arguments: longbridge_mcp.remote(db, tool, arguments))
 
 app = FastAPI(
     title="PanWatch API",
@@ -81,6 +80,9 @@ app.include_router(market.router, prefix="/api/market", tags=["market"])
 
 # 需要登录的路由
 protected = [Depends(get_current_user)]
+app.include_router(research_data.router, prefix="/api/research-data", tags=["research-data"], dependencies=protected)
+app.include_router(fuyao_rest.router, prefix="/api/datasources/fuyao", tags=["fuyao-rest"])
+app.include_router(ftshare_rest.router, prefix="/api/datasources/ftshare", tags=["ftshare-rest"])
 app.include_router(mcp_connections.router, prefix="/api/mcp-connections", tags=["mcp-connections"])
 app.include_router(builtin_skills.router, prefix="/api/builtin-skills", tags=["builtin-skills"])
 app.include_router(review.router, prefix="/api/market-review", tags=["market-review"], dependencies=protected)

@@ -233,6 +233,12 @@ class AppSettings(Base):
     description = Column(String, default="")
 
 
+class DataSourceProviderPause(Base):
+    __tablename__ = "data_source_provider_pauses"
+
+    provider = Column(String, primary_key=True)
+
+
 class DataSource(Base):
     """数据源配置（新闻、K线图、行情）"""
 
@@ -243,7 +249,7 @@ class DataSource(Base):
     type = Column(
         String, nullable=False
     )  # "news" / "chart" / "quote" / "kline" / "capital_flow"
-    provider = Column(String, nullable=False)  # "xueqiu" / "eastmoney" / "tencent"
+    provider = Column(String, nullable=False)
     config = Column(JSON, default={})  # 配置参数
     enabled = Column(Boolean, default=True)
     priority = Column(Integer, default=0)  # 越小优先级越高
@@ -1456,6 +1462,16 @@ class PersonalAccessToken(Base):
     created_at = Column(DateTime, server_default=func.now())
 
 
+class DataProviderCredential(Base):
+    """Provider credentials and the MCP services tested with that revision."""
+
+    __tablename__ = "data_provider_credentials"
+    provider = Column(String, primary_key=True)
+    encrypted_key = Column(Text, nullable=False, server_default="")
+    revision = Column(Integer, nullable=False, server_default="0")
+    mcp_services = Column(JSON, nullable=False, server_default="{}")
+
+
 class MCPConnection(Base):
     """Single-user built-in connection; secrets are excluded from settings exports."""
     __tablename__ = "mcp_connections"
@@ -1603,12 +1619,6 @@ class EmotionReview(Base):
     payload = Column(JSON, nullable=False)
 
 
-class EmotionSourceSettings(Base):
-    __tablename__ = 'emotion_source_settings'
-    id = Column(Integer, primary_key=True)
-    config = Column(JSON, nullable=False, default=dict)
-
-
 class EmotionRegulatoryEvent(Base):
     """Source-versioned records; repeated discovery never rewrites first knowledge."""
     __tablename__ = 'emotion_regulatory_events'
@@ -1619,7 +1629,7 @@ class EmotionRegulatoryEvent(Base):
 
 
 class LongbridgeObservation(Base):
-    """Versioned public market responses; never account, order or credential data."""
+    """Archive of public market responses collected by the former Longbridge data source."""
     __tablename__ = 'longbridge_market_observations'
     id = Column(Integer, primary_key=True)
     tool = Column(String, nullable=False, index=True)

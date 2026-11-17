@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session
 
-from src.modules.administration import longbridge_mcp as service
+from src.modules.administration import fuyao_mcp, longbridge_mcp as service
 from src.platform.persistence.database import get_db
 from .auth import get_password_hash, security, verify_token
 from src.web.errors import api_error
@@ -47,6 +47,21 @@ class RegionBody(StrictBody):
 @router.get("")
 def get_connections(db: Session = Depends(get_db)):
     return {"items": [service.status(db)]}
+
+
+@router.get("/fuyao")
+def get_fuyao(db: Session = Depends(get_db)):
+    return fuyao_mcp.status(db)
+
+
+@router.post("/fuyao/{endpoint}/test")
+async def test_fuyao(endpoint: str, db: Session = Depends(get_db)):
+    return await fuyao_mcp.test_service(db, endpoint)
+
+
+@router.put("/fuyao/{endpoint}")
+def configure_fuyao(endpoint: str, body: EnabledBody, db: Session = Depends(get_db)):
+    return fuyao_mcp.configure(db, endpoint, body.enabled)
 
 
 @router.post("/longbridge/authorize")

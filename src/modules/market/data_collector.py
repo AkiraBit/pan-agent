@@ -11,16 +11,14 @@ from marketdata import PACKAGE_VENDORS_BY_TYPE, capture_errors
 from src.platform.marketdata.marketdata_client import create_market_data
 
 from src.platform.persistence.database import SessionLocal
+from src.platform.marketdata.source_activation import active_source
 from src.platform.persistence.models import DataSource
 from src.platform.marketdata.models import MarketCode
+from . import source_test_settings
+from .source_test_settings import DEFAULT_TEST_SYMBOLS_BY_MARKET
 
 # 数据源测试的统一样本。每个市场固定两个稳定、容易识别的代码，避免新建数据源
 # 时只测到 A 股，导致港股/美股 provider 的市场路由问题直到生产才暴露。
-DEFAULT_TEST_SYMBOLS_BY_MARKET: dict[str, tuple[str, str]] = {
-    "CN": ("600519", "601127"),
-    "HK": ("00700", "00386"),
-    "US": ("AAPL", "NVDA"),
-}
 DEFAULT_TEST_SYMBOLS: tuple[str, ...] = tuple(
     symbol
     for symbols in DEFAULT_TEST_SYMBOLS_BY_MARKET.values()
@@ -48,6 +46,7 @@ class CollectorResult:
     source_provider: str = ""
     # 本次实际执行的代码(包含未返回的数据),用于测试弹窗回显配置/默认值。
     test_symbols: list[str] = field(default_factory=list)
+    test_params: dict = field(default_factory=dict)
     # 部分成功时保留逐代码失败原因，避免无数据代码(如 APPL)静默消失。
     errors: list[dict[str, str]] = field(default_factory=list)
 
@@ -96,7 +95,6 @@ class DataCollectorManager:
                 "eastmoney": lambda cfg: CapitalFlowCollector(MarketCode.CN),
             },
             "chart": {
-                "xueqiu": lambda cfg: ("xueqiu", cfg),
                 "eastmoney": lambda cfg: ("eastmoney", cfg),
             },
             "events": {
@@ -157,8 +155,8 @@ class DataCollectorManager:
         try:
             return (
                 db.query(DataSource)
-                .filter(DataSource.type == source_type, DataSource.enabled == True)
-                .order_by(DataSource.priority)
+                .filter(DataSource.type == source_type, active_source())
+                .order_by(DataSource.id)
                 .all()
             )
         finally:
@@ -364,14 +362,16 @@ class DataCollectorManager:
 
     async def test_source(self, source: DataSource) -> CollectorResult:
         """测试单个数据源"""
-        test_symbols = source.test_symbols or list(DEFAULT_TEST_SYMBOLS)
+        settings = source_test_settings.describe(source)
+        test_symbols = settings["test_symbols"] if settings else source.test_symbols or list(DEFAULT_TEST_SYMBOLS)
+        test_params = source_test_settings.probe_params(settings) if settings else {}
 
         start_time = datetime.now()
         self._log(
             source.name,
             source.type,
             "start",
-            f"开始测试，测试股票: {','.join(test_symbols)}",
+            f"开始测试，测试证券: {','.join(test_symbols)}" if test_symbols else "开始测试",
         )
 
         try:
@@ -379,6 +379,7 @@ class DataCollectorManager:
             with capture_errors() as errs:
                 result = await self._test_source_impl(source, test_symbols)
             result.test_symbols = list(test_symbols)
+            result.test_params = test_params
             if not result.success and errs:
                 # 去重保序 + 截断,拼成真因;若原本已有更具体的 error(如"provider 无对应 vendor")保留在前
                 seen: dict[str, None] = {}
@@ -427,6 +428,7 @@ class DataCollectorManager:
                 source_name=source.name,
                 source_provider=source.provider,
                 test_symbols=list(test_symbols),
+                test_params=test_params,
             )
 
     async def _test_source_impl(
@@ -437,23 +439,26 @@ class DataCollectorManager:
         if (source.type, source.provider) in SPECS:
             from .etf.free_collector import test_source
             return await test_source(source, test_symbols)
-        if source.provider == 'longbridge':
-            return await self._test_longbridge(source, test_symbols)
         if source.type == "news":
             return await self._test_news_source(source, test_symbols)
 
         elif source.type == "kline":
             # 按 provider 路由到对应 Provider,而不是写死走 tencent (KlineCollector)。
-            # Tushare/YFinance 的 token 等配置从 source.config 注入。
+            # 数据源参数从 source.config 注入。
             return await self._test_kline_source(source, test_symbols)
 
         elif source.type == "capital_flow":
-            from src.platform.marketdata.collectors.capital_flow_collector import CapitalFlowCollector
+            from marketdata import SourceConfig, StaticConfigProvider, Symbol
 
-            collector = CapitalFlowCollector(MarketCode.CN)
+            if source.provider not in PACKAGE_VENDORS_BY_TYPE["capital_flow"]:
+                return CollectorResult(success=False, error="该来源未注册资金流接口")
+            md = create_market_data(config=StaticConfigProvider({"capital_flow": [
+                SourceConfig(vendor=source.provider, config=source.config or {}, enabled=True),
+            ]}))
             results = []
             for symbol in test_symbols[:_TEST_SYMBOL_LIMIT]:
-                data = await asyncio.to_thread(collector.get_capital_flow, symbol)
+                market = Symbol.parse(symbol).market.value
+                data = await asyncio.to_thread(md.capital_flow, symbol, market=market)
                 if data:
                     results.append(
                         {
@@ -472,14 +477,14 @@ class DataCollectorManager:
             )
 
         elif source.type == "quote":
-            # 按 provider 路由到对应 Provider,Tushare(暂无 quote)/YFinance 可正确测到。
+            # 按 provider 路由到对应行情来源。
             return await self._test_quote_source(source, test_symbols)
 
         elif source.type == "chart":
             from src.platform.marketdata.collectors.screenshot_collector import ScreenshotCollector
             import base64
 
-            collector = ScreenshotCollector(config={"extra_wait_ms": 3000})
+            collector = ScreenshotCollector(config={**(source.config or {}), "extra_wait_ms": _probe_value(source, "extra_wait_ms", 2000)})
             try:
                 symbol = test_symbols[0] if test_symbols else "601127"
                 screenshot = await collector.capture(
@@ -500,52 +505,22 @@ class DataCollectorManager:
             finally:
                 await collector.close()
 
-        elif source.type == "events":
-            from src.platform.marketdata.collectors.events_collector import EastMoneyEventsCollector
+        elif source.type == "events" and source.provider == "eastmoney":
+            from marketdata import SourceConfig, StaticConfigProvider
 
-            from datetime import timedelta
-
-            # Use a longer window for tests to avoid "recently empty" false negatives.
-            # This is only for connectivity/format validation, not for production logic.
-            lookback_days = 365
-            since = datetime.now() - timedelta(days=lookback_days)
-            if source.provider == "eastmoney":
-                cfg = source.config or {}
-                collector = EastMoneyEventsCollector(
-                    timeout_s=cfg.get("timeout_s", 10.0),
-                    connect_timeout_s=cfg.get("connect_timeout_s"),
-                    verify_ssl=cfg.get("verify_ssl", False),
-                    proxy=cfg.get("proxy"),
-                    retries=cfg.get("retries", 1),
-                    backoff_s=cfg.get("backoff_s", 0.6),
-                )
-                items = await collector.fetch_events(
-                    symbols=test_symbols[:_TEST_SYMBOL_LIMIT],
-                    since=since,
-                    page_size=100,
-                )
-                if not items and getattr(collector, "last_error", None):
-                    return CollectorResult(
-                        success=False,
-                        data=[],
-                        count=0,
-                        error=str(collector.last_error),
-                    )
-                return CollectorResult(
-                    success=len(items) > 0,
-                    data=[
-                        {
-                            "title": i.title[:80],
-                            "time": i.publish_time.strftime("%m-%d %H:%M"),
-                            "event_type": i.event_type,
-                        }
-                        for i in items[:10]
-                    ],
-                    count=len(items),
-                    error=""
-                    if items
-                    else f"未获取到事件数据（lookback={lookback_days}d）",
-                )
+            lookback_days = _probe_value(source, "lookback_days", 365)
+            config = {**(source.config or {}), "page_size": _probe_value(source, "page_size", 100)}
+            md = create_market_data(config=StaticConfigProvider({"events": [
+                SourceConfig(vendor=source.provider, config=config, enabled=True),
+            ]}))
+            items = await asyncio.to_thread(md.events, test_symbols, market="CN", since_days=lookback_days)
+            return CollectorResult(
+                success=bool(items),
+                data=[{"title": item.title[:80], "time": item.publish_time.strftime("%m-%d %H:%M"),
+                       "event_type": item.event_type} for item in items[:10]],
+                count=len(items),
+                error="" if items else f"未获取到事件数据（lookback={lookback_days}d）",
+            )
 
         elif source.type == "flash_news":
             return await self._test_flash_news_source(source)
@@ -571,48 +546,6 @@ class DataCollectorManager:
         return CollectorResult(
             success=False, error=f"不支持的数据源类型: {source.type}"
         )
-
-    async def _test_longbridge(self, source, test_symbols):
-        from dataclasses import asdict
-        from datetime import timedelta
-        from marketdata import SourceConfig, StaticConfigProvider, Symbol
-        from src.modules.market.etf import turnover
-        from src.platform.marketdata.longbridge import TOOLS_BY_TYPE
-
-        if source.type not in TOOLS_BY_TYPE:
-            return CollectorResult(success=False, error='Unsupported Longbridge data type')
-        md = create_market_data(config=StaticConfigProvider({source.type: [
-            SourceConfig(vendor='longbridge', config=source.config or {}, enabled=True)]}))
-        result, errors = [], []
-        for code in test_symbols[:_TEST_SYMBOL_LIMIT]:
-            market = Symbol.parse(code).market.value
-            try:
-                if source.type == 'etf_turnover':
-                    end = turnover.last_closed_day()
-                    start = (datetime.fromisoformat(end) - timedelta(days=14)).date().isoformat()
-                    rows = await turnover.fetch(code, start, end)
-                    items = [{k: r[k] for k in ('code', 'date', 'turnover_cny')} for r in rows]
-                else:
-                    def read():
-                        if source.type == 'quote': return md.quotes([code], market=market)
-                        if source.type == 'kline': return md.klines(code, market=market, days=30)
-                        if source.type == 'capital_flow':
-                            value = md.capital_flow(code, market=market)
-                            return [value] if value else []
-                        if source.type == 'fundamentals':
-                            return md.fundamentals([code], market=market)
-                        if source.type == 'news': return md.news([code], market=market, since_hours=24 * 365)
-                        if source.type == 'events': return md.events([code], market=market, since_days=365)
-                        return md.dividend([code], market=market)
-                    items = [asdict(item) for item in await asyncio.to_thread(read)]
-                if items:
-                    result.extend(items)
-                else:
-                    errors.append({'symbol': code, 'market': market, 'error': '长桥未返回该标的数据'})
-            except Exception:
-                errors.append({'symbol': code, 'market': market, 'error': '长桥查询失败，请检查连接与数据权限'})
-        return CollectorResult(success=bool(result), data=result[:100], count=len(result), errors=errors,
-                               error='' if result else '长桥未返回数据，请检查连接、标的和数据权限')
 
     # 包内 kline/quote/flash_news/fundamentals Engine 各自只注册了这些 vendor(权威来源见 marketdata.PACKAGE_VENDORS_BY_TYPE)。
     # provider 不在这个集合里 = 包内没实现该源,测试应给出明确 error,不能构造 Engine 硬跑。
@@ -653,10 +586,11 @@ class DataCollectorManager:
         results = []
         errors: list[dict[str, str]] = []
         first_error = ""
+        count = _probe_value(source, "count", 30)
         for symbol in test_symbols[:_TEST_SYMBOL_LIMIT]:
             market = Symbol.parse(symbol).market.value
             try:
-                bars = await asyncio.to_thread(md.klines, symbol, market=market, days=30)
+                bars = (await asyncio.to_thread(md.klines, symbol, market=market, days=count))[-count:]
                 if bars:
                     last = bars[-1]
                     results.append(
@@ -755,7 +689,8 @@ class DataCollectorManager:
         try:
             # 包内 news publish_time 是 aware(UTC),now 也须 aware,否则 since 过滤崩
             from datetime import timezone
-            news = await asyncio.to_thread(md.news, test_symbols, names=names, now=datetime.now(timezone.utc))
+            news = await asyncio.to_thread(md.news, test_symbols, names=names, now=datetime.now(timezone.utc),
+                                           since_hours=_probe_value(source, "lookback_hours", 2))
         except Exception as e:
             return CollectorResult(success=False, error=str(e))
 
@@ -793,7 +728,7 @@ class DataCollectorManager:
         )
 
         try:
-            items = await asyncio.to_thread(md.flash_news, limit=20)
+            items = await asyncio.to_thread(md.flash_news, limit=_probe_value(source, "limit", 20))
         except Exception as e:
             return CollectorResult(success=False, error=str(e))
 
@@ -887,7 +822,9 @@ class DataCollectorManager:
             )
         )
 
-        test_date = cfg.get("test_date") or datetime.now().strftime("%Y-%m-%d")
+        test_date = _probe_value(source, "test_date", None)
+        if not test_date:
+            return CollectorResult(success=False, error="本地日历未找到已收盘交易日，请指定测试日期。")
 
         try:
             items = await asyncio.to_thread(md.dragon_tiger, date=test_date)
@@ -907,7 +844,7 @@ class DataCollectorManager:
             count=len(items),
             error=""
             if items
-            else "未获取到龙虎榜数据（需配置 test_date 或当日有榜）",
+            else f"{test_date} 未获取到龙虎榜数据",
         )
 
     async def _test_margin_source(self, source: DataSource) -> CollectorResult:
@@ -1088,6 +1025,11 @@ class DataCollectorManager:
 
 
 # 全局单例
+def _probe_value(source, name, default):
+    settings = source_test_settings.describe(source)
+    return source_test_settings.probe_params(settings).get(name, default) if settings else default
+
+
 _manager: DataCollectorManager | None = None
 
 

@@ -30,6 +30,9 @@ const {
   AgentsPage,
   SettingsPage,
   DataSourcesPage,
+  ResearchDataPage,
+  FuyaoRestPage,
+  FtshareRestPage,
   MCPPage,
   HistoryPage,
   AnalysisDetailPage,
@@ -46,6 +49,7 @@ const NAV_ITEMS: Array<{ to: string; icon: typeof LayoutDashboard; labelKey: Nav
   { to: '/portfolio', icon: List, labelKey: 'portfolio' },
   { to: '/assistant', icon: MessageCircle, labelKey: 'assistant' },
   { to: '/opportunities', icon: Sparkles, labelKey: 'opportunities' },
+  { to: '/market-data', icon: Database, labelKey: 'researchData' },
   { to: '/short-term', icon: Compass, labelKey: 'shortTerm' },
   { to: '/paper-trading', icon: Activity, labelKey: 'paperTrading' },
   { to: '/alerts', icon: BellRing, labelKey: 'alerts' },
@@ -94,6 +98,7 @@ function App() {
   const { mode, setMode } = useTheme()
   const location = useLocation()
   const isAssistantRoute = location.pathname === '/assistant' || location.pathname.startsWith('/assistant/')
+  const isDataSourcesRoute = /^\/datasources\/?$/.test(location.pathname)
   const [version, setVersion] = useState('')
   const [logsOpen, setLogsOpen] = useState(false)
   const [selfCheckOpen, setSelfCheckOpen] = useState(false)
@@ -157,7 +162,7 @@ function App() {
     <div
       className={isAssistantRoute
         ? 'relative flex h-dvh flex-col overflow-hidden bg-background'
-        : 'min-h-screen pb-16 md:pb-0 relative overflow-x-clip bg-background'}
+        : `min-h-screen pb-16 md:pb-0 relative overflow-x-clip bg-background ${isDataSourcesRoute ? 'md:flex md:h-dvh md:min-h-0 md:flex-col' : ''}`}
     >
       <AmbientBackground />
       {/* Desktop Floating Nav */}
@@ -304,7 +309,7 @@ function App() {
       <main
         className={`${isAssistantRoute
           ? 'flex min-h-0 flex-1 flex-col overflow-hidden pb-[calc(3.5rem+env(safe-area-inset-bottom))] md:pb-6'
-          : 'pb-4 md:pb-6'} px-4 pt-4 md:px-6 md:pt-6 w-full`}
+          : `pb-4 md:pb-6 ${isDataSourcesRoute ? 'md:flex md:min-h-0 md:flex-1 md:flex-col' : ''}`} px-4 pt-4 md:px-6 md:pt-6 w-full`}
       >
         <AssistantOpenBridge />
         <RouteErrorBoundary>
@@ -326,6 +331,9 @@ function App() {
               <Route path="/assistant" element={<AssistantPage />} />
               <Route path="/assistant/:conversationId" element={<AssistantPage />} />
               <Route path="/datasources" element={<DataSourcesPage />} />
+              <Route path="/market-data/:kind?" element={<ResearchDataPage />} />
+              <Route path="/datasources/fuyao" element={<FuyaoRestPage />} />
+              <Route path="/datasources/ftshare" element={<FtshareRestPage />} />
               <Route path="/integrations/mcp" element={<MCPPage />} />
               <Route path="/integrations/mcp/callback" element={<MCPPage />} />
               <Route path="/settings" element={<SettingsPage />} />

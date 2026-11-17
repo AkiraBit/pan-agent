@@ -6,6 +6,7 @@ from types import SimpleNamespace
 
 from sqlalchemy import func, select
 
+from src.platform.marketdata.source_activation import active_source
 from src.platform.persistence.models import DataSource
 from . import free_sources, service, sources
 from .models import EtfDaily, EtfFetchState, EtfFlowDay, EtfMeasurement, EtfSnapshot, EtfTurnover
@@ -17,15 +18,26 @@ METHOD = 'shares_change_x_unadjusted_close-v1'
 
 
 def enabled(kind, provider):
+    from src.platform.marketdata import fuyao_business, fuyao_rest
+
     with service.SessionLocal() as db:
-        return db.scalar(select(DataSource.id).where(DataSource.type == kind, DataSource.provider == provider,
-                                                     DataSource.enabled.is_(True)).limit(1)) is not None
+        types = [fuyao_rest.TYPE_PREFIX + op for op in fuyao_business.NATIVE_OPERATIONS.get(kind, ())] if provider == "fuyao" else [kind]
+        return db.scalar(select(DataSource.id).where(DataSource.type.in_(types), DataSource.provider == provider,
+                                                     active_source()).limit(1)) is not None
 
 
 def settings():
+    from src.platform.marketdata import fuyao_business, fuyao_credentials, fuyao_rest
     with service.SessionLocal() as db:
-        rows = db.scalars(select(DataSource).order_by(DataSource.priority, DataSource.id)).all()
-        return [(r.type, r.provider) for r in rows if r.enabled and (r.type, r.provider) in free_sources.SPECS]
+        rows = db.scalars(select(DataSource).where(active_source())).all()
+        configured = fuyao_credentials.configured(fuyao_credentials.read(db)) if any(
+            r.provider == "fuyao" for r in rows) else False
+        enabled = {(r.type, r.provider) for r in rows if r.provider != "fuyao"}
+        if configured and any(r.provider == "fuyao" and r.type in {
+            fuyao_rest.TYPE_PREFIX + op for op in fuyao_business.NATIVE_OPERATIONS["etf_nav"]
+        } for r in rows):
+            enabled.add(("etf_nav", "fuyao"))
+        return [key for key in free_sources.SPECS if key in enabled]
 
 
 def context():
@@ -135,9 +147,11 @@ def rebuild(start=None):
                 prices.setdefault(code, {}).setdefault(d, SimpleNamespace(payload={'close': original['close']},
                     snapshot_id=row.snapshot_id, trade_date=d))
         saved_derivations = derived(db)
-        # Primary NAV wins; PCF is dated by PreTradingDay, never by publication day.
+        # Prefer the configured NAV source when both publish a value for the day.
+        # Keep persisted evidence from an inactive source as a historical fallback.
+        priority = {provider: idx for idx, (kind, provider) in enumerate(settings()) if kind == "etf_nav"}
         navs = {}
-        for row in sorted(inputs, key=lambda r: (r.resource == 'nav', r.snapshot_id)):
+        for row in sorted(inputs, key=lambda r: (r.resource == "nav", -priority.get(r.source, 999), r.snapshot_id)):
             if row.resource in {'nav', 'pcf'}:
                 navs[(row.code, row.payload.get('nav_date', row.trade_date))] = row
         changed, affected = 0, set()

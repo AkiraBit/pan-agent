@@ -33,26 +33,25 @@ def test_md_quote_rows_uses_marketdata(monkeypatch):
 def test_db_config_provider_maps_rows(monkeypatch):
     rows = [
         SimpleNamespace(provider="tencent", priority=1, config={"k": "v"}, supports_batch=True),
-        SimpleNamespace(provider="yfinance", priority=2, config=None, supports_batch=False),
+        SimpleNamespace(provider="sina", priority=2, config=None, supports_batch=False),
     ]
     cp = mc.DbConfigProvider()
     monkeypatch.setattr(cp, "_query_rows", lambda datatype: rows)
-    got = cp.sources_for("quote", "CN")
+    got = cp.sources_for("quote", "HK")
     assert [(s.vendor, s.priority, s.enabled, s.config) for s in got] == [
-        ("tencent", 1, True, {"k": "v"}),
-        ("yfinance", 2, True, {}),
+        ("tencent", 0, True, {"k": "v"}),
     ]
 
 
-def test_db_config_provider_preserves_configured_us_kline_fallbacks(monkeypatch):
-    """A failing fallback must not exclude the configured primary provider."""
+def test_db_config_provider_uses_one_independent_us_kline_source(monkeypatch):
+    """Non-paired markets use one eligible provider and ignore stored priorities."""
     rows = [
         SimpleNamespace(provider="tencent", priority=0, config={}, supports_batch=False),
-        SimpleNamespace(provider="stooq", priority=15, config={}, supports_batch=False),
+        SimpleNamespace(provider="longbridge", priority=15, config={}, supports_batch=False),
     ]
     cp = mc.DbConfigProvider()
     monkeypatch.setattr(cp, "_query_rows", lambda datatype: rows)
 
     got = cp.sources_for("kline", "US")
 
-    assert [s.vendor for s in got] == ["tencent", "stooq"]
+    assert [s.vendor for s in got] == ["tencent"]

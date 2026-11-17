@@ -20,6 +20,9 @@ describe('route page loaders', () => {
       'evaluations',
       'history',
       'dataSources',
+      'researchData',
+      'fuyaoRest',
+      'ftshareRest',
       'mcp',
       'settings',
       'analysisDetail',
@@ -47,6 +50,17 @@ describe('route page loaders', () => {
 
   it('resolves the recoverable setup page', () => {
     expect(resolveRouteKey('/getting-started')).toBe('gettingStarted')
+  })
+
+  it('opens the REST catalogs separately from data source settings', () => {
+    expect(resolveRouteKey('/datasources')).toBe('dataSources')
+    expect(resolveRouteKey('/datasources/fuyao')).toBe('fuyaoRest')
+    expect(resolveRouteKey('/datasources/ftshare')).toBe('ftshareRest')
+  })
+
+  it('preloads the native market research workflows', () => {
+    expect(resolveRouteKey('/market-data')).toBe('researchData')
+    expect(resolveRouteKey('/market-data/options_research')).toBe('researchData')
   })
 
   it('loads MCP configuration and its OAuth callback without taking over the inbound MCP endpoint', () => {

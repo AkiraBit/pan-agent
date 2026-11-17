@@ -1,16 +1,19 @@
 import base64
 import os
+import re
 from pathlib import Path
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 
 from src.platform.persistence.database import get_db
 from src.platform.persistence.models import AppSettings
+from src.platform.marketdata import provider_credentials
 from src.platform.runtime.config import Settings
 from src.platform.runtime.paths import get_data_dir
 from src.modules.administration.update_checker import check_update
 from src.web.errors import api_error
+from .mcp_connections import require_login
 
 router = APIRouter()
 
@@ -72,7 +75,7 @@ def _get_env_defaults() -> dict[str, str]:
         "notify_retry_attempts": str(s.notify_retry_attempts),
         "notify_retry_backoff_seconds": str(s.notify_retry_backoff_seconds),
         "notify_dedupe_ttl_overrides": s.notify_dedupe_ttl_overrides,
-        "stock_link_platform": "xueqiu",
+        "stock_link_platform": "eastmoney",
         "panwatch_base_url": os.getenv("PANWATCH_BASE_URL", ""),
     }
 
@@ -107,6 +110,53 @@ def list_settings(db: Session = Depends(get_db)):
 def get_timezone():
     """Wall-clock configuration is shared by background schedules and quiet hours."""
     return {"execution_timezone": Settings().app_timezone}
+
+
+DATA_PROVIDERS = {"fuyao": "同花顺", "ftshare": "FTShare"}
+
+
+def _data_provider_name(provider: str) -> str:
+    name = DATA_PROVIDERS.get(provider)
+    if name is None:
+        raise api_error(404, "provider_not_found", "数据源服务商不存在。")
+    return name
+
+
+@router.get("/data-providers/{provider}", dependencies=[Depends(require_login)])
+def get_provider_credential(provider: str, db: Session = Depends(get_db)):
+    _data_provider_name(provider)
+    row = provider_credentials.read(db, provider)
+    return {"configured": provider_credentials.configured(row), "masked_key": provider_credentials.masked_key(row)}
+
+
+@router.put("/data-providers/{provider}", dependencies=[Depends(require_login)])
+async def set_provider_credential(provider: str, request: Request, db: Session = Depends(get_db)):
+    name = _data_provider_name(provider)
+    # Keep submitted credentials out of FastAPI's default validation error response.
+    try:
+        body = await request.json()
+    except ValueError:
+        body = None
+    key = body.get("api_key") if isinstance(body, dict) else None
+    key = key.strip() if isinstance(key, str) else ""
+    if not re.fullmatch(r"[!-~]{1,512}", key):
+        raise api_error(422, "provider_key_invalid", f"请输入有效的{name} API Key。")
+    try:
+        provider_credentials.replace(db, provider, key)
+    except provider_credentials.CredentialStorageError:
+        raise api_error(500, "provider_storage_unavailable", f"无法保存{name} API Key。") from None
+    from src.platform.marketdata.collectors.kline_collector import clear_kline_cache
+    clear_kline_cache()
+    return {"configured": True, "masked_key": provider_credentials.mask_key(key)}
+
+
+@router.delete("/data-providers/{provider}", dependencies=[Depends(require_login)])
+def clear_provider_credential(provider: str, db: Session = Depends(get_db)):
+    _data_provider_name(provider)
+    provider_credentials.replace(db, provider, None)
+    from src.platform.marketdata.collectors.kline_collector import clear_kline_cache
+    clear_kline_cache()
+    return {"configured": False, "masked_key": None}
 
 
 AVATAR_KEY = "ui_avatar"  # DB 仅存文件名;图片本体落在 data/avatars/

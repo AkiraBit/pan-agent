@@ -1,6 +1,5 @@
 import asyncio
 import copy
-import json
 from unittest.mock import AsyncMock
 
 import pytest
@@ -9,15 +8,12 @@ from sqlalchemy import func, select
 from test_etf_dashboard import database, board, report
 from src.modules.market.etf import history, service, turnover
 from src.modules.market.etf.models import EtfDaily, EtfSnapshot, EtfTurnover
-from src.platform.persistence.models import DataSource, MCPConnection
+from src.platform.persistence.models import DataSource
+from src.platform.marketdata import fuyao_rest
 
 
-def bar(day='2026-11-13', amount='123456789.25'):
-    return {'timestamp': day + 'T00:00:00+08:00', 'turnover': amount, 'volume': '1234'}
-
-
-def result(rows):
-    return {'content': [{'type': 'text', 'text': json.dumps(rows)}]}
+def reading(day='2026-11-13', code='510300', amount=123456789.25):
+    return [{'code': code, 'date': day, 'turnover_cny': amount, 'bar': {}}]
 
 
 def missing_board(value):
@@ -26,10 +22,11 @@ def missing_board(value):
     return value
 
 
-def enable(factory):
+def enable(factory, monkeypatch):
+    monkeypatch.setattr(turnover.fuyao_credentials, 'configured', lambda _: True)
     with factory() as db:
-        db.add(DataSource(name='Longbridge ETF', provider='longbridge', type='etf_turnover', enabled=True))
-        db.add(MCPConnection(provider='longbridge', credentials='encrypted-fixture', enabled=True))
+        db.add(DataSource(name='Fund market snapshot', provider='fuyao',
+                          type=fuyao_rest.TYPE_PREFIX + turnover.OPERATION, enabled=True))
         db.commit()
 
 
@@ -38,7 +35,7 @@ def test_fill_units_revision_restart_history_and_knowledge_cutoff(database, boar
     monkeypatch.setattr(service, 'timestamp', lambda: '2026-11-14T00:00:00+00:00')
     original = service.save_board(board, board)
     monkeypatch.setattr(service, 'timestamp', lambda: '2026-11-15T00:00:00+00:00')
-    rows = turnover.decode(result([bar()]), '510300', board['date'], board['date'])
+    rows = reading(board['date'])
     assert turnover.save(rows, {board['date']}) == 1
     turnover.save(rows, {board['date']})
     service._checked.clear()  # No in-memory cache is required for reads.
@@ -50,7 +47,7 @@ def test_fill_units_revision_restart_history_and_knowledge_cutoff(database, boar
     service.save_board(board, board)  # A later primary-source null must not erase the supplement.
     saved = service.saved_board(board['date'])['payload']
     assert saved['amount'] == 1.2345678925
-    assert saved['etfs'][0]['amount_source'] == 'longbridge'
+    assert saved['etfs'][0]['amount_source'] == 'fuyao'
     assert service.saved_board(board['date'], '2026-11-14T12:00:00+00:00')['payload']['amount'] is None
     for code in (None, '510300'):
         data = history.read_history(board['date'], board['date'], [board['date']], code=code)
@@ -60,7 +57,7 @@ def test_fill_units_revision_restart_history_and_knowledge_cutoff(database, boar
     service.save_holdings([report('2025-12-31')])
     assert history.read_history(board['date'], board['date'], [board['date']], national=True)['summary']['amount_days'] == 1
     monkeypatch.setattr(service, 'timestamp', lambda: '2026-11-16T00:00:00+00:00')
-    turnover.save(turnover.decode(result([bar(amount='0')]), '510300', board['date'], board['date']), {board['date']})
+    turnover.save(reading(board['date'], amount=0), {board['date']})
     assert service.saved_board()['payload']['amount'] == 0
     assert service.saved_board(knowledge_cutoff='2026-11-15T12:00:00+00:00')['payload']['amount'] == saved['amount']
 
@@ -69,7 +66,7 @@ def test_primary_precedence_and_incomplete_basket(database, board):
     value = missing_board(board)
     value['etfs'].append({**value['etfs'][0], 'code': '159919'})
     service.save_board(value, value)
-    rows = turnover.decode(result([bar()]), '510300', board['date'], board['date'])
+    rows = reading(board['date'])
     turnover.save(rows, {board['date']})
     assert service.saved_board()['payload']['amount'] is None
     assert service.saved_board()['payload']['etfs'][0]['amount'] is not None
@@ -81,24 +78,16 @@ def test_primary_precedence_and_incomplete_basket(database, board):
         assert db.get(EtfDaily, ('510300', board['date'])).turnover_cny == 1e9
 
 
-@pytest.mark.parametrize('rows', [[bar(amount='NaN')], [bar(amount='-1')], [bar(amount=True)],
-    [bar('2026-11-12')], [bar(), bar()], [{'timestamp': '2026-11-13', 'turnover': '1'}],
-    [{**bar(), 'symbol': '159919.SZ'}]])
-def test_rejects_corrupt_or_mismatched_measurements(rows):
-    with pytest.raises(ValueError):
-        turnover.decode(result(rows), '510300', '2026-11-13', '2026-11-13')
-
-
 @pytest.mark.anyio
 async def test_collect_respects_connection_source_controls_and_recovers(database, board, monkeypatch):
     value = missing_board(board)
     service.save_board(value, value)
-    fetch = AsyncMock(return_value=turnover.decode(result([bar()]), '510300', board['date'], board['date']))
-    monkeypatch.setattr(turnover, 'fetch', fetch)
+    fetch = AsyncMock(return_value=reading(board['date']))
+    monkeypatch.setattr(turnover, 'fetch_fuyao', fetch)
     monkeypatch.setattr(turnover, 'last_closed_day', lambda: board['date'])
     assert await turnover.collect() == 0
     fetch.assert_not_awaited()
-    enable(database)
+    enable(database, monkeypatch)
     with database() as db:
         source = db.scalar(select(DataSource))
         source.enabled = False
@@ -121,30 +110,35 @@ async def test_partial_or_failed_response_keeps_gaps_retryable(database, board, 
     value = missing_board(board)
     value['etfs'].append({**value['etfs'][0], 'code': '159919'})
     service.save_board(value, value)
-    enable(database)
+    enable(database, monkeypatch)
     monkeypatch.setattr(turnover, 'last_closed_day', lambda: board['date'])
     async def fetch(code, start, end):
         if code == '159919': raise RuntimeError('offline')
-        return turnover.decode(result([bar()]), code, start, end)
-    monkeypatch.setattr(turnover, 'fetch', fetch)
+        return reading(start, code)
+    monkeypatch.setattr(turnover, 'fetch_fuyao', fetch)
     assert await turnover.collect() == 1
     with database() as db:
         assert db.get(EtfDaily, ('159919', board['date'])).turnover_cny is None
     service._retry.clear()
-    monkeypatch.setattr(turnover, 'fetch', AsyncMock(return_value=turnover.decode(result([bar()]), '159919', board['date'], board['date'])))
+    monkeypatch.setattr(turnover, 'fetch_fuyao', AsyncMock(return_value=reading(board['date'], '159919')))
     assert await turnover.collect() == 1
 
 
 @pytest.mark.anyio
-async def test_rate_limit_retries_and_bounded_history(database, monkeypatch):
-    provider = AsyncMock(side_effect=[result({'error_code': 429002}), result([bar()])])
-    monkeypatch.setattr(turnover.longbridge_mcp, 'remote', provider)
-    monkeypatch.setattr(turnover.asyncio, 'sleep', AsyncMock())
-    assert len(await turnover.fetch('510300', '2026-11-13', '2026-11-13')) == 1
-    assert provider.await_count == 2
-    assert provider.call_args.args[2]['forward_adjust'] is False
-    assert list(turnover.batches(['2026-01-01', '2026-01-02', '2026-05-01'])) == [
-        ['2026-01-01', '2026-01-02'], ['2026-05-01']]
+async def test_snapshot_rejects_intraday_and_wrong_symbol(board, monkeypatch):
+    from datetime import datetime
+    day = board['date']
+    stamp = lambda hour: int(datetime.fromisoformat(f'{day}T{hour}:00:00+08:00').timestamp() * 1000)
+    upstream = AsyncMock(side_effect=[
+        {'timestamp': stamp(14), 'item': [{'thscode': '510300.SH', 'turnover': 100}]},
+        {'timestamp': stamp(15), 'item': [{'thscode': '159919.SZ', 'turnover': 100}]},
+        {'timestamp': stamp(15), 'item': [{'thscode': '510300.SH', 'turnover': 100}]},
+    ])
+    monkeypatch.setattr(turnover.fuyao_business, 'fetch', upstream)
+    assert not await turnover.fetch_fuyao('510300', day, day)
+    assert not await turnover.fetch_fuyao('510300', day, day)
+    assert (await turnover.fetch_fuyao('510300', day, day))[0]['turnover_cny'] == 100
+    upstream.assert_awaited_with(turnover.OPERATION, {'thscode': '510300.SH'})
 
 
 @pytest.mark.anyio
@@ -152,7 +146,7 @@ async def test_disabling_source_stops_remaining_requests(database, board, monkey
     value = missing_board(board)
     value['etfs'].append({**value['etfs'][0], 'code': '159919'})
     service.save_board(value, value)
-    enable(database)
+    enable(database, monkeypatch)
     monkeypatch.setattr(turnover, 'last_closed_day', lambda: board['date'])
     calls = []
     async def fetch(code, start, end):
@@ -160,7 +154,7 @@ async def test_disabling_source_stops_remaining_requests(database, board, monkey
         with database() as db:
             db.scalar(select(DataSource)).enabled = False
             db.commit()
-        return turnover.decode(result([bar()]), code, start, end)
-    monkeypatch.setattr(turnover, 'fetch', fetch)
+        return reading(start, code)
+    monkeypatch.setattr(turnover, 'fetch_fuyao', fetch)
     assert await turnover.collect() == 1
     assert len(calls) == 1

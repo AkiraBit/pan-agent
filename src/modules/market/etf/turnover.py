@@ -1,4 +1,4 @@
-"""Automatic Longbridge daily-turnover backfill using the saved OAuth connection.
+"""Supplement daily ETF turnover with completed Tonghuashun snapshots.
 
 Amounts are CNY, not volume (lots) or the board's 100-million-CNY display unit.
 Only completed trading days are supplemented; original board snapshots stay raw.
@@ -6,20 +6,19 @@ Only completed trading days are supplemented; original board snapshots stay raw.
 from __future__ import annotations
 
 import asyncio
-import json
 import re
 import time
 from datetime import date, datetime, timedelta
 
 from sqlalchemy import and_, func, or_, select
 
-from src.modules.administration import longbridge_mcp
-from src.platform.persistence.models import MCPConnection
+from src.platform.marketdata import fuyao_business, fuyao_credentials, fuyao_rest
+from src.platform.marketdata.source_activation import active_source
+from src.platform.persistence.models import DataSource
 from . import service, sources
 from .models import EtfDaily, EtfSnapshot, EtfTurnover
 
-TOOL = 'history_candlesticks_by_date'
-DOCS_URL = 'https://open.longbridge.com/docs/mcp/tools#history_candlesticks_by_date'
+OPERATION = "get_fund_market_snapshot"
 
 
 def symbol(code):
@@ -34,54 +33,27 @@ def last_closed_day():
     return (now.date() if (now.hour, now.minute) >= (15, 15) else now.date() - timedelta(days=1)).isoformat()
 
 
-def decode(result, code, start, end):
-    """Reject malformed/error responses atomically; never turn gaps into zeroes."""
-    if not isinstance(result, dict) or result.get('isError'):
-        raise ValueError('Longbridge tool failed')
-    data = result.get('structuredContent')
-    if data is None:
-        data = json.loads(''.join(block['text'] for block in result.get('content', []) if block.get('type') == 'text'))
-    if isinstance(data, dict) and data.get('error_code'):
-        if data['error_code'] == 429002:
-            raise RateLimited()
-        raise ValueError('Longbridge data unavailable')
-    if not isinstance(data, list):
-        raise ValueError('Missing Longbridge bars')
-    rows, seen = [], set()
-    for bar in data:
-        if not isinstance(bar, dict):
-            raise ValueError('Invalid daily bar')
-        if bar.get('symbol', symbol(code)) != symbol(code):
-            raise ValueError('ETF symbol mismatch')
-        stamp = datetime.fromisoformat(bar['timestamp'].replace('Z', '+00:00'))
-        if stamp.tzinfo is None:
-            raise ValueError('Missing exchange timezone')
-        day = stamp.astimezone(sources.CN).date().isoformat()
-        if not start <= day <= end or day in seen:
-            raise ValueError('Unexpected or duplicate trading date')
-        seen.add(day)
-        amount = sources.finite(bar.get('turnover'), nonnegative=True)
-        if amount is not None:
-            rows.append({'code': code, 'date': day, 'turnover_cny': amount, 'bar': bar})
-    return rows
+def configured_sources():
+    with service.SessionLocal() as db:
+        if fuyao_credentials.configured(fuyao_credentials.read(db)) and db.scalar(select(DataSource.id).where(
+            DataSource.provider == "fuyao", DataSource.type == fuyao_rest.TYPE_PREFIX + OPERATION, active_source(),
+        ).limit(1)):
+            return ["fuyao"]
+        return []
 
 
-class RateLimited(ValueError):
-    pass
-
-
-async def fetch(code, start, end):
-    arguments = {'symbol': symbol(code), 'period': 'day', 'start': start, 'end': end,
-                 'forward_adjust': False, 'trade_sessions': 'intraday'}
-    for attempt in range(3):
-        with service.SessionLocal() as db:
-            result = await longbridge_mcp.remote(db, TOOL, arguments)
-        try:
-            return decode(result, code, start, end)
-        except RateLimited:
-            if attempt == 2:
-                raise
-            await asyncio.sleep(2 ** attempt)
+async def fetch_fuyao(code, start, end):
+    data = await fuyao_business.fetch(OPERATION, {"thscode": symbol(code)})
+    if not isinstance(data, dict) or type(data.get("timestamp")) is not int:
+        return []
+    stamp = datetime.fromtimestamp(data["timestamp"] / 1000, sources.CN)
+    day = stamp.date().isoformat()
+    # An intraday cumulative value is not a completed daily observation.
+    if (stamp.hour, stamp.minute) < (15, 0) or not start <= day <= end:
+        return []
+    return [{"code": code, "date": day, "turnover_cny": amount, "bar": row}
+            for row in data.get("item", []) if row.get("thscode") == symbol(code)
+            and (amount := sources.finite(row.get("turnover"), nonnegative=True)) is not None][:1]
 
 
 def observations(db, cutoff=None, day=None):
@@ -100,7 +72,7 @@ def overlay(payload, supplements):
         row = dict(original)
         saved = supplements.get((row['code'], payload['date']))
         if row.get('amount') is None and saved:
-            row.update(amount=saved.payload['turnover_cny'] / 1e8, amount_source='longbridge',
+            row.update(amount=saved.payload['turnover_cny'] / 1e8, amount_source=saved.source,
                        amount_snapshot_id=saved.id)
             evidence.append(saved.id)
         rows.append(row)
@@ -121,9 +93,9 @@ def save(rows, requested_days):
             if daily is None:
                 continue
             payload = {**row, 'symbol': symbol(row['code']), 'period': 'day',
-                       'adjustment': 'none', 'currency': 'CNY', 'tool': TOOL}
+                       'adjustment': 'none', 'currency': 'CNY', 'tool': OPERATION}
             snap = service.snapshot(db, 'turnover', f"{row['code']}:{row['date']}", payload,
-                                    'longbridge', DOCS_URL)
+                                    "fuyao", fuyao_rest.OPERATIONS[OPERATION]["docs_url"])
             service.upsert(db, EtfTurnover, [{'code': row['code'], 'trade_date': row['date'],
                            'turnover_cny': row['turnover_cny'], 'snapshot_id': snap.id,
                            'checked_at': service.timestamp()}], ['code', 'trade_date'])
@@ -138,61 +110,45 @@ def save(rows, requested_days):
 
 
 def pending():
-    from src.platform.marketdata.longbridge import enabled
-    if not enabled('etf_turnover', service.SessionLocal):
+    if not configured_sources():
         return {}
     now = datetime.fromisoformat(service.timestamp())
     recent = (now.astimezone(sources.CN).date() - timedelta(days=7)).isoformat()
     with service.SessionLocal() as db:
-        connection = db.get(MCPConnection, 'longbridge')
-        if not connection or not connection.enabled or not connection.credentials:
-            return {}
-        rows = db.execute(select(EtfDaily.code, EtfDaily.trade_date).outerjoin(EtfTurnover,
+        query = (select(EtfDaily.code, EtfDaily.trade_date).outerjoin(EtfTurnover,
             and_(EtfDaily.code == EtfTurnover.code, EtfDaily.trade_date == EtfTurnover.trade_date))
             .where(EtfDaily.trade_date <= last_closed_day(), or_(EtfDaily.turnover_cny.is_(None),
                 and_(EtfDaily.trade_date >= recent, EtfTurnover.checked_at < (now - timedelta(hours=1)).isoformat())))
-            .order_by(EtfDaily.code, EtfDaily.trade_date)).all()
+            .order_by(EtfDaily.code, EtfDaily.trade_date))
+        query = query.where(EtfDaily.trade_date == select(func.max(EtfDaily.trade_date)).where(
+            EtfDaily.trade_date <= last_closed_day()).scalar_subquery())
+        rows = db.execute(query).all()
     result = {}
     for code, day in rows:
         result.setdefault(code, []).append(day)
     return result
 
 
-def batches(days):
-    """Bound API ranges to 90 calendar days to avoid silently truncated history."""
-    batch = []
-    for day in sorted(set(days)):
-        if batch and (date.fromisoformat(day) - date.fromisoformat(batch[0])).days >= 90:
-            yield batch
-            batch = []
-        batch.append(day)
-    if batch:
-        yield batch
-
-
 async def collect():
-    from src.platform.marketdata.longbridge import enabled
     async def run():
         written = 0
         for code, days in (await asyncio.to_thread(pending)).items():
             key = ('turnover', code)
-            if time.monotonic() < service._retry.get(key, 0):
+            day = days[0]  # Snapshot endpoint only covers the latest session.
+            if time.monotonic() < service._retry.get(key, 0) or (
+                date.fromisoformat(last_closed_day()) - date.fromisoformat(day)
+            ).days > 7:
                 continue
-            for batch in batches(days):
-                if not await asyncio.to_thread(enabled, 'etf_turnover', service.SessionLocal):
-                    return written  # Disabling the source stops the next request in a running backfill.
-                try:
-                    rows = await fetch(code, batch[0], batch[-1])
-                    written += await asyncio.to_thread(save, rows, set(batch))
-                    if set(batch) - {r['date'] for r in rows}:
-                        service._retry[key] = time.monotonic() + 300
-                except asyncio.CancelledError:
-                    raise
-                except Exception:
-                    # Never log provider bodies, tokens or account data.
-                    service.log.warning('ETF Longbridge turnover unavailable: %s', code)
+            if not await asyncio.to_thread(configured_sources):
+                return written  # Recheck after each request in case the source was disabled.
+            try:
+                rows = await fetch_fuyao(code, day, day)
+                written += await asyncio.to_thread(save, rows, {day})
+                if not rows:
                     service._retry[key] = time.monotonic() + 300
-                    break
-                await asyncio.sleep(.35)
+            except Exception:
+                service.log.warning('ETF turnover unavailable: fuyao/%s', code)
+                service._retry[key] = time.monotonic() + 300
+            await asyncio.sleep(.35)
         return written
     return await service.coalesce(('turnover',), run)

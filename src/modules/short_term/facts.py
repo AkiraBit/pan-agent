@@ -8,12 +8,13 @@ import math
 from dataclasses import asdict
 from datetime import datetime, time, timedelta, timezone
 
-from marketdata.short_term import Batch, POOLS, TZ, limit_pool, quotes
+from marketdata.short_term import Batch, POOLS, TZ, quotes
 from marketdata.sentiment import market_snapshot
 
 from src.platform.marketdata.marketdata_client import get_market_data
 from src.platform.scheduling.trading_calendar import calendar_known, is_trading_day
 from .analysis import analyze, phase_at, reference_day
+from .market_sources import limit_pool
 from .speculation import candidate_concepts, relay_observation, theme_observation
 
 
@@ -135,7 +136,7 @@ async def collect_facts(focus_symbols, memory_symbols=()):
     ev.insert(0, evidence("market:breadth", "market", "Shanghai / Shenzhen market breadth", market.provider,
                           snapshot['market'], observed, status=market.status))
     for kind, batch in pools.items():
-        ev.append(evidence(f"pool:{kind}", "pool", f"{day} / {kind}", "eastmoney",
+        ev.append(evidence(f"pool:{kind}", "pool", f"{day} / {kind}", batch.provider,
                            {"quality": batch.metadata(), "rows": batch.rows[:24], "sample_limit": 24,
                             "total_rows": len(batch.rows)}, observed, status=batch.status))
     for theme, batch in members:

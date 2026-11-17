@@ -17,11 +17,19 @@ class Request:
     limit: int = 120
     since_hours: int = 12
     extra: tuple[tuple[str, Any], ...] = ()
+    timeout_budget_seconds: float = 15
+    max_age_seconds: float | None = None
+    trade_date: date | None = None
+    required_fields: tuple[str, ...] = ()
+    stale_if_error_seconds: float = 0
 
     def cache_key(self, datatype: str) -> str:
         sym = ",".join(self.symbols)
         extra = ",".join(f"{k}={v}" for k, v in self.extra)
-        return f"{datatype}|{self.market}|{self.timeframe}|{self.limit}|{self.since_hours}|{sym}|{extra}"
+        base = f"{datatype}|{self.market}|{self.timeframe}|{self.limit}|{self.since_hours}|{sym}|{extra}"
+        if self.required_fields or self.max_age_seconds is not None or self.trade_date or self.stale_if_error_seconds:
+            return f"{base}|{self.required_fields}|{self.max_age_seconds}|{self.trade_date}|{self.stale_if_error_seconds}"
+        return base
 
 
 @dataclass
@@ -50,6 +58,7 @@ class Quote:
     quote_date: date | None = None
     source_timestamp: datetime | None = None
     source: str = ""
+    stale: bool = False
 
 
 @dataclass
@@ -244,8 +253,7 @@ class FlashNews:
 
 @dataclass
 class NewsArticle:
-    """新闻资讯(个股新闻+公告,对齐 PanWatch src/collectors/news_collector.NewsItem)。
-    来源可为 xueqiu(雪球个股新闻)/ eastmoney_news(东财个股新闻搜索)/ eastmoney(东财公告)。"""
+    """来自行情服务商的新闻资讯或个股公告。"""
 
     source: str
     external_id: str
@@ -266,6 +274,9 @@ class Response:
     error: str = ""
     vendor: str = ""
     latency_ms: int = 0
+    partial: bool = False
+    stale: bool = False
+    sources: tuple[str, ...] = ()
 
     @property
     def is_empty(self) -> bool:

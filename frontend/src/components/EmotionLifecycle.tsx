@@ -1,13 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@panwatch/base-ui/components/ui/button'
-import { Input } from '@panwatch/base-ui/components/ui/input'
-import { Label } from '@panwatch/base-ui/components/ui/label'
-import { Switch } from '@panwatch/base-ui/components/ui/switch'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@panwatch/base-ui/components/ui/dialog'
 import { useConfirm } from '@panwatch/base-ui/components/ui/confirm-dialog'
 import { useToast } from '@panwatch/base-ui/components/ui/toast'
-import { emotionApi, type AuctionSource, type EmotionPage, type EmotionPublication, type Evidence, type Lifecycle } from '@panwatch/api/emotion'
+import { emotionApi, type EmotionPage, type EmotionPublication, type Evidence, type Lifecycle } from '@panwatch/api/emotion'
 import { EmotionCard, emotionStamp } from './EmotionBlocks'
 import { formatNumber } from '@/i18n/format'
 
@@ -18,8 +14,7 @@ export default function EmotionLifecycle({ publication: p, page, active, onRefre
   const { t } = useTranslation('emotion')
   const { toast } = useToast(), requestConfirm = useConfirm()
   const [data, setData] = useState<Lifecycle | null>(null), [failed, setFailed] = useState(false)
-  const [busy, setBusy] = useState(false), [configOpen, setConfigOpen] = useState(false)
-  const [config, setConfig] = useState<AuctionSource | null>(null), [key, setKey] = useState('')
+  const [busy, setBusy] = useState(false)
   const load = useCallback(async (signal?: AbortSignal) => {
     try { const next = await emotionApi.lifecycle(p.id, signal); if (!signal?.aborted) { setData(next); setFailed(false) } }
     catch { if (!signal?.aborted) setFailed(true) }
@@ -38,7 +33,7 @@ export default function EmotionLifecycle({ publication: p, page, active, onRefre
   if (!visible) return null
   return <div className="space-y-5">
     {failed && <p role="alert" className="text-sm text-muted-foreground">{t('loadFailed')}</p>}
-    {page !== 'review' && <EmotionCard title={t('pages.monitor')} extra={<div className="flex flex-wrap gap-2"><Button size="sm" variant="outline" disabled={busy || !data} onClick={() => { setConfig(data!.auction_source); setKey(''); setConfigOpen(true) }}>{t('lifecycle.configure')}</Button><Button size="sm" disabled={busy || !data} onClick={() => void toggle()}>{t(status === 'active' ? 'lifecycle.pause' : 'lifecycle.start')}</Button></div>}>
+    {page !== 'review' && <EmotionCard title={t('pages.monitor')} extra={<div className="flex flex-wrap gap-2"><Button size="sm" variant="outline" asChild><a href="/datasources">{t('lifecycle.configure')}</a></Button><Button size="sm" disabled={busy || !data} onClick={() => void toggle()}>{t(status === 'active' ? 'lifecycle.pause' : 'lifecycle.start')}</Button></div>}>
       <div className="grid sm:grid-cols-3 gap-3">{[
         [t('lifecycle.monitor'), t(`monitorStates.${status}` as 'monitorStates.active')],
         [t('lifecycle.samples'), String(data?.sample_count ?? 0)],
@@ -55,6 +50,5 @@ export default function EmotionLifecycle({ publication: p, page, active, onRefre
         {review ? <div className="space-y-5"><div><h3 className="text-lg font-semibold">{review.analysis.title}</h3><p className="text-xs text-muted-foreground mt-2">{emotionStamp(review.published_at)} · {review.model_label}</p><p className="text-sm leading-7 mt-3">{review.analysis.summary}</p></div><p className="text-xs text-muted-foreground">{t('lifecycle.reviewCoverage', { count: review.summary.sample_count })} · {t(review.summary.has_closing_sample ? 'lifecycle.withClose' : 'lifecycle.noClose')} · {t(review.summary.prospective_plan ? 'lifecycle.prospective' : 'lifecycle.retrospective')}</p>{review.analysis.findings.map(f => <article key={f.condition_id} className="rounded-xl border p-4"><div className="flex flex-wrap justify-between gap-2 text-sm"><h4 className="font-medium">{p.analysis.conditions.find(c => c.id === f.condition_id)?.title}</h4><span>{t(`assessments.${f.assessment}`)}</span></div><p className="text-sm leading-7 mt-3">{f.explanation}</p><div className="flex flex-wrap gap-2 mt-2">{f.evidence_ids.map(id => { const e = review.evidence.find(e => e.id === id); return e ? <Button size="sm" variant="ghost" key={id} onClick={() => onEvidence(e)}>{emotionStamp(e.observed_at)}</Button> : null })}</div></article>)}<h3 className="text-sm font-semibold">{t('lifecycle.lessons')}</h3>{review.analysis.lessons.map((v, i) => <p key={i} className="text-sm leading-7">{v}</p>)}<h3 className="text-sm font-semibold">{t('lifecycle.nextDay')}</h3>{review.analysis.next_day_focus.map((v, i) => <p key={i} className="text-sm leading-7">{v}</p>)}<p className="text-sm leading-7 bg-accent/30 rounded-xl p-4">{review.analysis.memory_summary}</p></div> : <p className="text-sm text-muted-foreground leading-7">{t('lifecycle.reviewHint')}</p>}
       </EmotionCard><EmotionCard title={t('lifecycle.reviewMemory')}><div className="space-y-4">{p.review_memory_input?.map(m => <article key={m.review_id} className="border rounded-xl p-4"><h3 className="text-sm font-medium">{m.target_trade_date}</h3><p className="text-sm leading-7 mt-2">{m.memory_summary}</p>{m.open_questions.map((q, i) => <p className="text-xs text-muted-foreground leading-6 mt-2" key={i}>{q}</p>)}</article>)}{!p.review_memory_input?.length && <p className="text-sm text-muted-foreground">{t('lifecycle.noReviewMemory')}</p>}</div></EmotionCard>
     </>}
-    <Dialog open={configOpen} onOpenChange={setConfigOpen}><DialogContent className="max-w-xl"><DialogHeader><DialogTitle>{t('lifecycle.configure')}</DialogTitle><DialogDescription>{t('lifecycle.gatewayHint')}</DialogDescription></DialogHeader>{config && <div className="space-y-4"><div className="flex justify-between gap-3"><Label htmlFor="auction-enabled">{t('lifecycle.enableSource')}</Label><Switch id="auction-enabled" checked={config.enabled} onCheckedChange={enabled => setConfig({ ...config, enabled })} /></div><div><Label htmlFor="auction-provider">{t('lifecycle.provider')}</Label><Input id="auction-provider" value={config.provider_name} onChange={e => setConfig({ ...config, provider_name: e.target.value })} className="mt-2" /></div><div><Label htmlFor="auction-endpoint">{t('lifecycle.endpoint')}</Label><Input id="auction-endpoint" type="url" value={config.endpoint} onChange={e => setConfig({ ...config, endpoint: e.target.value })} className="mt-2" /></div><div><Label htmlFor="auction-key">{t(config.has_api_key ? 'lifecycle.replaceKey' : 'lifecycle.apiKey')}</Label><Input id="auction-key" type="password" autoComplete="new-password" value={key} onChange={e => setKey(e.target.value)} className="mt-2" /></div><Button disabled={busy || (config.enabled && !config.endpoint)} onClick={() => void action(async () => { await emotionApi.saveAuctionSource({ enabled: config.enabled, endpoint: config.endpoint, provider_name: config.provider_name, ...(key ? { api_key: key } : {}) }); setKey(''); setConfigOpen(false) })}>{t('save')}</Button></div>}</DialogContent></Dialog>
   </div>
 }

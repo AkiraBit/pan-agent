@@ -350,41 +350,16 @@ def seed_agents():
 # 预置数据源种子(供 seed_data_sources / reconcile_data_sources 复用)。
 # 只增不删的 upsert 目标;删孤儿的对账逻辑见 reconcile_data_sources。
 from src.modules.market.etf.free_sources import SPECS as PUBLIC_ETF_SPECS
+from src.platform.marketdata.ftshare_rest import seeds as ftshare_seeds
+from src.platform.marketdata.fuyao_business import seeds as fuyao_seeds
 
 DATA_SOURCE_SEEDS: list[dict] = [
+        *fuyao_seeds(),
+        *ftshare_seeds(),
         *[{'name': spec[1], 'type': kind, 'provider': provider, 'config': {},
-           'enabled': True, 'priority': 0, 'supports_batch': kind == 'etf_shares' and provider == 'sse',
-           'test_symbols': spec[2]} for (kind, provider), spec in PUBLIC_ETF_SPECS.items()],
-        *[
-            {"name": name, "type": kind, "provider": "longbridge", "config": {},
-             "enabled": True, "priority": 10 if kind == 'capital_flow' else 0,
-             "supports_batch": kind in {'quote', 'fundamentals'},
-             "test_symbols": symbols}
-            for kind, name, symbols in [
-                ('quote', '长桥行情', ['510300', '159919', '00700', 'AAPL']),
-                ('kline', '长桥 K 线', ['510300', '159919', '00700', 'AAPL']),
-                ('capital_flow', '长桥资金分布', ['600519', '00700', 'AAPL']),
-                ('fundamentals', '长桥基本面', ['600519', '00700', 'AAPL']),
-                ('news', '长桥资讯', ['600519', '00700', 'AAPL']),
-                ('events', '长桥公告', ['00700', 'AAPL']),
-                ('dividend', '长桥分红', ['00700', 'AAPL']),
-                ('etf_turnover', '长桥 ETF 成交额', ['510300', '159919']),
-            ]
-        ],
+           'enabled': True, 'priority': 0, 'supports_batch': False,
+           'test_symbols': spec[2]} for (kind, provider), spec in PUBLIC_ETF_SPECS.items() if provider != "fuyao"],
         # 新闻类数据源
-        {
-            "name": "雪球资讯",
-            "type": "news",
-            "provider": "xueqiu",
-            "config": {
-                "cookies": "",
-                "description": "雪球个股新闻聚合，需要登录 cookie",
-            },
-            "enabled": False,
-            "priority": 0,
-            "supports_batch": True,
-            "test_symbols": list(DEFAULT_TEST_SYMBOLS),
-        },
         {
             "name": "东方财富资讯",
             "type": "news",
@@ -420,33 +395,9 @@ DATA_SOURCE_SEEDS: list[dict] = [
             "name": "东方财富 K线",
             "type": "kline",
             "provider": "eastmoney",
-            "config": {"description": "东方财富日线,A股/港股长历史兜底(免 key)。"},
+            "config": {"description": "东方财富 A 股和港股历史日线。"},
             "enabled": True,
-            "priority": 5,   # 腾讯(0)之后、Tushare(10)之前 → CN/HK 兜底
-            "supports_batch": False,
-            "test_symbols": list(DEFAULT_TEST_SYMBOLS),
-        },
-        {
-            "name": "Stooq K线",
-            "type": "kline",
-            "provider": "stooq",
-            "config": {"description": "Stooq 美股日线兜底(免 key)。"},
-            "enabled": True,
-            "priority": 15,  # US 兜底(腾讯 0 之后)
-            "supports_batch": False,
-            "test_symbols": list(DEFAULT_TEST_SYMBOLS),
-        },
-        {
-            "name": "Yahoo K线",
-            "type": "kline",
-            "provider": "yahoo",
-            "config": {
-                "description": "Yahoo chart v8 日线(US/HK,免 key 免 crumb)。国内访问通常需代理,"
-                "在 config.proxy 填写代理地址后启用,作港股 K线第二源/美股更稳兜底。",
-                "proxy": "",
-            },
-            "enabled": False,  # 需代理,默认关(同 YFinance 口径),用户配好 proxy 再开
-            "priority": 20,  # US/HK 最后兜底
+            "priority": 5,
             "supports_batch": False,
             "test_symbols": list(DEFAULT_TEST_SYMBOLS),
         },
@@ -466,11 +417,11 @@ DATA_SOURCE_SEEDS: list[dict] = [
             "type": "capital_flow",
             "provider": "sina",
             "config": {
-                "description": "新浪资金流入趋势(CN,免 key)。作东财之后的第二源,"
+                "description": "新浪 A 股资金流入趋势，"
                 "仅含主力/超大单净额(无大/中/小单细分)。",
             },
             "enabled": True,
-            "priority": 5,  # 东财(0)之后的 CN 第二源
+            "priority": 5,
             "supports_batch": False,
             "test_symbols": list(DEFAULT_TEST_SYMBOLS),
         },
@@ -489,9 +440,9 @@ DATA_SOURCE_SEEDS: list[dict] = [
             "name": "东方财富行情",
             "type": "quote",
             "provider": "eastmoney",
-            "config": {"description": "东方财富 push2 实时行情(CN,免 key)。作腾讯之后的 A 股第二源。"},
+            "config": {"description": "东方财富 A 股实时行情。"},
             "enabled": True,
-            "priority": 3,  # 腾讯(0)之后的 CN 第二源(sina/yfinance 不支持 CN)
+            "priority": 3,
             "supports_batch": False,  # push2 stock/get 单只查询,逐只
             "test_symbols": list(DEFAULT_TEST_SYMBOLS),
         },
@@ -499,21 +450,9 @@ DATA_SOURCE_SEEDS: list[dict] = [
             "name": "Sina 行情",
             "type": "quote",
             "provider": "sina",
-            "config": {"description": "新浪美股/港股实时行情,免 key 免代理,作腾讯之后的 US/HK 备源。"},
+            "config": {"description": "新浪美股和港股实时行情。"},
             "enabled": True,
-            "priority": 5,   # 腾讯(0)之后
-            "supports_batch": True,
-            "test_symbols": list(DEFAULT_TEST_SYMBOLS),
-        },
-        {
-            "name": "YFinance 行情",
-            "type": "quote",
-            "provider": "yfinance",
-            "config": {
-                "description": "Yahoo Finance,需 pip install yfinance。适用 HK/US,A 股不可用。",
-            },
-            "enabled": False,
-            "priority": 10,
+            "priority": 5,
             "supports_batch": True,
             "test_symbols": list(DEFAULT_TEST_SYMBOLS),
         },
@@ -553,7 +492,7 @@ DATA_SOURCE_SEEDS: list[dict] = [
             "name": "东方财富7x24快讯",
             "type": "flash_news",
             "provider": "eastmoney",
-            "config": {"description": "东财 np-weblist 7×24 资讯,与财联社互备。"},
+            "config": {"description": "东方财富 7×24 快讯。"},
             "enabled": True,
             "priority": 10,
             "supports_batch": False,
@@ -640,19 +579,6 @@ DATA_SOURCE_SEEDS: list[dict] = [
         },
         # K线截图数据源
         {
-            "name": "雪球K线截图",
-            "type": "chart",
-            "provider": "xueqiu",
-            "config": {
-                "viewport": {"width": 1280, "height": 900},
-                "extra_wait_ms": 3000,
-            },
-            "enabled": True,
-            "priority": 0,
-            "supports_batch": False,
-            "test_symbols": list(DEFAULT_TEST_SYMBOLS),
-        },
-        {
             "name": "东方财富K线截图",
             "type": "chart",
             "provider": "eastmoney",
@@ -684,16 +610,22 @@ def seed_data_sources(db=None, *, reset_test_symbols: bool = False) -> list[dict
 
     seeded_missing: list[dict] = []
     for source_data in DATA_SOURCE_SEEDS:
+        identity = (
+            DataSource.type == source_data["type"] if source_data["provider"] in {"ftshare", "fuyao"}
+            else DataSource.name == source_data["name"]
+        )
         existing = (
             db.query(DataSource)
             .filter(
-                DataSource.name == source_data["name"],
+                identity,
                 DataSource.provider == source_data["provider"],
             )
             .first()
         )
         if existing:
-            # 恢复默认时只重置测试代码；配置、启用状态、优先级等用户设置仍保留。
+            if source_data["provider"] in {"ftshare", "fuyao"}:
+                existing.name = source_data["name"]
+            # 恢复默认时只重置测试代码；配置和启用状态保留。
             if existing.supports_batch != source_data.get("supports_batch", False):
                 existing.supports_batch = source_data.get("supports_batch", False)
             if reset_test_symbols:
@@ -735,6 +667,7 @@ def reconcile_data_sources(db, *, reset_test_symbols: bool = False) -> dict:
     reset_test_symbols=True 时,仅覆盖内置种子的 test_symbols,供“恢复默认”使用。
     """
     from marketdata import PACKAGE_VENDORS_BY_TYPE
+    from src.platform.marketdata import source_activation
 
     seeded_missing = seed_data_sources(db, reset_test_symbols=reset_test_symbols)
     seed_providers_by_type = _seed_providers_by_type()
@@ -742,14 +675,15 @@ def reconcile_data_sources(db, *, reset_test_symbols: bool = False) -> dict:
     deleted: list[dict] = []
     for row in db.query(DataSource).all():
         legal = PACKAGE_VENDORS_BY_TYPE.get(row.type, frozenset()) | seed_providers_by_type.get(row.type, set())
-        if row.provider not in legal:
+        if not source_activation.supported_provider(row.provider) or row.provider not in legal or (row.provider == "fuyao" and row.provider not in seed_providers_by_type.get(row.type, set())):
             deleted.append(
                 {"id": row.id, "type": row.type, "provider": row.provider, "name": row.name}
             )
             db.delete(row)
 
     if seeded_missing:
-        logger.info(f"数据源对账: 补齐缺失默认 {len(seeded_missing)} 条: {seeded_missing}")
+        logger.info("数据源对账: 补齐缺失默认 %s 条", len(seeded_missing))
+        logger.debug("新增数据源: %s", seeded_missing)
     if deleted:
         logger.info(f"数据源对账: 删除孤儿数据源 {len(deleted)} 条: {deleted}")
 

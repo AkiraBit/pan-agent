@@ -19,8 +19,3 @@ def test_to_tencent():
     assert Symbol.parse("920001").to_tencent() == "bj920001"
     assert Symbol.parse("00700", "HK").to_tencent() == "hk00700"
     assert Symbol.parse("AAPL").to_tencent() == "usAAPL"
-
-
-def test_to_yfinance():
-    assert Symbol.parse("00700", "HK").to_yfinance() == "0700.HK"
-    assert Symbol.parse("AAPL").to_yfinance() == "AAPL"

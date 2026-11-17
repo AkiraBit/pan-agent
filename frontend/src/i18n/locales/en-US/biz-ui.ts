@@ -179,19 +179,19 @@ export const bizUi = {
     },
     "datasources": {
       "title": "Check market and research data",
-      "description": "Find categories, priorities and connection tests when data is missing.",
+      "description": "Browse endpoints by provider, change call order, and test connections.",
       "steps": {
         "catalog": {
-          "title": "Find sources by data category",
-          "description": "Expand or collapse a category. Quotes, candles, news and fundamentals use their own sources. Higher-priority sources are tried first, with alternatives available after failures."
+          "title": "Browse endpoints by provider",
+          "description": "Select a provider, then filter its endpoints by data category. Open Call order to adjust priority across providers for the same data type."
         },
         "config": {
           "title": "Inspect source configuration",
-          "description": "Expand a category, then open Settings to inspect priority, test symbols and connection parameters. Save credentials for sources that require them. Built-in sources without credentials can also be tested directly."
+          "description": "Select the pencil beside an endpoint to review its test symbols and connection settings. Manage shared provider credentials on the Settings page."
         },
         "test": {
           "title": "Test and read the result",
-          "description": "Click Play to test an enabled source. Read its data time, count and missing details. A successful request does not guarantee every market or symbol. Close the result dialog to continue."
+          "description": "Select Test beside an endpoint to see returned data, counts, and missing details. A pass applies to that request. Close the result dialog to continue."
         }
       }
     }

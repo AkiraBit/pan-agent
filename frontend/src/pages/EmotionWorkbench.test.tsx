@@ -9,7 +9,7 @@ import EmotionWorkbench from './EmotionWorkbench'
 
 vi.mock('@panwatch/api/emotion', () => ({ emotionApi: {
   overview: vi.fn(), refreshOverview: vi.fn(), workspace: vi.fn(), publication: vi.fn(), run: vi.fn(), cancel: vi.fn(),
-  sessionValidation: vi.fn(), armSessionValidation: vi.fn(), lifecycle: vi.fn(), monitor: vi.fn(), review: vi.fn(), saveAuctionSource: vi.fn(),
+  sessionValidation: vi.fn(), armSessionValidation: vi.fn(), lifecycle: vi.fn(), monitor: vi.fn(), review: vi.fn(),
   settings: vi.fn(), context: vi.fn(), contextStatus: vi.fn(),
 } }))
 const empty: EmotionWorkspace = { publication: null, settings: { focus_symbols: [], schedule_enabled: false, schedule_time: '08:45', language: 'zh-CN', monitoring_enabled: false, monitor_interval_seconds: 30, postmarket_enabled: false, postmarket_time: '15:10' }, target_trade_date: '2026-11-16', server_time: '2026-11-14T00:00:00Z', input_version: 0, history: [], runs: [], notes: [] }
@@ -29,7 +29,7 @@ const publication: EmotionPublication = {
 function mount(path = '/short-term/playbook') {
   return render(<MemoryRouter initialEntries={[path]}><ToastProvider><ConfirmProvider labels={{ title: '确认', cancel: '取消', confirm: '确定' }}><EmotionWorkbench /></ConfirmProvider></ToastProvider></MemoryRouter>)
 }
-beforeEach(async () => { vi.clearAllMocks(); await i18n.changeLanguage('zh-CN'); await i18n.loadNamespaces('emotion'); vi.mocked(emotionApi.workspace).mockResolvedValue(empty); vi.mocked(emotionApi.lifecycle).mockResolvedValue({ monitor: null, sample_count: 0, latest: null, timeline: [], review: null, auction_source: { enabled: false, endpoint: '', provider_name: 'licensed_gateway', has_api_key: false } }) })
+beforeEach(async () => { vi.clearAllMocks(); await i18n.changeLanguage('zh-CN'); await i18n.loadNamespaces('emotion'); vi.mocked(emotionApi.workspace).mockResolvedValue(empty); vi.mocked(emotionApi.lifecycle).mockResolvedValue({ monitor: null, sample_count: 0, latest: null, timeline: [], review: null, auction_source: { enabled: false, provider_name: 'fuyao' } }) })
 afterEach(cleanup)
 
 describe('sentiment workbench user entry', () => {
@@ -99,13 +99,7 @@ it('arms monitoring without mutating the frozen plan and shows missing auction e
   fireEvent.click(screen.getByRole('button', { name: '启动监测' }))
   await waitFor(() => expect(emotionApi.monitor).toHaveBeenCalledWith('pub1', true))
   expect(emotionApi.run).not.toHaveBeenCalled()
-  fireEvent.click(screen.getByRole('button', { name: '配置竞价源' }))
-  const key = screen.getByLabelText('访问密钥（可选）')
-  expect(key.getAttribute('type')).toBe('password')
-  fireEvent.change(screen.getByLabelText('接口地址（HTTPS 或本机）'), { target: { value: 'https://gateway.example/auction' } })
-  fireEvent.change(key, { target: { value: 'test-only-key' } })
-  fireEvent.click(screen.getByRole('button', { name: '保存' }))
-  await waitFor(() => expect(emotionApi.saveAuctionSource).toHaveBeenCalledWith(expect.objectContaining({ api_key: 'test-only-key', endpoint: 'https://gateway.example/auction' })))
+  expect(screen.getByRole('link', { name: '配置竞价源' }).getAttribute('href')).toBe('/datasources')
 })
 
 
@@ -127,7 +121,6 @@ it('keeps the armed day visible across trading days and confirms activation with
   fireEvent.click(arm)
   fireEvent.click(screen.getByRole('button', { name: '确定' }))
   await waitFor(() => expect(emotionApi.armSessionValidation).toHaveBeenCalledWith('2026-11-16', true))
-  expect(emotionApi.saveAuctionSource).not.toHaveBeenCalled()
   expect(emotionApi.run).not.toHaveBeenCalled()
   expect(screen.queryByText('完整自然交易日已验证')).toBeNull()
 })

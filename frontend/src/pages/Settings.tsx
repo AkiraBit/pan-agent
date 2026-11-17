@@ -5,6 +5,7 @@ import { fetchAPI, type AIService, type AIModel, type NotifyChannel } from '@pan
 import { useAvatar, saveAvatar, fileToAvatarDataUrl } from '@/hooks/use-avatar'
 import { buildTemplateImportFeedback, type TemplateImportSummary } from '@/lib/template-import-feedback'
 import PatSection from '@/components/PatSection'
+import DataProvidersSettings from '@/components/integrations/DataProvidersSettings'
 import { useGuidedTour } from '@/components/onboarding/GuidedTour'
 import { UserAvatar } from '@/components/UserAvatar'
 import { Input } from '@panwatch/base-ui/components/ui/input'
@@ -702,6 +703,7 @@ export default function SettingsPage() {
   const jumpItems: Array<{ id: string; label: string; hint?: string }> = [
     { id: 'sec-ai', label: configT('configuration:settingsPage.nav.ai'), hint: `${services.length} ${configT('configuration:settingsPage.hero.providers')} / ${allModels.length} ${configT('configuration:settingsPage.hero.models')}` },
     { id: 'sec-notify', label: configT('configuration:settingsPage.nav.notifications'), hint: `${enabledChannels.length}/${channels.length} ${configT('configuration:settingsPage.hero.channelsEnabled')}` },
+    { id: 'sec-data-providers', label: t('configuration:dataProviders.title') },
     { id: 'sec-system', label: configT('configuration:settingsPage.nav.system'), hint: health?.timezone ? `TZ ${health.timezone}` : undefined },
     { id: 'sec-appearance', label: configT('configuration:settingsPage.nav.appearance') },
     { id: 'sec-pat', label: configT('configuration:settingsPage.nav.pat') },
@@ -1016,6 +1018,8 @@ export default function SettingsPage() {
           )}
         </section>
 
+        <DataProvidersSettings />
+
         {/* General Settings */}
         {settings.length > 0 && (
           <section id="sec-system" className="card p-4 md:p-6 lg:col-span-12">
@@ -1043,7 +1047,7 @@ export default function SettingsPage() {
               {filteredSettings.map(setting => {
                 const currentValue = edited[setting.key] ?? setting.value
                 const isChanged = setting.key in edited
-                const STOCK_LINK_OPTIONS: Record<string, string> = { xueqiu: configT('configuration:settingsPage.system.stockLinkXueqiu') }
+                const STOCK_LINK_OPTIONS: Record<string, string> = { eastmoney: configT('configuration:settingsPage.system.stockLinkEastmoney') }
                 const label = settingLabel(setting)
                 return (
                   <div key={setting.key}>
@@ -1054,7 +1058,7 @@ export default function SettingsPage() {
                     <div className="flex items-center gap-2.5">
                       {setting.key === 'stock_link_platform' ? (
                         <Select
-                          value={currentValue || 'xueqiu'}
+                          value={STOCK_LINK_OPTIONS[currentValue] ? currentValue : 'eastmoney'}
                           onValueChange={v => setEdited({ ...edited, [setting.key]: v })}
                         >
                           <SelectTrigger className={`${isChanged ? 'ring-2 ring-primary/20 border-primary/30' : ''}`}>

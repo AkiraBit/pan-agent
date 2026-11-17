@@ -31,7 +31,8 @@ class DailyReportAgent(SessionResearchAgent):
         """
         if market_code != MarketCode.CN:
             return []
-        items = await asyncio.to_thread(get_market_data().index_quotes, _CN_INDEX_TENCENT_SYMBOLS)
+        from src.platform.marketdata.fuyao_native import index_quotes
+        items = await asyncio.to_thread(index_quotes, _CN_INDEX_TENCENT_SYMBOLS, get_market_data().index_quotes)
         return [
             IndexData(
                 symbol=item["symbol"],

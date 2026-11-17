@@ -417,7 +417,7 @@ export const emotion = {
     "any": "任一",
     "actual": "实际",
     "auction": "动态竞价",
-    "auctionHint": "只接收带源时间的参考价、匹配量和未匹配量。未接通授权源时保持未知；普通买卖盘口不替代竞价数据。",
+    "auctionHint": "竞价数据由同花顺提供，是否可用取决于数据源配置和账号权限。普通买卖盘口不替代竞价数据。",
     "finalAuction": "最终撮合",
     "indicative": "虚拟撮合",
     "matched": "匹配量（股）",
@@ -436,7 +436,6 @@ export const emotion = {
     "nextDay": "下交易日观察重点",
     "reviewMemory": "本预案读取的盘后记忆",
     "noReviewMemory": "本预案尚未读取此前盘后复盘。后续生成时会自动读取最近七份复盘。",
-    "gatewayHint": "接入自有授权行情网关，响应需遵循 auction.v1。接口说明位于项目 docs/auction-gateway.md；未配置时其他流程仍可运行。",
     "enableSource": "启用竞价网关",
     "provider": "数据源名称",
     "endpoint": "接口地址（HTTPS 或本机）",
@@ -474,7 +473,8 @@ export const emotion = {
   "auctionSides": {
     "buy": "买方",
     "sell": "卖方",
-    "balanced": "平衡"
+    "balanced": "平衡",
+    "unknown": "方向未提供"
   },
   "phases": {
     "auction": "竞价",

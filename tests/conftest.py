@@ -59,7 +59,7 @@ def _mock_stock_link_platform(monkeypatch):
     """避免 stock_link 模块访问数据库读取平台设置。"""
     monkeypatch.setattr(
         "src.modules.administration.stock_link.get_platform",
-        lambda: "xueqiu",
+        lambda: "eastmoney",
     )
 
 

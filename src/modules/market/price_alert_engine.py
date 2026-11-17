@@ -174,7 +174,7 @@ class PriceAlertEngine:
             left = _safe_float(quote.get("volume"))
         elif ctype == "volume_ratio":
             # 优先用报价里的量比(腾讯 parts[49]),免拉 K线;
-            # 仅当报价缺量比(如美股 yfinance)才回退 K线摘要。
+            # 报价缺量比时回退到 K线摘要。
             left = _safe_float(quote.get("volume_ratio"))
             if left is None:
                 summary = await self._get_kline_summary_cached(market, symbol)

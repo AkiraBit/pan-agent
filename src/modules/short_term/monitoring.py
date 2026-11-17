@@ -50,11 +50,11 @@ async def monitor_once(runner, now=None, *, quote_reader=snapshots, auction_read
         try:
             def inputs(r):
                 lifecycle = LifecycleRepository(r.db)
-                return r.publication(monitor['publication_id']), lifecycle.latest(monitor['id']), lifecycle.source_config(private=True)
-            pub, previous, config = await asyncio.to_thread(runner.read, inputs)
+                return r.publication(monitor['publication_id']), lifecycle.latest(monitor['id'])
+            pub, previous = await asyncio.to_thread(runner.read, inputs)
             symbols = [s['symbol'] for s in pub['analysis']['watchlist']]
             rows, auction = await asyncio.wait_for(asyncio.gather(asyncio.to_thread(quote_reader,symbols),
-                auction_reader(config,symbols,clock)), 25)
+                auction_reader(symbols,clock)), 25)
             observed = now or utc_now()
             payload = {'id':'obs:'+uuid4().hex,'observed_at':observed.isoformat(),'phase':phase,
                        'quotes':rows,'auction':auction,'requested_symbols':symbols}

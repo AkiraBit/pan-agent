@@ -1,8 +1,6 @@
 """新闻数据结构 + 聚合采集器薄 shim。
 
-实际抓取(雪球个股新闻 / 东财个股新闻搜索 / 东财公告)已收口进 marketdata 包
-(packages/marketdata),本文件只保留消费方仍在用的 NewsItem 数据结构，以及
-一个转发到包的 NewsCollector shim，对消费方零改动。
+抓取逻辑在 marketdata 包；本模块为消费方保留 NewsItem 和 NewsCollector。
 """
 import asyncio
 from dataclasses import dataclass, field
@@ -12,7 +10,7 @@ from datetime import datetime
 @dataclass
 class NewsItem:
     """新闻数据结构"""
-    source: str           # "xueqiu" / "eastmoney_news" / "eastmoney"
+    source: str           # 服务商标识
     external_id: str      # 来源侧唯一ID
     title: str
     content: str

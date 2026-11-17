@@ -1,8 +1,26 @@
 # Built-in MCP / 内置 MCP
 
-PanWatch ships a fixed Longbridge connector. The account menu opens `/integrations/mcp`; the application's existing inbound `/mcp` endpoint remains separate. There is no marketplace, custom URL, package installer or local-command configuration.
+PanWatch ships fixed Longbridge and Tonghuashun (Fuyao) connectors. The account menu opens `/integrations/mcp`; the application's existing inbound `/mcp` endpoint remains separate. There is no marketplace, custom URL, package installer or local-command configuration.
 
-## 使用步骤
+## 同花顺（扶摇）
+
+1. 在[同花顺 API Key 管理](https://fuyao.aicubes.cn/admin/)创建 Key，然后在 **设置 → 数据源服务商** 保存。**数据源配置**和**同花顺 MCP** 都可以跳转到此卡片。
+2. 在**数据源配置**开启同花顺总开关，并启用所需接口。已有主备业务固定先 FTShare、后同花顺。新增源在启动时自动补齐，默认关闭，保留已有配置。
+3. 在 **MCP → 同花顺 MCP** 选择数据服务，点击**检测连接**，再开启**供 AI 助手使用**。八个[官方 MCP 服务](https://fuyao.aicubes.cn/docs/mcp/overview/)可分别设置，助手只会看到已检测并启用的服务中、对应接口也已开启的白名单查询工具。
+
+REST 与 MCP 共用同一个 Key。更换 Key 后需重新检测并启用 MCP 服务；清除 Key 后两种接入都会停止发起新请求。Key 在服务端加密保存，不纳入配置模板。迁移时应同时保留数据库与数据目录下的 `data-provider-credentials.key`。
+
+[官方在线调试中心](https://fuyao.aicubes.cn/playground/)列出的 111 个 REST 接口在「数据源」逐项展示，保留分类。每个接口的开关、测试和参数单独保存。首次升级时，接口继承原业务组的启用状态。
+
+8 个业务分类在 **市场研究** 提供原生工作区：指数与板块、新股发行与申购、ETF 前复权日线、基金持仓与配置、基金与经理研究、基金回测、期货研究、期权研究。可从「数据源」对应行的 **打开业务** 进入。工作区按业务设置筛选和呈现图表或表格，并支持从指数、披露期、发行日历和合约列表进入详情。回测从同花顺加载可用指标，用买入和卖出条件生成模拟结果。工作区会在每次请求时检查已启用的来源。投研助手只能调用已单独启用的 REST 接口。
+
+已有 A 股同行情口径的业务保留 FTShare → 同花顺的主备顺序；这些研究工作区使用其已接入的供应商。ETF 前复权日线仅用于走势图与比较，流量估算继续使用未复权收盘价。交易日历的配置影响日历展示，定时任务仍以交易所内置日历确认执行资格。有上游权限或参数限制的接口按官方规则处理。
+
+**API调试**可填写参数、查看上游状态和业务码、下载完整 JSON。目录和 Agent 调用都检查同花顺总开关及对应接口开关；MCP 工具还需要启用其所在的 MCP 服务。新增业务参见[数据源调用约定](data-source-calls.md)。
+
+程序可用 PanWatch 登录令牌读取 `GET /api/datasources/fuyao/catalog`，并用 `POST /api/datasources/fuyao/query/{operation_id}` 提交 `{"params":{"thscodes":"600519.SH"}}` 一类请求。后端仅向目录中的固定同花顺地址发送 GET，使用已保存的 Key。响应的 `response_json` 保留上游 JSON 文本及长整型精度；业务成功请检查 `business_code`，上游权限、限流等结果不会伪装成成功。更新目录时，下载[官方 OpenAPI 3.1](https://fuyao.aicubes.cn/openapi/financial-api.openapi.json)并运行 `python scripts/sync_fuyao_rest_catalog.py <文件路径>`。
+
+## 长桥使用步骤
 
 1. 先登录 PanWatch，打开右上角菜单 → **MCP & 技能** → **MCP**。
 2. 默认选择中国大陆节点 `https://mcp.longbridge.cn`；全球节点为 `https://mcp.longbridge.com`。

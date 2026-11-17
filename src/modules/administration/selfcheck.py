@@ -30,7 +30,7 @@ def classify_hint(category: str, error: str | None) -> str:
             "server disconnected", "timeout", "timed out", "connect", "proxy",
             "ssl", "remote end closed", "read timed out", "connection reset",
         )):
-            return "行情/新闻接口连接失败:所有请求走 http_proxy 设置的系统代理,检查该代理能否代出目标域名(国内接口需 CN 出口、Yahoo 需境外),或本机被 MITM 代理拦截需换可信出口。"
+            return "行情/新闻接口连接失败:所有请求走 http_proxy 设置的系统代理,检查该代理能否代出目标域名(国内接口通常需要可访问的境内出口),或本机被 MITM 代理拦截需换可信出口。"
         return "数据源不通:打开数据源配置页看详细日志,确认 provider 与接口可达。"
     if category == "ai":
         if any(k in e for k in ("401", "unauthorized", "invalid_api_key", "api key", "incorrect api key", "authentication")):
@@ -281,6 +281,7 @@ async def _guard(coro, fallback: dict) -> dict:
 
 def _enumerate(db, include_system: bool = True) -> list[dict]:
     """枚举所有待检项(身份 + ORM 引用),不探测。include_system 加 DB/磁盘/调度 系统基础项。"""
+    from src.platform.marketdata.source_activation import active_source
     from src.platform.persistence.models import AIModel, AIService, DataSource, NotifyChannel
 
     targets: list[dict] = []
@@ -288,7 +289,7 @@ def _enumerate(db, include_system: bool = True) -> list[dict]:
         targets.append({"category": "system", "key": "sys:db", "name": "数据库", "group": None, "_kind": "db"})
         targets.append({"category": "system", "key": "sys:disk", "name": "磁盘空间", "group": None, "_kind": "disk"})
         targets.append({"category": "system", "key": "sys:scheduler", "name": "调度器", "group": None, "_kind": "sched"})
-    for src in db.query(DataSource).filter(DataSource.enabled.is_(True)).all():
+    for src in db.query(DataSource).filter(active_source()).all():
         targets.append({"category": "datasource", "key": f"ds:{src.id}", "name": src.name,
                         "group": None, "_kind": "ds", "_obj": src})
     for model in db.query(AIModel).all():

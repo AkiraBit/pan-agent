@@ -184,7 +184,7 @@ def get_market_calendars(days: int = Query(default=14, ge=1, le=31), timezone: s
         raise api_error(400, "timezone_invalid", "时区无效") from exc
     now = trading_calendar._now_in_market_tz(MarketCode.CN).astimezone(display_tz)
     return {"timezone": timezone, "start_date": now.date().isoformat(),
-            "markets": [trading_calendar.upcoming_calendar(code, days=days, start_date=now.date())
+            "markets": [_display_calendar(code, days=days, start_date=now.date())
                         for code in MARKETS]}
 
 
@@ -193,7 +193,36 @@ def get_market_calendar(market: str, days: int = Query(default=14, ge=1, le=31))
     code = trading_calendar._to_market_code(market)
     if code is None:
         raise api_error(400, "market_invalid", "市场代码无效")
-    return trading_calendar.upcoming_calendar(code, days=days)
+    return _display_calendar(code, days=days)
+
+
+def _display_calendar(code, *, days, start_date=None):
+    from datetime import timedelta
+    from src.platform.marketdata import ftshare_market, fuyao_native
+
+    if code not in {MarketCode.CN, MarketCode.HK}:
+        return trading_calendar.upcoming_calendar(code, days=days, start_date=start_date)
+    start = start_date or trading_calendar._now_in_market_tz(code).date()
+    end = start + timedelta(days=days - 1)
+
+    def fuyao():
+        open_days = fuyao_native.open_days(start, end + timedelta(days=10))
+        # Do not label unpublished dates closed when the provider hasn't covered the window.
+        if open_days and max(open_days) >= end:
+            return trading_calendar.upcoming_calendar(code, days=days, start_date=start,
+                                                       provided_days=open_days, source="fuyao")
+        return None
+
+    def ftshare():
+        open_days = ftshare_market.open_days(code.value, start, end)
+        return trading_calendar.upcoming_calendar(code, days=days, start_date=start,
+                                                   provided_days=open_days, source="ftshare")
+
+    loaders = {"ftshare": ftshare}
+    if code is MarketCode.CN:
+        loaders["fuyao"] = fuyao
+    return fuyao_native.first("trading_calendar", loaders, market=code.value) or trading_calendar.upcoming_calendar(
+        code, days=days, start_date=start)
 
 
 @router.get("/search")
@@ -488,8 +517,7 @@ async def trigger_stock_agent(
             logger.warning(f"[TA] 写 running 生命周期失败,不影响主流程: {e}")
 
     # 立刻写一条"任务已触发"进度日志,保证前端 polling 第一拍就能看到 running。
-    # 否则 trigger_agent_for_stock 内部要先 await agent.collect()(美股拉 yfinance 数据
-    # 可能 30s+),期间没有任何 ta_progress 日志 → 前端 progress 接口返回 not_found
+    # trigger_agent_for_stock 可能需等待行情采集，期间无 ta_progress 日志会令前端收到 not_found，
     # → 60s grace 过后前端 reset 到 idle,看起来像"进度卡死自动退回"。
     if agent_name == "tradingagents":
         try:

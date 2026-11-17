@@ -17,6 +17,7 @@ export const navigation = {
     evaluations: 'Evaluation',
     history: 'History',
     dataSources: 'Data sources',
+    researchData: 'Market research',
     mcp: 'MCP & Skills',
     settings: 'Settings',
   },

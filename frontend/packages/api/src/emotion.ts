@@ -25,7 +25,7 @@ export type EmotionPublication = {
   condition_states: { id: string; state: 'waiting' | 'unknown' | 'review_required' | 'met' | 'not_met'; reason: string; observed_value: number | null; observed_at: string }[];
 }
 export type EmotionWorkspace = { publication: EmotionPublication | null; settings: EmotionSettings; validation_trade_date?: string | null; target_trade_date: string | null; server_time: string; input_version: number; history: { id: string; revision: number; target_trade_date: string; published_at: string; title: string }[]; runs: EmotionRun[]; notes: ContextNote[] }
-export type AuctionSource = { enabled: boolean; endpoint: string; provider_name: string; has_api_key: boolean }
+export type AuctionSource = { enabled: boolean; provider_name: string }
 export type ObservationState = { id: string; state: 'waiting' | 'unknown' | 'review_required' | 'met' | 'not_met' | 'observing' | 'invalidated'; reason: string; observed_at: string; last_source_time: string | null; since: string | null; checks: Array<MetricCheck & { observed_value: number | null; source_time: string | null; passed: boolean | null; error: string | null }> }
 export type Observation = { id: string; observed_at: string; phase: string; quotes: EmotionQuote[]; auction: { status: string; provider: string; quotes: Array<{ symbol: string; source_time: string; reference_price: number; matched_volume_shares: number; unmatched_volume_shares: number; unmatched_side: string; final: boolean }> }; evaluations: ObservationState[] }
 export type ReviewMemory = { review_id: string; target_trade_date: string; memory_summary: string; next_day_focus: string[]; open_questions: string[] }
@@ -66,7 +66,6 @@ export const emotionApi = {
   monitor: (id: string, enabled: boolean) => fetchAPI<Lifecycle>(`/short-term/publications/${encodeURIComponent(id)}/monitor`, { method: 'POST', body: JSON.stringify({ enabled }) }),
   review: (publication_id: string, request_key: string) => fetchAPI<EmotionRun>('/short-term/reviews', { method: 'POST', body: JSON.stringify({ publication_id, request_key }) }),
   auctionSource: () => fetchAPI<AuctionSource>('/short-term/auction-source'),
-  saveAuctionSource: (body: { enabled: boolean; endpoint: string; provider_name: string; api_key?: string; clear_api_key?: boolean }) => fetchAPI<AuctionSource>('/short-term/auction-source', { method: 'PUT', body: JSON.stringify(body) }),
   workspace: (signal?: AbortSignal) => fetchAPI<EmotionWorkspace>('/short-term/workspace', { signal }),
   publication: (id: string, signal?: AbortSignal) => fetchAPI<EmotionPublication>(`/short-term/publications/${encodeURIComponent(id)}`, { signal }),
   run: (body: { request_key: string; language: string; target_trade_date?: string }) => fetchAPI<EmotionRun>('/short-term/runs', { method: 'POST', body: JSON.stringify(body) }),

@@ -1456,6 +1456,11 @@ def build_panwatch_tool_registry(session: Session) -> ToolRegistry:
     register_context_tools(registry, db_bind, tool_spec)
     from .longbridge_tools import register_longbridge_tools
     register_longbridge_tools(registry, session, language)
+    from .fuyao_tools import register_fuyao_rest_tools, register_fuyao_tools
+    register_fuyao_rest_tools(registry, session, language)
+    register_fuyao_tools(registry, session, language)
+    from .market_rest_tools import register_ftshare_rest_tools
+    register_ftshare_rest_tools(registry, session)
     from .builtin_skills import register_builtin_skills
     register_builtin_skills(registry, session, language)
     return registry

@@ -1,28 +1,8 @@
-# Auction gateway and sentiment lifecycle
+# Tonghuashun auction data and sentiment lifecycle
 
-PanWatch polls an owner-configured licensed gateway during 09:15–09:30 Asia/Shanghai on known CN trading days. Configure it under Sentiment → Live validation → Auction source. Other sources and reviews work without this optional gateway. No ordinary order-book quantity is treated as matched or unmatched auction volume.
+Add a Tonghuashun API Key under Settings → Data Source Providers, then enable Tonghuashun and its auction endpoint under Data Sources. PanWatch samples the configured endpoint during 09:15–09:30 Asia/Shanghai on known CN trading days. The monitoring page links to the same Data Sources configuration.
 
-The authenticated configuration API is `PUT /api/short-term/auction-source`. Set `enabled`, `endpoint` (HTTPS, or HTTP on loopback), `provider_name`, and optional `api_key`. Omit `api_key` to preserve it; `clear_api_key: true` clears it. GET only returns `has_api_key`. Credentials are stored with the private application database, like other configured providers, never published with observations or Agent context. Protect database backups accordingly.
-
-PanWatch sends `GET {endpoint}?symbols=002242.SZ,600825.SH&trade_date=YYYY-MM-DD`, with `Authorization: Bearer {api_key}` if configured. The gateway must adapt its licensed upstream to:
-
-```json
-{
-  "schema_version": "auction.v1",
-  "quotes": [{
-    "symbol": "002242.SZ",
-    "source_time": "2026-11-16T09:20:05+08:00",
-    "reference_price": 10.20,
-    "pre_close": 10.00,
-    "matched_volume_shares": 100000,
-    "unmatched_volume_shares": 20000,
-    "unmatched_side": "buy",
-    "final": false
-  }]
-}
-```
-
-This example is illustrative, not an observed quote. Volumes are shares, prices CNY, unmatched side `buy`, `sell`, or `balanced` (zero unmatched shares). Source timestamps require a timezone. Indicative observations must originate between 09:15 and 09:25 and be at most 15 seconds old. Final observations must originate between 09:25 and 09:30 and be at most 300 seconds old. Future, stale, duplicated-symbol, nonfinite and inconsistent observations are rejected. Missing symbols stay unknown. Reads have a 5-second timeout, a 1 MB cap, and no redirects.
+Indicative observations must originate between 09:15 and 09:25 and be at most 15 seconds old. Final observations must originate between 09:25 and 09:30 and be at most 300 seconds old. Values are reported in shares and CNY, and unavailable observations stay unknown. The endpoint supplies unmatched volume without a direction. Only zero unmatched volume is marked balanced; buy and sell direction checks otherwise remain unknown.
 
 Sampling runs every 5 seconds during auction and defaults to 30 seconds during continuous sessions. Plans can define compound conditions, persistence and invalidation checks. Duplicate source timestamps never extend persistence. Gaps reset persistence. Numeric conditions are sampled assertions, not tick-complete claims about continuous market behavior. Qualitative claims remain for review. Observations use durable leases and unique time slots, survive restarts, and never rewrite the original plan. The host must remain running. Lunch, holidays and unknown calendar dates do not trigger sampling.
 

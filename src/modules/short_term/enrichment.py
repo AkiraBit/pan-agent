@@ -76,7 +76,7 @@ async def enrich_facts(facts, inputs):
     facts['evidence'].append(evidence('capability:constraints','capability','Verification coverage','panwatch',
         {'capabilities':facts['capabilities'], 'regulatory_status':'original_text_is_not_a_clean_monitoring_verdict',
          'abnormal_status':'source-derived regulatory ledger and scoped resets; exchange determination remains separate',
-         'auction_status':'requires_configured_licensed_gateway'}, now))
+         'auction_status':'requires_enabled_fuyao_auction_source'}, now))
     facts['collected_at'] = utc_now().isoformat()
     facts['verification_scope'] = {'symbols': symbols, 'max_documents_per_symbol': DOCUMENT_LIMIT, 'history_sessions': 80}
     return facts

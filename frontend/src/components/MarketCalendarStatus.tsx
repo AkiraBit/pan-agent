@@ -27,7 +27,7 @@ interface TradingCalendars {
   timezone: string
   markets: {
     market: string; status: string; next_open: string | null
-    local_date: string; local_time: string; timezone: string; days: CalendarDay[]
+    local_date: string; local_time: string; timezone: string; days: CalendarDay[]; source?: string
   }[]
 }
 
@@ -155,7 +155,9 @@ export function MarketCalendarStatus({ markets, labelMarket }: {
           </>}
         <div className="shrink-0 border-t border-border/60 bg-muted/10 px-4 py-3 text-[10px] leading-relaxed text-muted-foreground sm:px-5">
           <p>{t('stocksPage.calendar.statusRule')}</p>
-          <p className="mt-0.5 text-muted-foreground/70">{t('stocksPage.calendar.source')}</p>
+          <p className="mt-0.5 text-muted-foreground/70">
+            {t(data?.markets.some(market => market.source === 'fuyao') ? 'stocksPage.calendar.fuyaoSource' : 'stocksPage.calendar.source')}
+          </p>
         </div>
       </PopoverContent>
     </Popover>

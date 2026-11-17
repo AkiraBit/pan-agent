@@ -1,6 +1,6 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
-import { ChevronRight, ExternalLink, Loader2, RefreshCw, Unplug } from 'lucide-react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { ChevronRight, ExternalLink, KeyRound, Loader2, RefreshCw, Unplug } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { fetchAPI } from '@panwatch/api/client'
 import { Button } from '@panwatch/base-ui/components/ui/button'
@@ -10,6 +10,7 @@ import { useConfirm } from '@panwatch/base-ui/components/ui/confirm-dialog'
 import { useToast } from '@panwatch/base-ui/components/ui/toast'
 import { formatDate } from '@/i18n/format'
 import LongbridgeIcon from '@/components/integrations/LongbridgeIcon'
+import FuyaoMcpPanel from '@/components/integrations/FuyaoMcpPanel'
 
 interface Connection {
   id: string; region: 'cn' | 'global'; endpoint: string; authorized: boolean; enabled: boolean
@@ -58,6 +59,7 @@ export default function MCPPage() {
   const [error, setError] = useState('')
   const callbackStarted = useRef(false)
   const callback = location.pathname.endsWith('/callback')
+  const showFuyao = !callback && new URLSearchParams(location.search).get('provider') === 'fuyao'
   const label = (key: MCPLabel) => t(`configuration:mcp.${key}`)
   const load = async () => {
     const result = await fetchAPI<{ items: Connection[] }>('/mcp-connections')
@@ -69,7 +71,11 @@ export default function MCPPage() {
     finally { setBusy(false) }
   }
   useEffect(() => {
-    if (!callback) { callbackStarted.current = false; void act(load); return }
+    if (!callback) {
+      callbackStarted.current = false
+      if (!showFuyao) void act(load)
+      return
+    }
     if (callbackStarted.current) return
     callbackStarted.current = true
     const query = new URLSearchParams(location.search)
@@ -85,7 +91,7 @@ export default function MCPPage() {
       toast(label(query.has('error') ? 'cancelled' : 'authorized'), query.has('error') ? 'info' : 'success')
       navigate('/integrations/mcp', { replace: true })
     })
-  }, [callback])
+  }, [callback, showFuyao])
   const authorize = () => act(async () => {
     const browserKey = Array.from(crypto.getRandomValues(new Uint8Array(32)), b => b.toString(16).padStart(2, '0')).join('')
     const result = await fetchAPI<{ authorization_url: string; state: string }>(BASE + '/authorize', {
@@ -107,20 +113,25 @@ export default function MCPPage() {
   }
   const connectionStatus = item ? label(item.error_code === 'mcp_authorization_required' ? 'reauthorize' : item.authorized ? item.enabled ? 'enabled' : 'disabled' : item.pending ? 'pending' : 'notAuthorized') : ''
   return <div className="space-y-6">
-    {error && <div role="alert" className="rounded-xl border border-destructive/30 p-4 text-sm text-destructive space-y-3">
+    {!showFuyao && error && <div role="alert" className="rounded-xl border border-destructive/30 p-4 text-sm text-destructive space-y-3">
       <p>{error}</p><Button variant="secondary" size="sm" onClick={() => callback ? navigate('/integrations/mcp', { replace: true }) : void act(load)}>{label('retry')}</Button>
     </div>}
-    {callback ? <div className="card p-6" aria-live="polite">{busy ? label('completing') : label('returnHint')}</div> : item ? <div className="grid md:grid-cols-[240px_minmax(0,1fr)] gap-6 items-start">
+    {callback ? <div className="card p-6" aria-live="polite">{busy ? label('completing') : label('returnHint')}</div> : <div className="grid md:grid-cols-[240px_minmax(0,1fr)] gap-6 items-start">
       <nav aria-label={label('services')} className="card p-3 space-y-3 md:sticky md:top-24">
         <h2 className="px-2 pt-1 text-xs font-medium text-muted-foreground">{label('services')}</h2>
-        <a href="#longbridge-details" aria-current="page" className="flex items-center gap-3 rounded-xl border border-primary/15 bg-primary/5 p-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+        <Link to="/integrations/mcp" aria-current={!showFuyao ? 'page' : undefined} className={`flex items-center gap-3 rounded-xl border p-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${showFuyao ? 'border-transparent hover:bg-accent/40' : 'border-primary/15 bg-primary/5'}`}>
           <LongbridgeIcon className="w-10 h-10" />
           <span className="min-w-0 flex-1"><span className="block font-medium">{label('longbridge')}</span><span className="block text-xs text-muted-foreground mt-1">{connectionStatus}</span></span>
           <ChevronRight className="w-4 h-4 text-primary shrink-0" />
-        </a>
+        </Link>
+        <Link to="/integrations/mcp?provider=fuyao" aria-current={showFuyao ? 'page' : undefined} className={`flex items-center gap-3 rounded-xl border p-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${showFuyao ? 'border-primary/15 bg-primary/5' : 'border-transparent hover:bg-accent/40'}`}>
+          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary"><KeyRound className="h-5 w-5" /></span>
+          <span className="min-w-0 flex-1 font-medium">{t('configuration:fuyao.mcpTitle')}</span>
+          <ChevronRight className="w-4 h-4 text-primary shrink-0" />
+        </Link>
         <p className="px-2 pb-1 text-xs text-muted-foreground leading-relaxed">{label('builtinHint')}</p>
       </nav>
-      <section id="longbridge-details" aria-labelledby="mcp-detail-title" className="card min-w-0 p-5 md:p-7 space-y-6 scroll-mt-24">
+      {showFuyao ? <FuyaoMcpPanel /> : item ? <section id="longbridge-details" aria-labelledby="mcp-detail-title" className="card min-w-0 p-5 md:p-7 space-y-6 scroll-mt-24">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="flex items-center gap-3"><LongbridgeIcon className="w-12 h-12" />
           <div><h2 id="mcp-detail-title" className="font-semibold">{label('longbridge')}</h2><p className="text-xs text-muted-foreground mt-1">{label('builtin')}</p></div></div>
@@ -167,7 +178,7 @@ export default function MCPPage() {
       <div className="border-t border-border/60 pt-5 space-y-2 text-xs text-muted-foreground"><p>{label('privacy')}</p><p>{label('disconnectHint')}</p>
         <a href={item.docs_url} target="_blank" rel="noopener noreferrer" className="inline-flex gap-1 items-center text-primary">{label('docs')}<ExternalLink className="w-3 h-3" /></a>
       </div>
-      </section>
-    </div> : !error && <div className="card p-6 text-sm text-muted-foreground">{t('common:states.loading')}</div>}
+      </section> : !error && <div className="card p-6 text-sm text-muted-foreground">{t('common:states.loading')}</div>}
+    </div>}
   </div>
 }

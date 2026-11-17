@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 from src.platform.marketdata.marketdata_client import md_quote_rows
 from src.platform.marketdata.models import MarketCode
 from src.platform.marketdata.quote_display import daily_quote_fields
+from src.platform.scheduling import trading_calendar
 from src.web.errors import api_error
 
 router = APIRouter()
@@ -68,15 +69,26 @@ def _quote_to_response(symbol: str, market: MarketCode, quote: dict | None) -> d
         "pe_ratio": quote.get("pe_ratio"),
         "total_market_value": quote.get("total_market_value"),
         "circulating_market_value": quote.get("circulating_market_value"),
+        "source": quote.get("source"),
+        "source_timestamp": quote.get("source_timestamp"),
+        "stale": bool(quote.get("stale")),
         **daily_quote_fields(market.value, quote),
     }
+
+
+def _display_quote_rows(symbols, market):
+    now = trading_calendar._now_in_market_tz(market)
+    if trading_calendar.market_status(market, now) == "trading":
+        return md_quote_rows(symbols, market.value, max_age_seconds=600,
+                             trade_date=now.date(), stale_if_error_seconds=120)
+    return md_quote_rows(symbols, market.value)
 
 
 @router.get("/{symbol}")
 async def get_quote(symbol: str, market: str = "CN"):
     """获取单只股票实时行情"""
     market_code = _parse_market(market)
-    rows = await asyncio.to_thread(md_quote_rows, [symbol], market_code.value)
+    rows = await asyncio.to_thread(_display_quote_rows, [symbol], market_code)
     if not rows:
         raise api_error(404, "quote_not_found", "行情不存在")
     quote_map = {item.get("symbol"): item for item in rows}
@@ -101,7 +113,7 @@ async def get_quotes_batch(payload: QuoteBatchRequest):
     async def load(market_code, symbols):
         try:
             return market_code, await asyncio.wait_for(
-                asyncio.to_thread(md_quote_rows, list(dict.fromkeys(symbols)), market_code.value),
+                asyncio.to_thread(_display_quote_rows, list(dict.fromkeys(symbols)), market_code),
                 timeout=15,
             )
         except Exception:

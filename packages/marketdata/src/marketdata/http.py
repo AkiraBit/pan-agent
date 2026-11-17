@@ -15,10 +15,33 @@ from contextlib import contextmanager
 from typing import Any
 
 import httpx
+from marketdata.fallback import SourceFailure
 
 logger = logging.getLogger(__name__)
 
 _FETCH_SOURCE: contextvars.ContextVar[str] = contextvars.ContextVar("fetch_source", default="")
+_ATTEMPT_DEADLINE: contextvars.ContextVar[float | None] = contextvars.ContextVar("md_attempt_deadline", default=None)
+
+
+@contextmanager
+def attempt_budget(seconds: float):
+    previous = _ATTEMPT_DEADLINE.get()
+    deadline = time.monotonic() + seconds
+    token = _ATTEMPT_DEADLINE.set(min(previous, deadline) if previous is not None else deadline)
+    try:
+        yield
+    finally:
+        _ATTEMPT_DEADLINE.reset(token)
+
+
+def within_budget(timeout: float) -> float:
+    deadline = _ATTEMPT_DEADLINE.get()
+    if deadline is None:
+        return timeout
+    remaining = deadline - time.monotonic()
+    if remaining <= 0:
+        raise SourceFailure("market-data attempt budget exhausted")
+    return min(timeout, remaining)
 
 
 @contextmanager
@@ -54,7 +77,7 @@ def capture_errors():
 
 def record_error(msg: str) -> None:
     """把一条失败原因写入当前 capture_errors 上下文(无上下文则忽略)。
-    供 vendor 自己 catch 异常(如 yfinance 走库、不经 market_get)时也能上报真因。"""
+    供适配器捕获异常时上报原始错误。"""
     sink = _ERROR_SINK.get()
     if sink is not None and msg:
         sink.append(msg)
@@ -107,7 +130,10 @@ def market_get(
     """
     effective_proxy = proxy
     last_err: Any = None
+    attempt_deadline = _ATTEMPT_DEADLINE.get()
     deadline = time.monotonic() + max(0.0, total_timeout)
+    if attempt_deadline is not None:
+        deadline = min(deadline, attempt_deadline)
     for attempt in range(max(1, retries + 1)):
         if time.monotonic() >= deadline:
             last_err = TimeoutError("market-data retry budget exhausted")
@@ -140,6 +166,13 @@ def market_get(
                 if encoding:
                     return resp.content.decode(encoding, errors="ignore")
                 return resp.text
+        except httpx.HTTPStatusError as exc:
+            last_err = exc
+            if attempt_deadline is not None and exc.response.status_code in (401, 403, 429):
+                status = exc.response.status_code
+                raw = exc.response.headers.get("Retry-After", "")
+                delay = min(int(raw), 600) if raw.isascii() and raw.isdigit() and len(raw) <= 8 else (30 if status == 429 else 60)
+                raise SourceFailure(f"{host_key}: HTTP {status}", retry_after=delay) from None
         except Exception as e:
             last_err = e
         if attempt < retries:

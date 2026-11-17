@@ -24,8 +24,8 @@
 
 ```bash
 pip install -e ./packages/marketdata          # 本地 editable(monorepo 内)
-# 依赖仅 httpx;yfinance 为可选 extra:
-pip install -e "./packages/marketdata[yfinance]"
+# 安装 marketdata:
+pip install -e "./packages/marketdata"
 ```
 
 ## 快速上手(独立使用)
@@ -43,7 +43,6 @@ md = MarketData(config=StaticConfigProvider({
     "kline": [
         SourceConfig(vendor="tencent",   priority=0),
         SourceConfig(vendor="eastmoney", priority=5),  # CN/HK 长历史兜底
-        SourceConfig(vendor="stooq",     priority=15), # US 兜底
     ],
     "capital_flow": [SourceConfig(vendor="eastmoney", priority=0)],
     "events":       [SourceConfig(vendor="eastmoney", priority=0)],
@@ -123,8 +122,8 @@ class SourceConfig:
 
 | type | 返回 dataclass | 已实现 vendor(provider 名) | 覆盖市场 | 粒度 |
 |---|---|---|---|---|
-| `quote` | `Quote` | `tencent` / `sina` / `eastmoney` / `yfinance` | tencent: CN+HK+US;sina: US+HK;eastmoney: CN;yfinance: HK+US(可选依赖) | 按 symbol |
-| `kline` | `Bar` | `tencent` / `stooq` / `eastmoney` / `yahoo` | tencent: CN+HK+US;eastmoney: CN+HK;stooq: US;yahoo: US+HK | 按 symbol |
+| `quote` | `Quote` | `tencent` / `sina` / `eastmoney` / `fuyao` | 腾讯覆盖 CN/HK/US，新浪覆盖 US/HK，东财与同花顺覆盖 CN | 按 symbol |
+| `kline` | `Bar` | `tencent` / `eastmoney` / `fuyao` | 腾讯覆盖 CN/HK/US，东财覆盖 CN/HK，同花顺覆盖 CN | 按 symbol |
 | `capital_flow` | `CapitalFlow` | `eastmoney` / `sina` | eastmoney: CN+HK+US;sina: CN | 按 symbol |
 | `events` | `EventItem` | `eastmoney` | CN | 按 symbol |
 | `flash_news` | `FlashNews` | `cls` / `sina` / `eastmoney` | 均 CN | **市场级**(symbols 恒空) |

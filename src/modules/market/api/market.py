@@ -5,6 +5,7 @@ import time
 from fastapi import APIRouter
 
 from src.platform.marketdata.collectors.kline_collector import get_index_klines
+from src.platform.marketdata import fuyao_native
 from src.platform.marketdata.models import MarketCode
 
 logger = logging.getLogger(__name__)
@@ -80,7 +81,7 @@ async def get_market_indices():
 
     try:
         # 外部行情是同步 I/O，不能占住事件循环，让首页其他 API 等它返回。
-        quotes = await asyncio.to_thread(lambda: get_market_data().index_quotes(tencent_symbols))
+        quotes = await asyncio.to_thread(fuyao_native.index_quotes, tencent_symbols, get_market_data().index_quotes)
     except Exception as e:
         logger.error(f"获取市场指数失败: {e}")
         return []

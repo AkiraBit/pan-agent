@@ -75,11 +75,12 @@ class SignalPackBuilder:
 
         - If DB has no sources of this type: use defaults.
         - If DB has sources but all are disabled: disabled=True.
-        - If some enabled: return them ordered by priority.
+        - If some enabled: check their switches without applying routing order.
         """
 
         try:
             from src.platform.persistence.database import SessionLocal
+            from src.platform.marketdata.source_activation import active_source, paused_providers, provider_group
             from src.platform.persistence.models import DataSource
 
             db = SessionLocal()
@@ -90,11 +91,13 @@ class SignalPackBuilder:
                     .count()
                 )
                 if total == 0:
-                    return [(p, {}) for p in default_providers], False
+                    paused = paused_providers(db)
+                    defaults = [(p, {}) for p in default_providers if provider_group(p) not in paused]
+                    return defaults, bool(default_providers and not defaults)
                 enabled = (
                     db.query(DataSource)
-                    .filter(DataSource.type == source_type, DataSource.enabled == True)
-                    .order_by(DataSource.priority)
+                    .filter(DataSource.type == source_type, active_source())
+                    .order_by(DataSource.id)
                     .all()
                 )
                 if not enabled:
@@ -140,12 +143,6 @@ class SignalPackBuilder:
         computed_at = self._now_iso()
         symbol_set = {s for s, _, _ in symbols}
 
-        quote_providers, quote_disabled = self._source_policy(
-            "quote", default_providers=["tencent"]
-        )
-        kline_providers, kline_disabled = self._source_policy(
-            "kline", default_providers=["tencent"]
-        )
         flow_providers, flow_disabled = self._source_policy(
             "capital_flow", default_providers=["eastmoney"]
         )
@@ -163,44 +160,16 @@ class SignalPackBuilder:
         for market, items in by_market.items():
             missing = [s for s, _ in items if (market, s) not in self._quote_cache]
             if missing:
-                if quote_disabled:
-                    for sym in missing:
-                        self._quote_cache[(market, sym)] = None
-                        self._quote_source_cache[(market, sym)] = "disabled"
-                else:
-                    remaining = set(missing)
-                    for provider, cfg in quote_providers:
-                        if not remaining:
-                            break
-                        try:
-                            if provider != "tencent":
-                                logger.info(
-                                    f"SignalPack quote 未支持 provider={provider}，跳过"
-                                )
-                                continue
-
-                            stocks = await asyncio.to_thread(
-                                md_stock_data, sorted(remaining), market.value
-                            )
-                            got = {s.symbol: s for s in stocks}
-                            for sym in list(remaining):
-                                sd = got.get(sym)
-                                if not sd:
-                                    continue
-                                self._quote_cache[(market, sym)] = sd
-                                self._quote_source_cache[(market, sym)] = provider
-                                remaining.discard(sym)
-                        except Exception as e:
-                            logger.warning(
-                                f"SignalPack quotes 采集失败({market.value},{provider}): {e}"
-                            )
-                            continue
-
-                    for sym in remaining:
-                        self._quote_cache[(market, sym)] = None
-                        self._quote_source_cache.setdefault(
-                            (market, sym), "unavailable"
-                        )
+                try:
+                    stocks = await asyncio.to_thread(md_stock_data, missing, market.value)
+                    got = {stock.symbol: stock for stock in stocks}
+                except Exception as exc:
+                    logger.warning("SignalPack quotes unavailable (%s): %s", market.value, exc)
+                    got = {}
+                for sym in missing:
+                    stock = got.get(sym)
+                    self._quote_cache[(market, sym)] = stock
+                    self._quote_source_cache[(market, sym)] = (stock.source or "unknown") if stock else "unavailable"
 
             for sym, _ in items:
                 quote_map[sym] = self._quote_cache.get((market, sym))
@@ -216,32 +185,13 @@ class SignalPackBuilder:
             for sym, market, _ in symbols:
                 key = (market, sym)
                 if key not in self._tech_cache:
-                    if kline_disabled:
-                        self._tech_cache[key] = {"error": "K线数据源已禁用"}
-                        self._tech_source_cache[key] = "disabled"
-                    else:
-                        last_err = None
-                        for provider, cfg in kline_providers:
-                            try:
-                                if provider == "tencent":
-                                    collector = KlineCollector(market)
-                                else:
-                                    logger.info(
-                                        f"SignalPack kline 未支持 provider={provider}，跳过"
-                                    )
-                                    continue
-                                self._tech_cache[key] = await asyncio.to_thread(collector.get_kline_summary, sym)
-                                self._tech_source_cache[key] = provider
-                                last_err = None
-                                break
-                            except Exception as e:
-                                last_err = e
-                                continue
-                        if key not in self._tech_cache:
-                            self._tech_cache[key] = {
-                                "error": str(last_err) if last_err else "获取K线失败"
-                            }
-                            self._tech_source_cache.setdefault(key, "unavailable")
+                    try:
+                        summary = await asyncio.to_thread(KlineCollector(market).get_kline_summary, sym)
+                        self._tech_cache[key] = summary
+                        self._tech_source_cache[key] = summary.get("source") or "unavailable"
+                    except Exception as exc:
+                        self._tech_cache[key] = {"error": str(exc)}
+                        self._tech_source_cache[key] = "unavailable"
                 tech_map[sym] = self._tech_cache[key]
                 if key in self._tech_cache and key not in self._tech_source_cache:
                     self._tech_source_cache[key] = "cache"

@@ -5,11 +5,8 @@ import asyncio
 import base64
 import hashlib
 import json
-import os
 import secrets
-import tempfile
 import time
-from pathlib import Path
 from urllib.parse import urlencode, urlsplit
 
 import httpx
@@ -17,6 +14,7 @@ from cryptography.fernet import Fernet, InvalidToken
 from sqlalchemy import update
 from sqlalchemy.orm import Session
 
+from src.platform.persistence.local_cipher import local_cipher
 from src.platform.persistence.models import MCPConnection
 from src.platform.runtime.paths import get_data_dir
 from src.web.errors import api_error
@@ -55,20 +53,7 @@ def fail(code="mcp_connection_failed"):
 
 def cipher() -> Fernet:
     """Keep the key outside the database and generic settings/configuration exports."""
-    path = get_data_dir() / "mcp-credentials.key"
-    path.parent.mkdir(parents=True, exist_ok=True)
-    if not path.exists():
-        fd, temporary = tempfile.mkstemp(prefix=".mcp-key-", dir=path.parent)
-        try:
-            with os.fdopen(fd, "wb") as handle:
-                handle.write(Fernet.generate_key())
-            try:
-                os.link(temporary, path)  # Atomic publication; never overwrite another worker's key.
-            except FileExistsError:
-                pass
-        finally:
-            Path(temporary).unlink(missing_ok=True)
-    return Fernet(path.read_bytes())
+    return local_cipher(get_data_dir() / "mcp-credentials.key", create=True)
 
 
 def seal(value: dict) -> str:

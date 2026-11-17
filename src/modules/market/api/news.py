@@ -6,6 +6,8 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel
 
 from src.platform.persistence.database import get_db
+from src.platform.marketdata.source_activation import REGISTERED_PROVIDERS, paused_providers, provider_group, provider_group_column
+from src.platform.marketdata.call_order import types_for
 from src.platform.persistence.models import Stock, DataSource
 from src.platform.marketdata.collectors.news_collector import NewsCollector, NewsItem
 
@@ -38,7 +40,7 @@ async def get_news(
     hours: int = Query(default=168, ge=1, le=720, description="时间范围（小时，默认7天）"),
     limit: int = Query(default=50, ge=1, le=200, description="返回数量"),
     filter_related: bool = Query(default=True, description="只显示相关新闻"),
-    source: str = Query(default="", description="来源过滤，逗号分隔：xueqiu/eastmoney_news/eastmoney"),
+    source: str = Query(default="", description="按来源过滤，逗号分隔；也可过滤历史新闻的来源"),
     db: Session = Depends(get_db),
 ):
     """
@@ -139,16 +141,17 @@ def get_news_sources(db: Session = Depends(get_db)):
     """获取已配置的新闻数据源列表"""
     data_sources = (
         db.query(DataSource)
-        .filter(DataSource.type == "news")
-        .order_by(DataSource.priority)
+        .filter(DataSource.type.in_(types_for("news")), provider_group_column().in_(REGISTERED_PROVIDERS))
+        .order_by(DataSource.id)
         .all()
     )
 
+    paused = paused_providers(db)
     return [
         {
             "id": ds.provider,
             "name": ds.name,
-            "enabled": ds.enabled,
+            "enabled": bool(ds.enabled and provider_group(ds.provider) not in paused),
             "priority": ds.priority,
         }
         for ds in data_sources

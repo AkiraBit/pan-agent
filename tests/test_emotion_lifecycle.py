@@ -3,8 +3,6 @@ import asyncio
 from copy import deepcopy
 from datetime import datetime, timedelta
 import json
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from threading import Thread
 from types import SimpleNamespace
 
 import pytest
@@ -18,7 +16,7 @@ from src.modules.short_term.lifecycle_repository import LifecycleRepository
 from src.modules.short_term.monitoring import monitor_once
 from src.modules.short_term.repository import EmotionRepository, WorkspaceError
 from src.modules.short_term.review_agent import validate_review
-from src.modules.short_term.schemas import AuctionSettings, ReviewCreate, WorkspaceSettings
+from src.modules.short_term.schemas import ReviewCreate, WorkspaceSettings
 from src.modules.short_term.service import EmotionRunner
 from src.modules.short_term.verification import evaluate_conditions, sample_phase
 from marketdata.short_term import TZ
@@ -101,27 +99,23 @@ def test_primary_identity_and_safe_url():
 
 
 @run_async
-async def test_actual_http_auction_contract_freshness_and_auth():
-    now=NOW.replace(hour=9,minute=20)
-    body={'schema_version':'auction.v1','quotes':[{'symbol':SYMBOL,'source_time':now.isoformat(),
-         'reference_price':10,'pre_close':8,'matched_volume_shares':200,'unmatched_volume_shares':40,'unmatched_side':'buy','final':False}]}
-    seen=[]
-    class Handler(BaseHTTPRequestHandler):
-        def do_GET(self):
-            seen.append(self.headers.get('Authorization'));raw=json.dumps(body).encode()
-            self.send_response(200);self.end_headers();self.wfile.write(raw)
-        def log_message(self,*a):pass
-    server=ThreadingHTTPServer(('127.0.0.1',0),Handler);thread=Thread(target=server.serve_forever,daemon=True);thread.start()
-    try:
-        config={'enabled':True,'endpoint':f'http://127.0.0.1:{server.server_port}/auction','api_key':'test-only'}
-        result=await read_auction(config,[SYMBOL],now)
-        assert result['status']=='available' and result['quotes'][0]['matched_amount_cny']==2000
-        assert result['quotes'][0]['unmatched_ratio']==.2 and seen==['Bearer test-only']
-        assert (await read_auction(config,[SYMBOL],now+timedelta(seconds=16)))['status']=='unavailable'
-        assert (await read_auction({},[SYMBOL],now))['status']=='not_configured'
-        body['quotes'][0]['unmatched_side']='balanced'
-        assert (await read_auction(config,[SYMBOL],now))['status']=='source_error'
-    finally:server.shutdown();server.server_close();thread.join()
+async def test_fuyao_auction_preserves_freshness_and_unknown_direction(monkeypatch):
+    from src.platform.marketdata import fuyao_business
+    now = NOW.replace(hour=9, minute=20)
+    monkeypatch.setattr(fuyao_business, 'providers', lambda kind: ['fuyao'])
+    async def fetch(operation, args):
+        assert operation == 'get_a_share_auction_snapshot'
+        assert args == {'thscodes': SYMBOL, 'stage': 'live'}
+        return {'auction_phase': 'live', 'data_status': 'ready', 'timestamp': now.timestamp() * 1000,
+                'item': [{'thscode': SYMBOL, 'auction_price': 10, 'pre_close_price': 8,
+                          'auction_volume': 200, 'auction_unmatched': 40}]}
+    monkeypatch.setattr(fuyao_business, 'fetch', fetch)
+    result = await read_auction([SYMBOL], now)
+    assert result['status'] == 'available' and result['quotes'][0]['matched_amount_cny'] == 2000
+    assert result['quotes'][0]['unmatched_ratio'] is None and result['quotes'][0]['unmatched_side'] == 'unknown'
+    assert (await read_auction([SYMBOL], now + timedelta(seconds=16)))['status'] == 'unavailable'
+    monkeypatch.setattr(fuyao_business, 'providers', lambda kind: [])
+    assert (await read_auction([SYMBOL], now))['status'] == 'not_configured'
 
 
 class ReviewTransport:
@@ -153,8 +147,7 @@ async def test_full_lifecycle_persists_review_and_next_day_memory(sessions):
     with sessions() as db:
         repo=EmotionRepository(db);pub=repo.workspace()['publication'];before=deepcopy(pub)
         life=LifecycleRepository(db);life.set_monitor(pub['id'],True,now=NOW)
-        life.save_source(AuctionSettings(api_key='test-secret'))
-        assert life.source_config()['has_api_key'] and 'api_key' not in life.source_config()
+        assert life.source_config() == {'enabled': False, 'provider_name': 'fuyao'}
     async def auction(*_):return {'status':'not_configured','quotes':[]}
     for clock in [NOW.replace(hour=9,minute=30),NOW.replace(hour=9,minute=31),NOW.replace(hour=15,minute=1)]:
         await monitor_once(runner,clock,quote_reader=lambda _:sample(clock)['quotes'],auction_reader=auction)

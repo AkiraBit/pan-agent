@@ -148,6 +148,42 @@ async def test_http_cache_coalesces_and_never_forwards_user_credentials(monkeypa
     assert 'authorization' not in requests[0].headers and 'cookie' not in requests[0].headers
 
 
+@pytest.mark.anyio
+async def test_overseas_uses_retained_providers_and_skips_paused_sina(monkeypatch):
+    requests = []
+    async def handler(request):
+        requests.append(request)
+        if request.url.host == 'hq.sinajs.cn':
+            assert request.headers['referer'] == 'https://finance.sina.com.cn/'
+            return httpx.Response(200, content=(
+                'var hq_str_hf_OIL="94,,94,95,96,93,21:08:15,95,95,0,2,1,2026-11-16,布伦特原油,91533";'
+                'var hq_str_hf_GC="";var hq_str_hf_SI="invalid";'
+            ).encode('gb18030'))
+        assert request.url.host == 'qt.gtimg.cn'
+        fields = ['0'] * 33
+        fields[3], fields[30], fields[32] = '150.55', '2026-11-13 16:00:01', '-0.43'
+        return httpx.Response(200, content=f'v_usXBI="{"~".join(fields)}";'.encode())
+
+    original = httpx.AsyncClient
+    monkeypatch.setattr(s.httpx, 'AsyncClient', lambda **kwargs: original(transport=httpx.MockTransport(handler), **kwargs))
+    monkeypatch.setattr(s, 'review_pauses', frozenset)
+    value = await s.fetch('overseas')
+    assert [row['id'] for row in value['sources']] == ['tencent', 'sina']
+    assert next(row for row in value['industry']['sectors'] if row['id'] == 'XBI')['regular']['change_percent'] == -0.43
+    commodity, = value['indicators']['commodities']['items']
+    assert commodity['symbol'] == 'BRENT' and commodity['name'].endswith('CFD')
+    assert commodity['change_percent'] == pytest.approx((94 / 95 - 1) * 100)
+    assert commodity['quote_at'] == '2026-11-16T21:08:15+08:00'
+
+    s._cache.clear()
+    requests.clear()
+    monkeypatch.setattr(s, 'review_pauses', lambda: frozenset({'sina'}))
+    value = await s.fetch('overseas')
+    assert [request.url.host for request in requests] == ['qt.gtimg.cn']
+    assert [row['id'] for row in value['sources']] == ['tencent']
+    assert not value['indicators']['commodities']['items']
+
+
 def test_no_kanpanba_request_path_in_independent_adapter():
     from pathlib import Path
     source=Path(s.__file__).read_text()
@@ -155,11 +191,18 @@ def test_no_kanpanba_request_path_in_independent_adapter():
 
 
 @pytest.mark.anyio
-async def test_minute_falls_back_only_to_independent_provider(monkeypatch):
+async def test_minute_does_not_switch_provider_after_failure(monkeypatch):
     monkeypatch.setattr(s,'eastmoney_minute',AsyncMock(side_effect=httpx.ConnectError('offline')))
-    monkeypatch.setattr(s,'tencent_minute',AsyncMock(return_value={'date':'2026-11-12','sources':[s.PROVIDERS['tencent']]}))
-    value=await s.minute('600001','2026-11-12')
-    assert value['sources'][0]['id']=='tencent'
+    secondary = AsyncMock(return_value={'date':'2026-11-12','sources':[s.PROVIDERS['tencent']]})
+    monkeypatch.setattr(s,'tencent_minute',secondary)
+    with pytest.raises(httpx.ConnectError, match='offline'):
+        await s.minute('600001','2026-11-12')
+    secondary.assert_not_awaited()
+    token = s._paused.set(frozenset({'eastmoney'}))
+    try:
+        assert (await s.minute('600001','2026-11-12'))['sources'][0]['id'] == 'tencent'
+    finally:
+        s._paused.reset(token)
 
 
 @pytest.mark.anyio
@@ -174,12 +217,12 @@ async def test_etf_snapshot_fallback_is_explicit_when_one_fund_fails(monkeypatch
 
 
 @pytest.mark.anyio
-async def test_five_minute_fallback_uses_requested_days_previous_close(monkeypatch):
+async def test_historical_five_minute_uses_requested_days_previous_close(monkeypatch):
     monkeypatch.setattr(s,'minute',AsyncMock(side_effect=ValueError('unavailable')))
     async def get(url, params, **kwargs):
         if 'mkline' in url:
             return {'data':{'sh600001':{'m5':[['202611111500','9','11'],['202611121500','11','12']]}}}
-        return {'data':{'sh600001':{'day':[['2026-11-10','9','10'],['2026-11-11','10','11'],['2026-11-12','11','12']]}}}
+        return [{'day': '2026-11-10', 'open': '9', 'close': '10'}, {'day': '2026-11-11', 'open': '10', 'close': '11'}]
     monkeypatch.setattr(s,'get',get)
     result=await s.stock_line('600001','2026-11-11')
     assert result['interval']=='5m' and len(result['line'])==1
@@ -199,10 +242,11 @@ async def test_calendar_survives_tencent_daily_outage(monkeypatch):
 
 
 @pytest.mark.anyio
-async def test_daily_bars_has_independent_tencent_fallback(monkeypatch):
+async def test_daily_bars_does_not_switch_provider_after_failure(monkeypatch):
     async def get(url, params, **kwargs):
         if 'sina.cn' in url:
             raise httpx.ConnectError('Sina unavailable')
-        return {'data':{'sh000001':{'day':[['2026-11-12','3673','3655.83']]}}}
+        pytest.fail('Tencent must not be called after Sina fails')
     monkeypatch.setattr(s,'get',get)
-    assert (await s.daily_bars('sh000001'))[0][2]=='3655.83'
+    with pytest.raises(httpx.ConnectError, match='Sina unavailable'):
+        await s.daily_bars('sh000001')

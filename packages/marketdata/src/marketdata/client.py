@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import time
-from datetime import datetime, timedelta
+from dataclasses import replace
+from datetime import date, datetime, timedelta
 
 from marketdata.cache import TTLCache
 from marketdata.defaults import InMemoryMetricsSink
@@ -56,9 +57,11 @@ INDEX_TENCENT: dict[str, str] = {
 
 
 class MarketData:
-    def __init__(self, config: ConfigProvider, metrics: MetricsSink | None = None, *, longbridge_transport=None):
+    def __init__(self, config: ConfigProvider, metrics: MetricsSink | None = None, *,
+                 fuyao_api_key=None, fuyao_transport=None, extra_vendors=None):
         def vendors(datatype):
-            return build_vendors(datatype, longbridge_transport)
+            return {**build_vendors(datatype, fuyao_api_key=fuyao_api_key,
+                                    fuyao_transport=fuyao_transport), **(extra_vendors or {}).get(datatype, {})}
 
         self.config = config
         self.metrics = metrics or InMemoryMetricsSink()
@@ -152,7 +155,9 @@ class MarketData:
         resp = self._kline_engine.fetch(req, min_count=min_count, cache_ttl_sec=0)
         return resp.data or []
 
-    def quotes(self, symbols: list[str | Symbol], *, market: str | None = None) -> list[Quote]:
+    def quotes(self, symbols: list[str | Symbol], *, market: str | None = None,
+               max_age_seconds: float | None = None, stale_if_error_seconds: float = 0,
+               trade_date: date | None = None) -> list[Quote]:
         """批量报价。symbols 可跨市场:未显式给 market 时按代码自动识别并分组。"""
         groups: dict[str, list[Symbol]] = {}
         for raw in symbols:
@@ -161,13 +166,17 @@ class MarketData:
 
         out: list[Quote] = []
         for mkt, syms in groups.items():
-            req = Request(symbols=tuple(s.code for s in syms), market=mkt)
-            resp = self._quote_engine.fetch(req)
+            req = Request(symbols=tuple(s.code for s in syms), market=mkt, required_fields=("current_price",),
+                          max_age_seconds=max_age_seconds, stale_if_error_seconds=stale_if_error_seconds, trade_date=trade_date)
+            # A provider may omit unsupported symbols (for example funds in an A-share equity request).
+            resp = self._quote_engine.fetch(req, min_count=len(set(req.symbols)))
             if resp.ok and resp.data:
                 for quote in resp.data:
+                    if resp.stale:
+                        quote = replace(quote, stale=True)
                     if not quote.source:
                         quote.source = resp.vendor
-                out.extend(resp.data)
+                    out.append(quote)
         return out
 
     def index_quotes(self, tencent_symbols: list[str]) -> list[dict]:
@@ -179,7 +188,7 @@ class MarketData:
         from marketdata.vendors.tencent import fetch_raw
         return fetch_raw(list(tencent_symbols)) if tencent_symbols else []
 
-    def index_klines(self, code: str, *, market: str, days: int = 120) -> list:
+    def index_klines(self, code: str, *, market: str, days: int = 120, provider: str | None = None) -> list:
         """指数日K:东财 secid 主源;失败/未映射(如美股指数)走腾讯原始符号兜底;都无 → []。
 
         腾讯兜底修两类缺口:①东财 push2his 被代理/风控掐时 CN/HK 指数仍有数;
@@ -187,13 +196,13 @@ class MarketData:
         """
         c = str(code).strip()
         secid = INDEX_SECID.get(c) or INDEX_SECID.get(c.upper())
-        if secid:
+        if secid and provider in (None, "eastmoney"):
             from marketdata.vendors.kline import fetch_eastmoney_kline
             bars = fetch_eastmoney_kline(secid, days)
             if bars:
                 return bars
         tsym = INDEX_TENCENT.get(c) or INDEX_TENCENT.get(c.upper())
-        if tsym:
+        if tsym and provider in (None, "tencent"):
             from marketdata.vendors.kline import fetch_tencent_kline_raw
             return fetch_tencent_kline_raw(tsym, days)
         return []

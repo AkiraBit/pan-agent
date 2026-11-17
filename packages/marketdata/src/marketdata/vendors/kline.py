@@ -1,9 +1,8 @@
-"""K 线 vendors:腾讯(全市场)/ Stooq(US)/ 东财(CN/HK)/ Yahoo(US/HK)。移植自 PanWatch kline_collector 抓取核。"""
+"""腾讯和东方财富日 K 线适配器。"""
 from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime, timezone
 
 from marketdata.http import market_get
 from marketdata.symbol import Market, Symbol
@@ -14,8 +13,6 @@ logger = logging.getLogger(__name__)
 
 _TENCENT_URL = "https://web.ifzq.gtimg.cn/appstock/app/fqkline/get"
 _EASTMONEY_URL = "https://push2his.eastmoney.com/api/qt/stock/kline/get"
-_STOOQ_URL = "https://stooq.com/q/d/l/"
-_YAHOO_CHART_URL = "https://query2.finance.yahoo.com/v8/finance/chart/{sym}"
 
 
 def _days(config: dict, default: int = 60) -> int:
@@ -109,40 +106,6 @@ class TencentKlineVendor(KlineVendor):
         return fetch_tencent_kline_raw(sym.to_tencent(), _days(config))
 
 
-class StooqKlineVendor(KlineVendor):
-    name = "stooq"
-    supports_markets = {"US"}
-
-    def fetch(self, symbols: list[Symbol], config: dict) -> list[Bar]:
-        if not symbols:
-            return []
-        sym = symbols[0].code.strip().lower()
-        if not sym:
-            return []
-        text = market_get(
-            _STOOQ_URL, host_key="stooq.com", params={"s": f"{sym}.us", "i": "d"},
-            headers={"User-Agent": "PanWatch/1.0 (+https://github.com/)"},
-            timeout=12, retries=2, parse="text", log_label="Stooq K线", symbol=sym,
-        )
-        if not text:
-            return []
-        lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
-        if len(lines) <= 1:
-            return []
-        out: list[Bar] = []
-        for ln in lines[1:]:
-            p = ln.split(",")
-            if len(p) < 6 or not p[0] or p[0] == "Date":
-                continue
-            try:
-                out.append(Bar(date=p[0], open=float(p[1]), close=float(p[4]),
-                               high=float(p[2]), low=float(p[3]),
-                               volume=float(p[5]) if p[5] else 0.0))
-            except Exception:
-                continue
-        return out
-
-
 def _em_secid(sym: Symbol) -> str:
     if sym.market == Market.HK:
         return f"116.{sym.code}"
@@ -192,84 +155,3 @@ class EastmoneyKlineVendor(KlineVendor):
             return []
         days = _days(config)
         return fetch_eastmoney_kline(_em_secid(sym), days)
-
-
-def _yahoo_range(days: int) -> str:
-    """days → Yahoo chart v8 的 range 枚举(不用 period1/period2,避免依赖当前时间)。"""
-    if days <= 5:
-        return "5d"
-    if days <= 22:
-        return "1mo"
-    if days <= 66:
-        return "3mo"
-    if days <= 130:
-        return "6mo"
-    if days <= 260:
-        return "1y"
-    if days <= 520:
-        return "2y"
-    if days <= 1300:
-        return "5y"
-    return "max"
-
-
-class YahooKlineVendor(KlineVendor):
-    """Yahoo chart v8 日K,零 crumb / 零 cookie(crumb 只有 quoteSummary 基本面才需要)。"""
-
-    name = "yahoo"
-    supports_markets = {"US", "HK"}
-
-    def fetch(self, symbols: list[Symbol], config: dict) -> list[Bar]:
-        if not symbols:
-            return []
-        sym = symbols[0]
-        if sym.market not in (Market.US, Market.HK):
-            return []
-        days = _days(config)
-        ysym = sym.to_yfinance()
-        proxy = config.get("proxy")
-        payload = market_get(
-            _YAHOO_CHART_URL.format(sym=ysym), host_key="query2.finance.yahoo.com",
-            params={"interval": "1d", "range": _yahoo_range(days)},
-            headers={"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"},
-            timeout=10, retries=2, parse="json", proxy=proxy,
-            log_label="Yahoo K线", symbol=ysym,
-        )
-        if not isinstance(payload, dict):
-            return []
-        try:
-            result = ((payload.get("chart") or {}).get("result")) or []
-            if not result:
-                return []
-            r0 = result[0] or {}
-            timestamps = r0.get("timestamp") or []
-            indicators = r0.get("indicators") or {}
-            quote = (indicators.get("quote") or [{}])[0] or {}
-            adjcloses = (indicators.get("adjclose") or [{}])[0].get("adjclose") if indicators.get("adjclose") else None
-        except Exception:
-            return []
-        opens = quote.get("open") or []
-        highs = quote.get("high") or []
-        lows = quote.get("low") or []
-        closes = quote.get("close") or []
-        volumes = quote.get("volume") or []
-        out: list[Bar] = []
-        for i, ts in enumerate(timestamps or []):
-            try:
-                o = opens[i] if i < len(opens) else None
-                h = highs[i] if i < len(highs) else None
-                low = lows[i] if i < len(lows) else None
-                c = closes[i] if i < len(closes) else None
-                if o is None or h is None or low is None or c is None:
-                    continue
-                if adjcloses is not None and i < len(adjcloses) and adjcloses[i] is not None:
-                    c = adjcloses[i]
-                v = volumes[i] if i < len(volumes) and volumes[i] is not None else 0
-                date = datetime.fromtimestamp(int(ts), tz=timezone.utc).strftime("%Y-%m-%d")
-                out.append(Bar(date=date, open=float(o), close=float(c),
-                               high=float(h), low=float(low), volume=float(v)))
-            except Exception:
-                continue
-        if days > 0 and len(out) > days:
-            out = out[-days:]
-        return out

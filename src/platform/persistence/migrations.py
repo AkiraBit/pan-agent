@@ -2320,6 +2320,78 @@ def _m144_mcp_connection_details(conn: Connection) -> None:
             conn.execute(text(f"ALTER TABLE mcp_connections ADD COLUMN {name} {definition}"))
 
 
+def _m145_data_provider_credentials(conn: Connection) -> None:
+    conn.execute(text("""CREATE TABLE IF NOT EXISTS data_provider_credentials (
+        provider VARCHAR PRIMARY KEY NOT NULL,
+        encrypted_key TEXT NOT NULL DEFAULT '',
+        revision INTEGER NOT NULL DEFAULT 0,
+        mcp_services JSON NOT NULL DEFAULT '{}'
+    )"""))
+
+
+def _m146_data_source_provider_pauses(conn: Connection) -> None:
+    conn.execute(text("CREATE TABLE IF NOT EXISTS data_source_provider_pauses (provider VARCHAR PRIMARY KEY NOT NULL)"))
+
+
+def _m147_retire_data_sources(conn: Connection) -> None:
+    if _has_table(conn, "data_sources"):
+        for kind, name in (("stock_search", "东方财富标的检索"), ("index_kline", "东方财富指数日 K 线")):
+            conn.execute(text("""
+                UPDATE data_sources SET provider = 'eastmoney', name = :name
+                WHERE provider = 'public' AND type = :kind AND NOT EXISTS (
+                    SELECT 1 FROM data_sources WHERE type = :kind AND provider = 'eastmoney')
+            """), {"kind": kind, "name": name})
+        conn.execute(text("""
+            DELETE FROM data_sources
+            WHERE provider NOT IN ('fuyao','ftshare','cls','eastmoney','eastmoney_news','tencent','sina','longbridge','ths')
+               OR type IN ('etf_shares', 'etf_pcf')
+        """))
+    conn.execute(text("""
+        DELETE FROM data_source_provider_pauses
+        WHERE provider NOT IN ('fuyao','ftshare','cls','eastmoney','tencent','sina','longbridge')
+    """))
+    if _has_table(conn, "app_settings"):
+        conn.execute(text("UPDATE app_settings SET value = 'eastmoney' WHERE key = 'stock_link_platform' AND value = 'xueqiu'"))
+
+
+def _m148_ftshare_backup_priorities(conn: Connection) -> None:
+    if not _has_table(conn, "data_sources"):
+        return
+    # Before these routes existed, FTShare priority 0 was only an endpoint default.
+    conn.execute(text("""
+        UPDATE data_sources SET priority = 50
+        WHERE provider = 'ftshare' AND priority = 0
+          AND type IN ('ftshare:stock_daec_stocks', 'ftshare:stock_candlesticks',
+                       'ftshare:index_candlesticks', 'ftshare:trading_calendar')
+    """))
+
+
+def _m149_fuyao_operation_settings(conn: Connection) -> None:
+    if not _has_table(conn, "data_sources"):
+        return
+    from src.platform.marketdata import fuyao_business, fuyao_rest
+
+    old = dict(conn.execute(text("""
+        SELECT type, MAX(CASE WHEN enabled THEN 1 ELSE 0 END) FROM data_sources
+        WHERE provider = 'fuyao' GROUP BY type
+    """)).all())
+    for op_id, business in fuyao_business.BY_OPERATION.items():
+        if business not in old:
+            continue
+        conn.execute(text("""
+            INSERT INTO data_sources (name, type, provider, config, enabled, priority, supports_batch, test_symbols)
+            SELECT :name, :type, 'fuyao', '{}', :enabled, 1, 0, '[]'
+            WHERE NOT EXISTS (SELECT 1 FROM data_sources WHERE provider = 'fuyao' AND type = :type)
+        """), {"name": fuyao_rest.OPERATIONS[op_id]["summary"], "type": fuyao_rest.TYPE_PREFIX + op_id,
+                 "enabled": old[business]})
+    conn.execute(text("DELETE FROM data_sources WHERE provider = 'fuyao' AND type NOT LIKE 'fuyao:%'"))
+
+
+def _m150_retire_longbridge_data_sources(conn: Connection) -> None:
+    conn.execute(text("DELETE FROM data_sources WHERE provider = 'longbridge'"))
+    conn.execute(text("DELETE FROM data_source_provider_pauses WHERE provider = 'longbridge'"))
+
+
 MIGRATIONS: tuple[Migration, ...] = (
     Migration(101, "agent_config_kind_and_visibility", _m101_agent_config_kind),
     Migration(102, "backfill_agent_kind_data", _m102_backfill_agent_kind),
@@ -2365,6 +2437,12 @@ MIGRATIONS: tuple[Migration, ...] = (
     Migration(142, "emotion_regulatory_validation", _m142_emotion_regulatory_validation),
     Migration(143, "builtin_mcp_connections", _m143_builtin_mcp_connections),
     Migration(144, "mcp_connection_details", _m144_mcp_connection_details),
+    Migration(145, "data_provider_credentials", _m145_data_provider_credentials),
+    Migration(146, "data_source_provider_pauses", _m146_data_source_provider_pauses),
+    Migration(147, "retire_data_sources", _m147_retire_data_sources),
+    Migration(148, "ftshare_backup_priorities", _m148_ftshare_backup_priorities),
+    Migration(149, "fuyao_operation_settings", _m149_fuyao_operation_settings),
+    Migration(150, "retire_longbridge_data_sources", _m150_retire_longbridge_data_sources),
 )
 
 

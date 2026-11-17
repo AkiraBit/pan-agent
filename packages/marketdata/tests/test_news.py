@@ -1,9 +1,4 @@
-"""新闻资讯 vendor 测试:xueqiu/eastmoney_news/eastmoney 均离线构造样例,
-monkeypatch news 模块内 market_get(三个 vendor 共享同一个模块级引用)。
-
-沙箱代理会拦真实端点,字段映射按 src/collectors/news_collector.py 尽力构造;
-雪球已知被阿里云 WAF 拦截,用构造的 WAF HTML 挑战页样例验证防御分支。
-"""
+"""Offline behavior of the two East Money news adapters."""
 from __future__ import annotations
 
 import json
@@ -20,91 +15,6 @@ from marketdata.types import NewsArticle
 
 def _jsonp(payload: dict) -> str:
     return "jQuery(" + json.dumps(payload) + ")"
-
-
-# ---------------------------------------------------------------------------
-# xueqiu(雪球个股新闻)
-# ---------------------------------------------------------------------------
-
-def test_xueqiu_parses_item_and_importance(monkeypatch):
-    payload = {
-        "list": [
-            {
-                "id": 5001,
-                "title": "<b>重磅</b>:公司获得新订单",
-                "description": "详细描述内容",
-                "created_at": 1752652800000,  # ms -> 2026-07-16 08:00:00 UTC
-                "target": "https://xueqiu.com/1234/5001",
-            }
-        ]
-    }
-    monkeypatch.setattr(news_mod, "market_get", lambda *a, **k: json.dumps(payload))
-
-    out = news_mod.XueqiuNewsVendor().fetch([Symbol.parse("600519")], {"cookies": "abc=1"})
-    assert len(out) == 1
-    a = out[0]
-    assert isinstance(a, NewsArticle)
-    assert a.source == "xueqiu"
-    assert a.external_id == "5001"
-    assert a.title == "重磅:公司获得新订单"  # HTML 标签被清理
-    assert a.content == "详细描述内容"
-    assert a.publish_time == datetime.fromtimestamp(1752652800, tz=timezone.utc)
-    assert a.symbols == ["600519"]
-    assert a.importance == 2  # 命中"重磅"
-    assert a.url == "https://xueqiu.com/1234/5001"
-
-
-def test_xueqiu_symbol_id_prefix_rules(monkeypatch):
-    """SH/SZ 加前缀,BJ 保留原值(雪球不识别 BJ 代码)。"""
-    captured = {}
-
-    def fake(url, *, params, **kwargs):
-        captured["symbol_id"] = params["symbol_id"]
-        return json.dumps({"list": []})
-
-    monkeypatch.setattr(news_mod, "market_get", fake)
-
-    news_mod.XueqiuNewsVendor().fetch([Symbol.parse("600519")], {})
-    assert captured["symbol_id"] == "SH600519"
-
-    news_mod.XueqiuNewsVendor().fetch([Symbol.parse("000001")], {})
-    assert captured["symbol_id"] == "SZ000001"
-
-    news_mod.XueqiuNewsVendor().fetch([Symbol.parse("920001")], {})
-    assert captured["symbol_id"] == "920001"  # BJ 原值透传
-
-
-def test_xueqiu_no_a_share_symbols_returns_empty():
-    # 港股/美股代码不是 6 位数字 -> 直接返回 [],不发请求
-    assert news_mod.XueqiuNewsVendor().fetch([Symbol.parse("00700"), Symbol.parse("AAPL")], {}) == []
-
-
-def test_xueqiu_waf_blocked_records_error(monkeypatch):
-    """WAF 挑战页(HTML)命中特征字符串 -> 返回 [] 且 record_error 带 "WAF" 字样。"""
-    html = "<html><body><textarea>window._waf_challenge = 1;</textarea></body></html>"
-    monkeypatch.setattr(news_mod, "market_get", lambda *a, **k: html)
-
-    with capture_errors() as errs:
-        out = news_mod.XueqiuNewsVendor().fetch([Symbol.parse("600519")], {})
-
-    assert out == []
-    assert any("WAF" in e for e in errs)
-
-
-def test_xueqiu_non_json_non_waf_response_returns_empty(monkeypatch):
-    """既不含 WAF 特征、也不是合法 JSON 的响应 -> 视为非预期结构,同样 record_error 且返回 []。"""
-    monkeypatch.setattr(news_mod, "market_get", lambda *a, **k: "not json at all")
-
-    with capture_errors() as errs:
-        out = news_mod.XueqiuNewsVendor().fetch([Symbol.parse("600519")], {})
-
-    assert out == []
-    assert any("WAF" in e for e in errs)
-
-
-def test_xueqiu_market_get_failure_returns_empty(monkeypatch):
-    monkeypatch.setattr(news_mod, "market_get", lambda *a, **k: None)
-    assert news_mod.XueqiuNewsVendor().fetch([Symbol.parse("600519")], {}) == []
 
 
 # ---------------------------------------------------------------------------
@@ -370,20 +280,6 @@ def test_news_dedup_keeps_first_seen_across_vendors(monkeypatch):
                     },
                 }
             )
-        if host_key == news_mod._XUEQIU_HOST:
-            return json.dumps(
-                {
-                    "list": [
-                        {
-                            "id": "DUP1",
-                            "title": "来自雪球的标题",
-                            "description": "雪球内容",
-                            "created_at": 1752739200000,  # 2026-07-17 12:00:00 UTC(更新,但优先级更低)
-                            "target": "https://xueqiu.com/x/DUP1",
-                        }
-                    ]
-                }
-            )
         return None
 
     monkeypatch.setattr(news_mod, "market_get", fake)
@@ -393,11 +289,15 @@ def test_news_dedup_keeps_first_seen_across_vendors(monkeypatch):
             {
                 "news": [
                     SourceConfig(vendor="eastmoney_news", priority=1),
-                    SourceConfig(vendor="xueqiu", priority=2),
+                    SourceConfig(vendor="eastmoney", priority=2),
                 ]
             }
         )
     )
+    first = news_mod.EastmoneyStockNewsVendor().fetch([Symbol.parse("600519")], {})[0]
+    from dataclasses import replace
+    monkeypatch.setattr(news_mod.EastmoneyAnnNewsVendor, "fetch",
+                        lambda *_: [replace(first, source="eastmoney", title="公告标题")])
     out = md.news(["600519"])
     assert len(out) == 1
     assert out[0].source == "eastmoney_news"  # 先处理的优先级更高的源被保留
