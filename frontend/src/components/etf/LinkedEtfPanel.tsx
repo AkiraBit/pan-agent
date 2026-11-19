@@ -65,7 +65,7 @@ export function LinkedEtfPanel({ data, turnoverBaseline, prices, breadth, breadt
     // Debounce cursor motion so scrubbing the chart does not flood the API.
     timer = window.setTimeout(read, 220)
     return () => { controller.abort(); window.clearTimeout(timer) }
-  }, [data.date, detailGroup, cursor, expanded, detailAttempt])
+  }, [data.date, detailGroup, cursor, expanded, detailAttempt, analysis?.backfill?.status])
   const selected = selectTurnover(data, analysis, group, turnoverBaseline)
   const plotPrices = useMemo(() => [
     ...(analysis?.benchmarks ?? []).map((item, index) => ({ instrument: { symbol: item.symbol, kind: 'index' as const, name: t(`groups.${item.group}`) },
