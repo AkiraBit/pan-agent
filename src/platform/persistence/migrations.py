@@ -2460,6 +2460,19 @@ def _m156_tushare_etf_market_stats(conn: Connection) -> None:
     )"""))
 
 
+def _m157_tushare_breadth_replay(conn: Connection) -> None:
+    columns = {row[1] for row in conn.execute(text("PRAGMA table_info(etf_tushare_breadth_minutes)"))}
+    if "source" not in columns:
+        conn.execute(text("ALTER TABLE etf_tushare_breadth_minutes ADD COLUMN source VARCHAR(12) NOT NULL DEFAULT 'snapshot'"))
+    conn.execute(text("""CREATE TABLE IF NOT EXISTS etf_tushare_breadth_replay_stocks (
+        trade_date VARCHAR(10) NOT NULL, symbol VARCHAR(9) NOT NULL, through VARCHAR(5) NOT NULL,
+        bars JSON NOT NULL, PRIMARY KEY (trade_date, symbol)
+    )"""))
+    conn.execute(text("""CREATE TABLE IF NOT EXISTS etf_tushare_breadth_replay_results (
+        trade_date VARCHAR(10) NOT NULL PRIMARY KEY, payload JSON NOT NULL
+    )"""))
+
+
 MIGRATIONS: tuple[Migration, ...] = (
     Migration(101, "agent_config_kind_and_visibility", _m101_agent_config_kind),
     Migration(102, "backfill_agent_kind_data", _m102_backfill_agent_kind),
@@ -2517,6 +2530,7 @@ MIGRATIONS: tuple[Migration, ...] = (
     Migration(154, "tushare_etf_price_sessions", _m154_tushare_etf_price_sessions),
     Migration(155, "tushare_index_price_sessions", _m155_tushare_index_price_sessions),
     Migration(156, "tushare_etf_market_stats", _m156_tushare_etf_market_stats),
+    Migration(157, "tushare_breadth_replay", _m157_tushare_breadth_replay),
 )
 
 

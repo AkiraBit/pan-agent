@@ -6,19 +6,28 @@ import { marketPhase, nextEtfRefresh } from '@/components/etf/market-clock'
 import { etfIntradayMove } from '@/components/etf/session'
 import BroadEtf from '@/pages/BroadEtf'
 
+const chartBreadth = vi.hoisted(() => vi.fn())
 vi.mock('@panwatch/api/etf', () => ({ etfApi: {
   intraday: vi.fn(), turnoverBaseline: vi.fn(), priceCatalog: vi.fn(), priceLine: vi.fn(), marketStats: vi.fn(),
+  backfillBreadth: vi.fn(), analysis: vi.fn().mockResolvedValue({ groups: [], benchmarks: [], boards: {} }), components: vi.fn(), backfillComponents: vi.fn(),
 } }))
 vi.mock('@/components/etf/IntradayChart', () => ({
-  IntradayChart: ({ data, prices, breadth }: {
-    data?: EtfIntraday; prices: { instrument: EtfPriceInstrument }[]; breadth?: EtfMarketStats['breadth']
-  }) => <div role="img" aria-label={data?.date ?? 'breadth'} data-breadth={breadth && JSON.stringify(breadth.points)}
-    data-price={prices.length ? prices.map(price => price.instrument.symbol).join(',') : undefined} />,
+  IntradayChart: ({ data, prices = [], breadth, breadthControls, turnoverBaseline }: {
+    data?: EtfIntraday; prices?: { instrument: EtfPriceInstrument }[]; breadth?: EtfMarketStats['breadth']; breadthControls?: React.ReactNode; turnoverBaseline?: EtfTurnoverBaseline
+  }) => {
+    chartBreadth(breadth)
+    return <>
+      <div role="img" aria-label={data?.date ?? 'breadth'} data-breadth={breadth && JSON.stringify(breadth.points)}
+        data-baseline={turnoverBaseline && JSON.stringify(turnoverBaseline)} data-price={prices.length ? prices.map(price => price.instrument.symbol).join(',') : undefined} />
+      {breadthControls}
+    </>
+  },
 }))
 
 const load = vi.mocked(etfApi.intraday)
 const reference = vi.mocked(etfApi.turnoverBaseline)
 const stats = vi.mocked(etfApi.marketStats)
+const startBackfill = vi.mocked(etfApi.backfillBreadth)
 const latest = '2026-11-17'
 const previous = '2026-11-16'
 
@@ -48,6 +57,8 @@ beforeEach(() => {
   localStorage.clear()
   load.mockReset()
   reference.mockReset().mockResolvedValue(null)
+  chartBreadth.mockClear()
+  startBackfill.mockReset()
   stats.mockReset().mockImplementation(async date => ({
     date, breadth: { through: '15:00', points: {} },
     daily_flow: { total: 22, covered: 0, status: 'pending', net_cny: null },
@@ -57,6 +68,52 @@ beforeEach(() => {
 afterEach(() => { cleanup(); vi.useRealTimers() })
 
 describe('Tushare broad-market ETFs', () => {
+  it('shows finished minutes on timed polls without replacing chart data for progress-only updates', async () => {
+    const seed: EtfMarketStats = {
+      date: latest, breadth: { through: '09:31', points: {} },
+      daily_flow: { total: 22, covered: 22, status: 'ready', net_cny: 0 },
+    }
+    const early = { up: 10, down: 20, flat: 3, source: 'backfill' as const }
+    stats.mockResolvedValueOnce(seed).mockResolvedValueOnce({
+      ...seed, backfill: { status: 'running', total: 55, processed: 3, added: 0, reason: null },
+    }).mockResolvedValueOnce({
+      ...seed, backfill: { status: 'running', total: 55, processed: 40, added: 1, reason: null },
+      breadth: { through: '09:31', points: { '09:30': early } },
+    }).mockResolvedValueOnce({
+      ...seed, backfill: { status: 'running', total: 55, processed: 54, added: 1, reason: null },
+      breadth: { through: '09:31', points: { '09:30': { ...early } } },
+    }).mockResolvedValue({
+      ...seed, backfill: { status: 'complete', total: 55, processed: 55, added: 2, reason: null },
+      breadth: { through: '09:31', points: { '09:30': early, '09:31': { ...early, up: 11 } } },
+    })
+    startBackfill.mockResolvedValue({ date: latest, status: 'running' })
+    show(`/etf?date=${latest}`)
+    const button = await screen.findByRole('button', { name: '回补' }) as HTMLButtonElement
+    expect(startBackfill).not.toHaveBeenCalled()
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    await act(async () => { fireEvent.click(button) })
+    expect(startBackfill).toHaveBeenCalledOnce()
+    expect(startBackfill).toHaveBeenCalledWith(latest)
+    expect(screen.getByText('回补中 3 / 55 只')).toBeTruthy()
+    expect(button.disabled).toBe(true)
+    await act(async () => { await vi.advanceTimersByTimeAsync(3999) })
+    expect(stats).toHaveBeenCalledTimes(2)
+    await act(async () => { await vi.advanceTimersByTimeAsync(1) })
+    expect(screen.getByText('回补中 40 / 55 只 · 已补 1 分钟')).toBeTruthy()
+    const chart = screen.getByRole('img', { name: latest })
+    expect(chart.getAttribute('data-breadth')).toContain('09:30')
+    expect(chart.getAttribute('data-breadth')).not.toContain('09:31')
+    const drawn = chartBreadth.mock.lastCall?.[0]
+    await act(async () => { await vi.advanceTimersByTimeAsync(4000) })
+    expect(screen.getByText('回补中 54 / 55 只 · 已补 1 分钟')).toBeTruthy()
+    expect(chartBreadth.mock.lastCall?.[0]).toBe(drawn)
+    await act(async () => { await vi.advanceTimersByTimeAsync(4000) })
+    expect(screen.getByText('已回补 2 分钟')).toBeTruthy()
+    expect(chart.getAttribute('data-breadth')).toContain('09:31')
+    expect(screen.queryByRole('button', { name: '回补' })).toBeNull()
+    expect(load).toHaveBeenCalledTimes(1)
+  })
+
   it('loads the selected date’s stored breadth and only shows a complete net flow', async () => {
     stats.mockImplementation(async date => ({
       date,
@@ -130,13 +187,13 @@ describe('Tushare broad-market ETFs', () => {
     show()
     expect(await screen.findByText('计算中')).toBeTruthy()
     expect(screen.getByRole('img', { name: latest })).toBeTruthy()
-    expect(screen.getByText('前 5 个交易日同分钟均值')).toBeTruthy()
+    expect(screen.getByRole('img', { name: latest }).getAttribute('data-baseline')).toBeNull()
     await act(async () => { resolveBaseline({ sessions: 5, cumulative_cny: { '09:31': 200_000_000, '15:00': 500_000_000 } }) })
     expect(await screen.findByText('较同期均值高 25%')).toBeTruthy()
     expect(screen.queryByText('计算中')).toBeNull()
     expect(screen.getByText('明显放量')).toBeTruthy()
     expect(screen.getByText('对比前 5 个交易日同期均值 · 截至 09:31')).toBeTruthy()
-    expect(screen.getByText('前 5 个交易日同分钟均值')).toBeTruthy()
+    expect(JSON.parse(screen.getByRole('img', { name: latest }).getAttribute('data-baseline')!)).toEqual({ sessions: 5, cumulative_cny: { '09:31': 200_000_000, '15:00': 500_000_000 } })
   })
 
   it('renders cached averages together with each date without starting a calculation request', async () => {
@@ -304,6 +361,35 @@ describe('Tushare broad-market ETFs', () => {
     expect(marketPhase(at('10:00:00'), latest, { ...market, trading_day: false })).toBe('marketHoliday')
     expect(nextEtfRefresh(at('10:00:00'), { ...market, trading_day: false }, '', 12_000, undefined, undefined))
       .toMatchObject({ day: '2026-11-18', minute: '09:30' })
+  })
+
+  it('refreshes stored breadth even when the main chart already has the latest ETF minute', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date(`${latest}T09:34:18+08:00`))
+    const readyMinute = '09:35'
+    load.mockImplementation(async () => {
+      const result = session()
+      return { ...result, market: { ...result.market, at: new Date().toISOString() },
+        points: ['09:34', readyMinute].map(minute => ({
+          minute, turnover_cny: 100_000_000, index_close: 3550, etf_count: 2,
+        })) }
+    })
+    const flow = { total: 22, covered: 0, status: 'pending' as const, net_cny: null }
+    stats.mockResolvedValueOnce({ date: latest, breadth: { through: '09:34', points: {} }, daily_flow: flow })
+      .mockResolvedValue({ date: latest, breadth: { through: readyMinute, points: {
+        [readyMinute]: { up: 2000, down: 1800, flat: 120 },
+      } }, daily_flow: flow })
+
+    await act(async () => { show(`/etf?date=${latest}`) })
+    const chart = screen.getByRole('img', { name: latest })
+    expect(chart.getAttribute('data-breadth')).toBe('{}')
+    expect(stats).toHaveBeenCalledTimes(1)
+    await act(async () => { await vi.advanceTimersByTimeAsync(59_999) })
+    expect(stats).toHaveBeenCalledTimes(1)
+    await act(async () => { await vi.advanceTimersByTimeAsync(1) })
+    expect(stats).toHaveBeenCalledTimes(2)
+    expect(load).toHaveBeenCalledTimes(1)
+    expect(chart.getAttribute('data-breadth')).toContain(readyMinute)
   })
 
   it('shows names and codes in both sample groups and links verified disclosures', async () => {

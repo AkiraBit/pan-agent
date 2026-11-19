@@ -12,6 +12,7 @@ const palette = [
   ['#ad5832', '#ffac80'],
   ['#675b99', '#ccc1f1'],
   ['#756900', '#e4d170'],
+  ['#3469bf', '#86b6ff'],
 ]
 
 export function etfPriceColor(index: number, dark: boolean) {
@@ -22,4 +23,5 @@ export interface EtfChartPrice {
   instrument: EtfPriceInstrument
   closes: Record<string, number>
   colorIndex: number
+  previousClose?: number | null
 }

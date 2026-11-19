@@ -193,7 +193,7 @@ export function EtfPricePicker({ selection, onChange }: {
       }}>
       <TabsList aria-label={t('priceInstrumentTypes')} className="grid h-8 w-full grid-cols-2">
         <TabsTrigger value="index" className="h-full text-xs">{t('priceIndexTab')}</TabsTrigger>
-        <TabsTrigger value="etf" className="h-full text-xs">ETF</TabsTrigger>
+        <TabsTrigger value="etf" className="h-full text-xs">{t('priceEtfTab')}</TabsTrigger>
       </TabsList>
       <TabsContent value={kind} className="mt-2">
       <div className="relative">

@@ -37,7 +37,7 @@ async def rows(operation, params, fields=""):
 
     status, code = reply["http_status"], reply["business_code"]
     message = (reply["message"] or "").lower()
-    if status == 429 or code in {429, 42901} or any(word in message for word in ("频次", "限流", "rate limit", "每分钟", "每小时", "每天最多")):
+    if status == 429 or code in {429, 42901, 40203} or any(word in message for word in ("频次", "限流", "请求过于频繁", "rate limit", "每秒", "每分钟", "每小时", "每天最多")):
         raise TushareFailure("rate_limited", retry_after=60)
     if status in {401, 403} or code in {401, 403, 40301, 2002} or any(
         word in message for word in ("权限", "积分", "permission", "未授权")

@@ -3,11 +3,12 @@ import { Activity, ArrowDownRight, ArrowUpRight, BarChart3, CalendarDays, Chevro
 import { Link, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { enUS, zhCN } from 'react-day-picker/locale'
-import { etfApi, type EtfIntraday, type EtfMarketStats, type EtfTurnoverBaseline } from '@panwatch/api/etf'
+import { etfApi, type EtfBreadthBackfillStart, type EtfIntraday, type EtfMarketStats, type EtfTurnoverBaseline } from '@panwatch/api/etf'
 import { Button } from '@panwatch/base-ui/components/ui/button'
 import { Calendar } from '@panwatch/base-ui/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@panwatch/base-ui/components/ui/popover'
 import { IntradayChart } from '@/components/etf/IntradayChart'
+import { LinkedEtfPanel } from '@/components/etf/LinkedEtfPanel'
 import { EtfPricePicker, EtfPriceStrip, useEtfPriceLines } from '@/components/etf/EtfPriceControls'
 import { priceInstrumentKey } from '@/components/etf/price-palette'
 import { CNY_PER_YI, ETF_SESSION_MINUTES, VOLUME_THRESHOLD } from '@/components/etf/session'
@@ -21,6 +22,8 @@ import { marketSignTextClass } from '@/lib/market-colors'
 const DEFAULT_WIDTH = 216
 const MIN_WIDTH = 164
 const MAX_WIDTH = 292
+const BREADTH_POLL_MS = 4000
+const BREADTH_SAMPLE_DELAY = 18_000
 const clampWidth = (width: number) => Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, width))
 const datePattern = /^\d{4}-\d{2}-\d{2}$/
 const firstDate = '2009-01-01'
@@ -38,6 +41,21 @@ function quotesChanged(previous: EtfIntraday | undefined, next: EtfIntraday) {
       return point.minute !== prior.minute || point.turnover_cny !== prior.turnover_cny
         || point.index_close !== prior.index_close || point.etf_count !== prior.etf_count
     })
+}
+
+function sameBreadth(previous: EtfMarketStats['breadth'], next: EtfMarketStats['breadth']) {
+  if (previous.through !== next.through) return false
+  const a = previous.preview
+  const b = next.preview
+  if (a !== b && (!a || !b || a.through !== b.through || a.total !== b.total || a.minimum !== b.minimum
+    || Object.keys(a.minutes).length !== Object.keys(b.minutes).length
+    || Object.entries(b.minutes).some(([minute, count]) => a.minutes[minute] !== count))) return false
+  const minutes = Object.keys(next.points)
+  return minutes.length === Object.keys(previous.points).length && minutes.every(minute => {
+    const before = previous.points[minute]
+    const after = next.points[minute]
+    return !!before && before.up === after.up && before.down === after.down && before.flat === after.flat && before.source === after.source
+  })
 }
 
 function calendarDate(value: string) {
@@ -148,6 +166,11 @@ export default function BroadEtf() {
   }>({ date, busy: true })
   const [attempt, setAttempt] = useState(0)
   const [marketStats, setMarketStats] = useState<{ date: string; result: EtfMarketStats | null }>()
+  const [statsAttempt, reloadStats] = useState(0)
+  const [backfillAction, setBackfillAction] = useState<{ date: string; status: EtfBreadthBackfillStart | 'sending' | 'failed' }>()
+  const pendingBackfillDate = useRef<string>()
+  const lastBackfillRead = useRef<{ date: string; at: number }>()
+  const lastBreadthSlot = useRef<EtfRefreshSlot>()
   const [baselineAttempt, retryBaseline] = useState(0)
   const [lag, setLag] = useState<{ day: string; delay: number }>()
   const [reference, setReference] = useState<{ date: string; attempt: number; value: EtfTurnoverBaseline | null }>()
@@ -159,7 +182,10 @@ export default function BroadEtf() {
     pendingRefresh.current = { date, slot }
     setAttempt(id => id + 1)
   }, [date])
-  const refresh = () => requestRefresh()
+  const refresh = () => {
+    requestRefresh()
+    reloadStats(id => id + 1)
+  }
 
   useEffect(() => {
     const controller = new AbortController()
@@ -192,23 +218,98 @@ export default function BroadEtf() {
 
   const calendar = state.data
   const data = state.date === date && state.data?.date === (date || state.data?.latest) ? state.data : undefined
+  const market = calendar?.market
+  const offset = state.offset ?? 0
+  const breadthClock = useRef({ market, offset })
+  breadthClock.current = { market, offset }
   const statsDate = data?.date ?? (state.date === date && state.failed ? date : null)
   useEffect(() => {
     if (statsDate === null) return
     const controller = new AbortController()
-    const apply = (result: EtfMarketStats | null) => {
-      if (!controller.signal.aborted) setMarketStats({ date: statsDate, result })
+    let timer: number
+    let reading = false
+    let polling = lastBackfillRead.current?.date === statsDate || pendingBackfillDate.current === statsDate
+    const nextSlot = () => {
+      const { market, offset } = breadthClock.current
+      const now = Date.now() + offset
+      return { now, slot: market && nextEtfRefresh(now, market, statsDate, BREADTH_SAMPLE_DELAY, lastBreadthSlot.current, undefined) }
     }
-    etfApi.marketStats(statsDate, controller.signal).then(apply, () => apply(null))
-    return () => controller.abort()
-  }, [statsDate, attempt])
+    const schedule = () => {
+      window.clearTimeout(timer)
+      if (reading || document.visibilityState === 'hidden') return
+      if (polling) {
+        const elapsed = lastBackfillRead.current?.date === statsDate ? Date.now() - lastBackfillRead.current.at : BREADTH_POLL_MS
+        timer = window.setTimeout(read, Math.max(0, BREADTH_POLL_MS - elapsed))
+        return
+      }
+      const { now, slot } = nextSlot()
+      if (slot) timer = window.setTimeout(read, Math.max(0, slot.at - now))
+    }
+    const read = () => {
+      if (reading || controller.signal.aborted) return
+      const { now, slot } = nextSlot()
+      if (slot && slot.at <= now) lastBreadthSlot.current = slot
+      reading = true
+      etfApi.marketStats(statsDate, controller.signal).then(result => {
+        if (controller.signal.aborted) return
+        reading = false
+        setMarketStats(previous => {
+          const prior = previous?.date === statsDate ? previous.result : null
+          // Progress can tick without any newly complete minutes. Keep the
+          // chart's data reference stable so those polls don't repaint it.
+          if (prior?.date === result.date && sameBreadth(prior.breadth, result.breadth)) {
+            return { date: statsDate, result: { ...result, breadth: prior.breadth } }
+          }
+          return { date: statsDate, result }
+        })
+        setBackfillAction(action => action?.date === result.date && action.status === 'running' ? undefined : action)
+        polling = result.backfill?.status === 'running'
+        if (polling) {
+          lastBackfillRead.current = { date: statsDate, at: Date.now() }
+        } else {
+          if (lastBackfillRead.current?.date === statsDate) lastBackfillRead.current = undefined
+          if (pendingBackfillDate.current === result.date) pendingBackfillDate.current = undefined
+        }
+        schedule()
+      }, () => {
+        if (controller.signal.aborted) return
+        reading = false
+        if (polling || pendingBackfillDate.current === statsDate) {
+          polling = true
+          lastBackfillRead.current = { date: statsDate, at: Date.now() }
+        }
+        else setMarketStats({ date: statsDate, result: null })
+        schedule()
+      })
+    }
+    const last = lastBackfillRead.current
+    const delay = last?.date === statsDate ? BREADTH_POLL_MS - (Date.now() - last.at) : 0
+    if (delay > 0) timer = window.setTimeout(read, delay)
+    else read()
+    document.addEventListener('visibilitychange', schedule)
+    return () => {
+      controller.abort()
+      window.clearTimeout(timer)
+      document.removeEventListener('visibilitychange', schedule)
+    }
+  }, [statsDate, statsAttempt])
   const stats = statsDate !== null && marketStats?.date === statsDate ? marketStats.result : undefined
+  const fillDate = stats?.date
+  const action = backfillAction?.date === fillDate ? backfillAction?.status : undefined
+  const fillRunning = action === 'sending' || action === 'running' || stats?.backfill?.status === 'running'
+  const startBackfill = () => {
+    if (!fillDate || fillRunning) return
+    setBackfillAction({ date: fillDate, status: 'sending' })
+    etfApi.backfillBreadth(fillDate).then(({ status }) => {
+      if (status === 'running') pendingBackfillDate.current = fillDate
+      setBackfillAction({ date: fillDate, status })
+      if (status === 'running' || status === 'nothing_to_fill') reloadStats(id => id + 1)
+    }, () => setBackfillAction({ date: fillDate, status: 'failed' }))
+  }
   const priceLines = useEtfPriceLines(data?.date, data?.status === 'live', attempt)
   const prices = useMemo(() => priceLines.rows.flatMap(({ instrument, colorIndex, quote }) =>
     quote && Object.keys(quote.closes).length ? [{ instrument, colorIndex, closes: quote.closes }] : []), [priceLines.rows])
   const busy = state.busy || state.date !== date
-  const market = calendar?.market
-  const offset = state.offset ?? 0
   const marketNow = useMarketTime(offset)
   const marketZone = market?.timezone ?? SHANGHAI_TIMEZONE
   const marketDate = shanghaiDate(marketNow, marketZone)
@@ -251,7 +352,6 @@ export default function BroadEtf() {
   const turnoverPoints = data?.points.filter(point => point.turnover_cny != null) ?? []
   const lastTurnover = turnoverPoints[turnoverPoints.length - 1]
   const total = turnoverPoints.reduce((sum, point) => sum + (point.turnover_cny ?? 0), 0)
-  const hasIndex = data?.points.some(point => point.index_close != null)
   const complete = !!lastTurnover && turnoverPoints.every((point, index) =>
     point.etf_count === data?.symbols.length && point.minute === ETF_SESSION_MINUTES[index])
   const baselineState = data?.turnover_baseline
@@ -273,10 +373,48 @@ export default function BroadEtf() {
   const mean = complete && lastTurnover ? baseline?.cumulative_cny[lastTurnover.minute] : undefined
   const change = mean != null && mean > 0 ? total / mean - 1 : null
   const format = new Intl.NumberFormat(i18n.language, { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+  const tailPoints = turnoverPoints.slice(-20)
+  const tailTotal = tailPoints.length === 20 && tailPoints.every(p => p.etf_count === data?.symbols.length)
+    ? tailPoints.reduce((sum, p) => sum + (p.turnover_cny ?? 0), 0) : null
+  const tailEnd = tailPoints[tailPoints.length - 1]?.minute
+  const tailBefore = tailPoints[0] ? ETF_SESSION_MINUTES[ETF_SESSION_MINUTES.indexOf(tailPoints[0].minute) - 1] : undefined
+  const tailMean = tailEnd && baseline?.cumulative_cny[tailEnd] != null
+    ? baseline.cumulative_cny[tailEnd] - (tailBefore ? baseline.cumulative_cny[tailBefore] ?? NaN : 0) : null
   const flow = stats?.daily_flow
   const flowValue = flow?.net_cny
   const flowFormat = new Intl.NumberFormat(i18n.language, { minimumFractionDigits: 1, maximumFractionDigits: 1, signDisplay: 'exceptZero' })
   const flowTone = flowValue === 0 ? 'text-foreground' : marketSignTextClass(flowValue)
+  const breadthThrough = stats?.breadth.through
+  const hasBreadthGap = !!breadthThrough && ETF_SESSION_MINUTES.some(minute =>
+    minute <= breadthThrough && !stats.breadth.points[minute])
+  const backfill = stats?.backfill
+  const stockCount = new Intl.NumberFormat(i18n.language)
+  const jobCount = {
+    processed: stockCount.format(backfill?.processed ?? 0), total: stockCount.format(backfill?.total ?? 0),
+  }
+  const fillMessage = fillRunning ? (backfill?.status === 'running' && backfill.reason === 'rate_limited' ? t('breadthFillPaused')
+    : backfill?.status === 'running' && backfill.total
+    ? backfill.added > 0 ? t('breadthFillProgressWithMinutes', { ...jobCount, count: backfill.added }) : t('breadthFillProgress', jobCount)
+    : t('breadthFillStarting'))
+    : action === 'busy' ? t('breadthFillBusy')
+      : action === 'cooldown' || backfill?.reason === 'rate_limited' ? t('breadthFillCooldown')
+        : action === 'failed' || action === 'unavailable' || backfill?.status === 'failed' ? t('breadthFillFailed')
+          : backfill?.status === 'partial' ? t('breadthFillPartial', { ...jobCount, count: backfill.added })
+            : backfill?.status === 'complete' ? t('breadthFillComplete', { count: backfill.added }) : null
+  const fillDetail = !fillRunning && backfill?.reason && backfill.reason !== 'missing_stocks' && backfill.reason !== 'missing_minutes'
+    ? t(`issues.${backfill.reason}`) : fillMessage
+  const fillWindow = backfill?.through && fillDate ? t('breadthFillWindow', { date: fillDate, time: backfill.through }) : null
+  const breadthControls = (hasBreadthGap || fillRunning || fillMessage) && <>
+    {fillMessage && <span role="status" className="truncate" title={[fillWindow, fillDetail].filter(Boolean).join(' · ')}>
+      {fillMessage}{fillRunning && backfill?.through && ` · ${t('through', { time: backfill.through })}`}
+    </span>}
+    {(hasBreadthGap || fillRunning) && <Button type="button" size="sm" variant="outline"
+      className="pointer-events-auto h-6 shrink-0 px-2 text-[11px]" disabled={fillRunning}
+      title={t('breadthFillHint')} onClick={startBackfill}>
+      {fillRunning && <RefreshCw aria-hidden className="mr-1 size-3 motion-safe:animate-spin" />}
+      {t('breadthFill')}
+    </Button>}
+  </>
   const percent = new Intl.NumberFormat(i18n.language, { style: 'percent', maximumFractionDigits: 1 })
   const volume = change == null || mean == null ? null : total >= mean * (1 + VOLUME_THRESHOLD) ? 'elevated'
     : total <= mean * (1 - VOLUME_THRESHOLD) ? 'subdued' : 'typical'
@@ -342,8 +480,9 @@ export default function BroadEtf() {
                 {format.format(total / CNY_PER_YI)} <span className="text-xs font-medium tracking-normal text-secondary-foreground">{t('amountUnit')}</span>
               </p>
             </div>}
+            {tailTotal != null && <div className="space-y-1 border-l border-border/80 pl-5"><p className="text-xs text-secondary-foreground">{t('last20Minutes')}</p><p className="text-xl font-semibold tabular-nums">{format.format(tailTotal / CNY_PER_YI)} <span className="text-xs font-normal text-secondary-foreground">{t('amountUnit')}</span></p><p className="text-[10px] text-secondary-foreground">{tailMean != null && tailMean > 0 ? t('timesBaseline', { value: (tailTotal / tailMean).toFixed(1) }) : t('baselineUnavailable')}</p></div>}
             {flow && <div className={`space-y-1 ${lastTurnover ? 'border-l border-border/80 pl-5' : ''}`} title={t('methodFlow')} aria-live="polite">
-              <p className="text-xs text-secondary-foreground">{t('dailyFlow', { count: flow.total })}</p>
+              <p className="text-xs text-secondary-foreground">{t('dailyFlow', { count: flow.total })}</p><p className="text-[10px] text-secondary-foreground">{t('dataAsOf', { date: stats?.date })}</p>
               {flowValue != null ? <p className={`text-xl font-semibold leading-none tracking-tight tabular-nums ${flowTone}`}>
                 {flowFormat.format(flowValue / CNY_PER_YI)} <span className="text-xs font-medium tracking-normal text-secondary-foreground">{t('amountUnit')}</span>
               </p> : <p className="text-xs font-medium text-secondary-foreground">
@@ -353,25 +492,7 @@ export default function BroadEtf() {
           </div>}
         </div>
         {hasData && data ? <div className="etf-intraday-chart">
-          <div className="flex flex-wrap justify-center gap-x-5 gap-y-2 px-4 pb-2 pt-4 text-xs text-secondary-foreground">
-            {lastTurnover && <span className="inline-flex items-center gap-1.5"><i aria-hidden className="h-2.5 w-3 rounded-sm bg-[var(--etf-turnover-bar)]" />{t('turnover')}</span>}
-            {(baseline || baselinePending) && <>
-              <span className="inline-flex items-center gap-1.5">
-                <i aria-hidden className={`h-2.5 w-3 rounded-sm bg-[var(--etf-excess-bar)] ${baselinePending ? 'opacity-40' : ''}`} />
-                {t('excessMinute')}
-              </span>
-              <span className="inline-flex flex-wrap items-center justify-center gap-1.5">
-                <i aria-hidden className={`w-4 border-t-2 border-dashed border-[var(--etf-usual-line)] ${baselinePending ? 'opacity-40' : ''}`} />
-                {t('minuteAverage', { count: baseline?.sessions ?? 5 })}
-                {baselinePending && <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-primary/10 px-2 py-0.5 font-medium text-primary">
-                  <RefreshCw aria-hidden className="size-3 motion-safe:animate-spin" />{t('baselineCalculating')}
-                </span>}
-              </span>
-            </>}
-            {hasIndex && <span className="inline-flex items-center gap-1.5"><i aria-hidden className="h-0.5 w-4 rounded bg-[var(--etf-index-line)]" />{t('index')}</span>}
-            {data.previous_close != null && <span className="inline-flex items-center gap-1.5"><i aria-hidden className="w-4 border-t border-dashed border-muted-foreground" />{t('previousClose')}</span>}
-            <EtfPricePicker selection={priceLines.selection} onChange={priceLines.setVisible} />
-          </div>
+          {baselinePending && <p role="status" className="px-5 pt-2 text-xs text-secondary-foreground">{t('baselineCalculating')}</p>}
           <EtfPriceStrip selection={priceLines.selection} />
           {priceLines.rows.map(({ instrument, failed, quote }) => {
             const issue = quote?.issue
@@ -384,12 +505,9 @@ export default function BroadEtf() {
                 onClick={() => priceLines.retryPrice(instrument)}>{t('retry')}</Button>}
             </div>
           })}
-          <div className="flex justify-between gap-4 px-4 pt-2 text-[11px] text-secondary-foreground sm:px-6">
-            <span>{data.etf_count > 0 && t('turnoverAxis')}</span>
-            <span>{(hasIndex || data.previous_close != null) && t('indexAxis')}</span>
-          </div>
-          <div className="px-1.5 sm:px-4"><IntradayChart key={data.date} data={data} turnoverBaseline={baseline} prices={prices}
-            breadth={stats?.breadth} breadthFailed={stats === null} /></div>
+          <div className="px-1.5 sm:px-4"><LinkedEtfPanel key={data.date} data={data} turnoverBaseline={baseline} prices={prices}
+            breadth={stats?.breadth} breadthFailed={stats === null} breadthControls={breadthControls}
+            priceControls={<EtfPricePicker selection={priceLines.selection} onChange={priceLines.setVisible} />} /></div>
           {(busy || state.failed || data.issues.length > 0) && <div className="space-y-1 px-4 pb-3 text-xs leading-relaxed text-secondary-foreground sm:px-6" aria-live="polite">
             {busy && <p>{t('refreshing')}</p>}
             {state.failed && <p>{t('unavailable')}</p>}
@@ -408,7 +526,7 @@ export default function BroadEtf() {
           </div>}
         </div>}
         {!hasData && stats?.breadth.through && <div className="etf-intraday-chart px-1.5 sm:px-4">
-          <IntradayChart key={stats.date} breadth={stats.breadth} prices={[]} />
+          <IntradayChart key={stats.date} breadth={stats.breadth} breadthControls={breadthControls} />
         </div>}
         <details className="border-t border-border px-4 py-3 text-xs text-secondary-foreground sm:px-6">
           <summary className="w-fit cursor-pointer rounded-sm font-semibold text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring">{t('methodology')}</summary>
