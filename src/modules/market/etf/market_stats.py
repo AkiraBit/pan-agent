@@ -97,20 +97,25 @@ def _save_breadth(day: date, minute: str, counts: dict) -> None:
                 raise
 
 
+async def market_snapshot(fetch=None):
+    fetch = fetch or tushare_market.rows
+    fields = "ts_code,trade_time,close,pre_close,vol"
+    rows = await fetch("rt_k", {"ts_code": ",".join(A_SHARE_GROUPS)}, fields)
+    if len(rows) >= SNAPSHOT_LIMIT:
+        groups = await asyncio.gather(*(fetch("rt_k", {"ts_code": group}, fields) for group in A_SHARE_GROUPS))
+        if any(len(group) >= SNAPSHOT_LIMIT for group in groups):
+            raise TushareFailure("unavailable")
+        rows = [row for group in groups for row in group]
+    return rows
+
+
 async def capture_breadth() -> None:
     now = intraday.now_cn()
     minute = minute_slot(now)
     if minute is None or await asyncio.to_thread(_has_breadth, now.date(), minute):
         return
-    fields = "ts_code,trade_time,close,pre_close,vol"
     try:
-        rows = await tushare_market.rows("rt_k", {"ts_code": ",".join(A_SHARE_GROUPS)}, fields)
-        if len(rows) >= SNAPSHOT_LIMIT:
-            groups = await asyncio.gather(*(tushare_market.rows("rt_k", {"ts_code": group}, fields)
-                                            for group in A_SHARE_GROUPS))
-            if any(len(group) >= SNAPSHOT_LIMIT for group in groups):
-                return
-            rows = [row for group in groups for row in group]
+        rows = await market_snapshot()
     except TushareFailure as exc:
         logger.debug("ETF breadth snapshot unavailable (%s): %s", minute, exc.code)
         return
@@ -119,6 +124,8 @@ async def capture_breadth() -> None:
     counts = breadth_counts(rows, now.date(), minute)
     if counts is not None:
         await asyncio.to_thread(_save_breadth, now.date(), minute, counts)
+        from src.modules.market.etf import linked
+        await asyncio.to_thread(linked.capture_observation, now.date(), minute, rows, sessions=SessionLocal)
 
 
 def _shares(day: date) -> dict:
@@ -196,29 +203,36 @@ async def capture_daily_flows() -> None:
         logger.debug("ETF daily shares unavailable (%s): %s", day, exc.code)
 
 
-def _latest_due(day: date, now: datetime) -> str | None:
+def latest_closed_minute(day: date, now: datetime) -> str | None:
     if not trading_calendar.is_trading_day("CN", day):
         return None
     if day < now.date():
         return intraday.MINUTES[-1]
     if day > now.date():
         return None
-    # Allow the scheduled fetch to finish before reporting a minute as missing.
-    current = now - timedelta(seconds=SAMPLE_SECOND + SAMPLE_GRACE + 8)
-    if current.date() != day:
-        return None
-    end = bisect_right(intraday.MINUTES, current.strftime("%H:%M"))
+    end = bisect_right(intraday.MINUTES, now.strftime("%H:%M"))
     return intraday.MINUTES[end - 1] if end else None
+
+
+def latest_due(day: date, now: datetime) -> str | None:
+    # Allow the scheduled fetch to finish before reporting a minute as missing.
+    grace = timedelta(seconds=SAMPLE_SECOND + SAMPLE_GRACE + 8)
+    return latest_closed_minute(day, now - grace)
 
 
 def read_session(day: date, now: datetime) -> dict:
     day_key = day.isoformat()
-    with SessionLocal() as db:
-        minutes = db.scalars(select(EtfMarketBreadthMinute)
-                             .where(EtfMarketBreadthMinute.trade_date == day_key)
-                             .order_by(EtfMarketBreadthMinute.minute)).all()
-        points = {row.minute: {"up": row.up, "down": row.down, "flat": row.flat} for row in minutes}
-    through = max(points.keys() | {_latest_due(day, now) or ""}) or None
+    closed = latest_closed_minute(day, now)
+    points = {}
+    if closed is not None:
+        with SessionLocal() as db:
+            minutes = db.scalars(select(EtfMarketBreadthMinute)
+                                 .where(EtfMarketBreadthMinute.trade_date == day_key, EtfMarketBreadthMinute.minute <= closed)
+                                 .order_by(EtfMarketBreadthMinute.minute))
+            points = {row.minute: {"up": row.up, "down": row.down, "flat": row.flat,
+                                   **({"source": "backfill"} if row.source == "backfill" else {})}
+                      for row in minutes if row.minute in intraday.MINUTE_SET}
+    through = max(points.keys() | {latest_due(day, now) or ""}) or None
 
     reference = previous_trading_day(day)
     current = _shares(day)

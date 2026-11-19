@@ -1,3 +1,4 @@
+from src.modules.market.etf.models import EtfAnalysisMinute, EtfAnalysisCache
 import asyncio
 from datetime import date, datetime
 
@@ -9,10 +10,11 @@ from sqlalchemy.orm import sessionmaker
 
 from src.modules.market.api.etf import router
 from src.modules.market.etf import intraday, market_stats as stats
+from src.modules.market.etf import breadth_replay
 from src.modules.market.etf.models import EtfIntradayDay
 from src.modules.market.etf.universe import SAMPLE, UNIVERSE_KEY
 from src.platform.persistence.database import Base
-from src.platform.persistence.migrations import _m156_tushare_etf_market_stats
+from src.platform.persistence.migrations import _m156_tushare_etf_market_stats, _m157_tushare_breadth_replay
 
 DAY = date(2026, 11, 16)
 NEXT = date(2026, 11, 17)
@@ -23,10 +25,14 @@ def storage(tmp_path, monkeypatch):
     engine = create_engine(f"sqlite:///{tmp_path / 'etf-market-stats.db'}")
     Base.metadata.create_all(engine, tables=[stats.EtfIntradayDay.__table__, stats.EtfTushareUniverse.__table__])
     with engine.begin() as connection:
+        EtfAnalysisMinute.__table__.create(connection, checkfirst=True)
+        EtfAnalysisCache.__table__.create(connection, checkfirst=True)
         _m156_tushare_etf_market_stats(connection)
         _m156_tushare_etf_market_stats(connection)
+        _m157_tushare_breadth_replay(connection)
     sessions = sessionmaker(bind=engine)
     monkeypatch.setattr(stats, "SessionLocal", sessions)
+    monkeypatch.setattr(breadth_replay, "SessionLocal", sessions)
     yield sessions
     engine.dispose()
 
@@ -80,6 +86,23 @@ def test_intraday_collection_preserves_gaps_and_api_reads_without_requesting_quo
             "through": "15:00", "points": {},
         }
     assert calls == [("rt_k", {"ts_code": ",".join(stats.A_SHARE_GROUPS)})] * 2
+
+
+def test_session_hides_future_bars_and_lunch_is_capped_at_the_morning_close(storage):
+    counts = {"up": 21, "down": 13, "flat": 5}
+    for minute in ("11:30", "12:00", "13:01", "13:02"):
+        stats._save_breadth(DAY, minute, counts)
+    assert stats.latest_due(DAY, moment("09:30:10")) is None
+    assert stats.latest_due(DAY, moment("12:30:00")) == "11:30"
+    assert stats.latest_due(DAY, moment("13:01:16")) == "11:30"
+    assert stats.latest_due(DAY, moment("13:01:17")) == "13:01"
+    assert stats.read_session(DAY, moment("12:30:00"))["breadth"] == {
+        "through": "11:30", "points": {"11:30": counts},
+    }
+    # A successful automatic capture may be ready before the missing-minute grace expires.
+    assert stats.read_session(DAY, moment("13:01:08"))["breadth"] == {
+        "through": "13:01", "points": {"11:30": counts, "13:01": counts},
+    }
 
 
 def test_daily_net_uses_the_current_main_chart_basket_and_waits_for_full_coverage(storage, monkeypatch):

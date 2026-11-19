@@ -37,7 +37,7 @@ from src.platform.ai.ai_failover import build_failover_client
 from src.platform.notifications.notifier import NotifierManager
 from src.modules.automation.agent_scheduler import AgentScheduler
 from src.modules.market.price_alert_scheduler import PriceAlertScheduler
-from src.modules.market.etf import market_stats as etf_market_stats
+from src.modules.market.etf import breadth_replay, market_stats as etf_market_stats
 from src.modules.paper_trading.paper_trading_scheduler import PaperTradingScheduler
 from src.modules.research.context_scheduler import ContextMaintenanceScheduler
 from src.modules.automation.agent_runs import record_agent_run
@@ -1557,6 +1557,9 @@ async def lifespan(app):
         async with application_lifespan(app):
             yield
     finally:
+        await breadth_replay.replay.shutdown()
+        from src.modules.market.etf import linked
+        await linked.replay.shutdown()
         if etf_stats_scheduler:
             etf_stats_scheduler.shutdown(wait=False)
         if scheduler:
