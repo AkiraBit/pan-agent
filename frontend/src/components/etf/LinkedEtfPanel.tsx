@@ -21,6 +21,15 @@ export function LinkedEtfPanel({ data, turnoverBaseline, prices, breadth, breadt
   const [board, setBoard] = useState<EtfBoard>('all')
   const last = data.points[data.points.length - 1]?.minute ?? '09:30'
   const [range, setRange] = useState<MinuteRange>(() => [MINUTES[Math.max(0, MINUTES.indexOf(last) - 19)], last])
+  const [draftRange, setDraftRange] = useState<MinuteRange>(range)
+  const [rangeError, setRangeError] = useState(false)
+  useEffect(() => { setDraftRange(range); setRangeError(false) }, [range])
+  const commitRange = (index: 0 | 1, raw: string) => {
+    const candidate: MinuteRange = index === 0 ? [raw.slice(0, 5), range[1]] : [range[0], raw.slice(0, 5)]
+    if (candidate.every(minute => MINUTES.includes(minute)) && candidate[0] <= candidate[1] && candidate[1] <= last) {
+      setRange(candidate); setRangeError(false)
+    } else { setDraftRange(range); setRangeError(true) }
+  }
   const [cursor, setCursor] = useState(last)
   const [expanded, setExpanded] = useState(false)
   const [detailGroup, setDetailGroup] = useState<EtfGroupId>('csi300')
@@ -113,11 +122,12 @@ export function LinkedEtfPanel({ data, turnoverBaseline, prices, breadth, breadt
       <aside className="space-y-5 rounded-lg border border-border p-4" aria-label={t('intervalObservation')}>
         <div className="flex items-center justify-between gap-2"><h3 className="text-sm font-semibold">{t('intervalObservation')}</h3><span className="text-xs tabular-nums text-secondary-foreground">{range.join(' – ')}</span></div>
         <div className="grid grid-cols-2 gap-2 text-xs">
-          <label className="space-y-1 text-secondary-foreground">{t('rangeStart')}<input type="time" step="60" value={range[0]} aria-label={t('rangeStart')}
-            className="w-full rounded-md border border-input bg-background p-1.5 text-foreground" onChange={e => { const minute = e.target.value.slice(0, 5); if (MINUTES.includes(minute) && minute <= range[1]) setRange([minute, range[1]]) }} /></label>
-          <label className="space-y-1 text-secondary-foreground">{t('rangeEnd')}<input type="time" step="60" value={range[1]} aria-label={t('rangeEnd')}
-            className="w-full rounded-md border border-input bg-background p-1.5 text-foreground" onChange={e => { const minute = e.target.value.slice(0, 5); if (MINUTES.includes(minute) && minute >= range[0] && minute <= last) setRange([range[0], minute]) }} /></label>
+          <label className="space-y-1 text-secondary-foreground">{t('rangeStart')}<input type="time" step="60" value={draftRange[0]} aria-label={t('rangeStart')}
+            className="w-full rounded-md border border-input bg-background p-1.5 text-foreground" onChange={e => setDraftRange([e.target.value, draftRange[1]])} onBlur={e => commitRange(0, e.currentTarget.value)} /></label>
+          <label className="space-y-1 text-secondary-foreground">{t('rangeEnd')}<input type="time" step="60" value={draftRange[1]} aria-label={t('rangeEnd')}
+            className="w-full rounded-md border border-input bg-background p-1.5 text-foreground" onChange={e => setDraftRange([draftRange[0], e.target.value])} onBlur={e => commitRange(1, e.currentTarget.value)} /></label>
         </div>
+        {rangeError && <p role="alert" className="text-xs text-secondary-foreground">{t('rangeInvalid')}</p>}
         <dl className="space-y-4 text-sm">
           <div className="flex justify-between gap-2"><dt className="text-secondary-foreground">{t('intervalTurnover')}</dt><dd className="font-semibold tabular-nums">{amount(actual)} {t('amountUnit')}</dd></div>
           <div className="flex justify-between gap-2"><dt className="text-secondary-foreground">{t('intervalRatio')}</dt><dd className="font-semibold tabular-nums">{volumeRatio == null ? '—' : t('times', { value: volumeRatio.toFixed(1) })}</dd></div>

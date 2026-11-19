@@ -492,6 +492,7 @@ export default function BroadEtf() {
           </div>}
         </div>
         {hasData && data ? <div className="etf-intraday-chart">
+          {baselinePending && <p role="status" className="px-5 pt-2 text-xs text-secondary-foreground">{t('baselineCalculating')}</p>}
           <EtfPriceStrip selection={priceLines.selection} />
           {priceLines.rows.map(({ instrument, failed, quote }) => {
             const issue = quote?.issue

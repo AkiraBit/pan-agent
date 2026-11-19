@@ -1,4 +1,5 @@
 export const etf = {
+  rangeInvalid: '请选择已结束的交易分钟，开始时间不能晚于结束时间。',
   boardBackfill: '回补分板块',
   priceEtfTab: 'ETF',
   linkedTitle: "成交与市场反馈",

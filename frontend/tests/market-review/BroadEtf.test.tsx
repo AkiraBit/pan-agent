@@ -12,13 +12,13 @@ vi.mock('@panwatch/api/etf', () => ({ etfApi: {
   backfillBreadth: vi.fn(), analysis: vi.fn().mockResolvedValue({ groups: [], benchmarks: [], boards: {} }), components: vi.fn(), backfillComponents: vi.fn(),
 } }))
 vi.mock('@/components/etf/IntradayChart', () => ({
-  IntradayChart: ({ data, prices = [], breadth, breadthControls }: {
-    data?: EtfIntraday; prices?: { instrument: EtfPriceInstrument }[]; breadth?: EtfMarketStats['breadth']; breadthControls?: React.ReactNode
+  IntradayChart: ({ data, prices = [], breadth, breadthControls, turnoverBaseline }: {
+    data?: EtfIntraday; prices?: { instrument: EtfPriceInstrument }[]; breadth?: EtfMarketStats['breadth']; breadthControls?: React.ReactNode; turnoverBaseline?: EtfTurnoverBaseline
   }) => {
     chartBreadth(breadth)
     return <>
       <div role="img" aria-label={data?.date ?? 'breadth'} data-breadth={breadth && JSON.stringify(breadth.points)}
-        data-price={prices.length ? prices.map(price => price.instrument.symbol).join(',') : undefined} />
+        data-baseline={turnoverBaseline && JSON.stringify(turnoverBaseline)} data-price={prices.length ? prices.map(price => price.instrument.symbol).join(',') : undefined} />
       {breadthControls}
     </>
   },
@@ -187,13 +187,13 @@ describe('Tushare broad-market ETFs', () => {
     show()
     expect(await screen.findByText('计算中')).toBeTruthy()
     expect(screen.getByRole('img', { name: latest })).toBeTruthy()
-    expect(screen.getByText('前 5 个交易日同分钟均值')).toBeTruthy()
+    expect(screen.getByRole('img', { name: latest }).getAttribute('data-baseline')).toBeNull()
     await act(async () => { resolveBaseline({ sessions: 5, cumulative_cny: { '09:31': 200_000_000, '15:00': 500_000_000 } }) })
     expect(await screen.findByText('较同期均值高 25%')).toBeTruthy()
     expect(screen.queryByText('计算中')).toBeNull()
     expect(screen.getByText('明显放量')).toBeTruthy()
     expect(screen.getByText('对比前 5 个交易日同期均值 · 截至 09:31')).toBeTruthy()
-    expect(screen.getByText('前 5 个交易日同分钟均值')).toBeTruthy()
+    expect(JSON.parse(screen.getByRole('img', { name: latest }).getAttribute('data-baseline')!)).toEqual({ sessions: 5, cumulative_cny: { '09:31': 200_000_000, '15:00': 500_000_000 } })
   })
 
   it('renders cached averages together with each date without starting a calculation request', async () => {

@@ -2,6 +2,7 @@ import type { TranslationShape } from '../../resource-types'
 import { etf as zhEtf } from '../zh-CN/etf'
 
 export const etf = {
+  rangeInvalid: 'Choose completed trading minutes, with the start no later than the end.',
   boardBackfill: 'Backfill boards',
   priceEtfTab: 'ETF',
   linkedTitle: "Turnover and market response",
